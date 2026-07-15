@@ -8,14 +8,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root{
-  --paper:#FDFDFB;
-  --panel:#F2F1EC;
-  --ink:#1A1A1A;
-  --ink-soft:#5B584F;
-  --line:#1A1A1A;
-  --good:#3F7A57;
-  --over:#C23B33;
-  --hair:#D8D6CC;
+  --paper:#0D0D0D;
+  --panel:#161616;
+  --ink:#F2EFE8;
+  --ink-soft:#938F84;
+  --line:#3A362E;
+  --accent:#E7B23A;
+  --good:#5FBF77;
+  --over:#E8604A;
+  --hair:#2A2823;
 }
 
 *{box-sizing:border-box;}
@@ -33,9 +34,10 @@ body{
 /* ---- Header ---- */
 .masthead{
   display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  border-bottom:6px solid var(--ink);
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  border-bottom:6px solid var(--accent);
   padding-bottom:10px;
   margin-bottom:18px;
 }
@@ -45,7 +47,6 @@ body{
   line-height:1.15;
   letter-spacing:0.3px;
   margin:0;
-  max-width:70%;
 }
 @media (max-width:400px){
   .masthead h1{font-size:17px;}
@@ -70,7 +71,7 @@ body{
 }
 .datebar button{
   background:none;
-  border:1px solid var(--ink);
+  border:1px solid var(--line);
   color:var(--ink);
   width:30px;height:30px;
   cursor:pointer;
@@ -78,7 +79,7 @@ body{
   font-size:14px;
   border-radius:0;
 }
-.datebar button:hover{background:var(--ink);color:var(--paper);}
+.datebar button:hover{background:var(--accent);color:var(--paper);}
 .datebar input[type="date"]{
   font-family:'Space Mono',monospace;
   border:1px solid var(--hair);
@@ -96,14 +97,15 @@ body{
 
 /* ---- Nutrition Facts style summary panel ---- */
 .facts{
-  border:2px solid var(--ink);
+  border:2px solid var(--accent);
   padding:0;
   margin-bottom:24px;
-  background:var(--paper);
+  background:var(--panel);
 }
 .facts-top{
-  border-bottom:9px solid var(--ink);
+  border-bottom:9px solid var(--accent);
   padding:10px 14px 8px;
+  text-align:center;
 }
 .facts-top .eyebrow{
   font-family:'Space Mono',monospace;
@@ -122,9 +124,9 @@ body{
   justify-content:space-between;
   align-items:baseline;
   padding:8px 14px;
-  border-bottom:1px solid var(--ink);
+  border-bottom:1px solid var(--line);
 }
-.facts-row.thick{border-bottom:4px solid var(--ink);}
+.facts-row.thick{border-bottom:4px solid var(--accent);}
 .facts-row .label{
   font-size:14px;
   font-weight:600;
@@ -132,6 +134,7 @@ body{
 .facts-row .value{
   font-family:'Archivo Black',sans-serif;
   font-size:20px;
+  color:var(--accent);
 }
 .facts-row .value.big{font-size:34px;}
 .facts-row.remaining .value{
@@ -156,19 +159,19 @@ body{
   padding:2px 0;
   text-align:right;
 }
-.facts-goal-edit input:focus{outline:none;border-bottom:1px solid var(--ink);}
+.facts-goal-edit input:focus{outline:none;border-bottom:1px solid var(--accent);}
 
 .bar-track{
   height:10px;
   margin:0 14px 12px;
   background:var(--panel);
-  border:1px solid var(--ink);
+  border:1px solid var(--line);
   position:relative;
   overflow:hidden;
 }
 .bar-fill{
   height:100%;
-  background:var(--ink);
+  background:var(--accent);
   transition:width .3s ease, background .3s ease;
 }
 .bar-fill.over{background:var(--over);}
@@ -186,7 +189,7 @@ body{
 .macro-row div span{
   display:block;
   font-family:'Inter',sans-serif;
-  color:var(--ink);
+  color:var(--accent);
   font-size:15px;
   font-weight:700;
   text-transform:none;
@@ -196,8 +199,8 @@ body{
 
 /* ---- Log entries ---- */
 .log-head{
-  background:var(--ink);
-  color:var(--paper);
+  background:var(--accent);
+  color:#141210;
   padding:6px 12px;
   font-family:'Space Mono',monospace;
   font-size:12px;
@@ -239,6 +242,7 @@ body{
 .entry .cal{
   font-family:'Archivo Black',sans-serif;
   font-size:15px;
+  color:var(--accent);
 }
 .entry .del{
   background:none;
@@ -259,7 +263,7 @@ body{
 
 /* ---- Add form ---- */
 .add-form{
-  border:1px solid var(--ink);
+  border:1px solid var(--line);
   padding:14px;
   margin-top:26px;
 }
@@ -292,22 +296,22 @@ body{
   padding:8px;
   font-family:'Inter',sans-serif;
   font-size:14px;
-  background:var(--paper);
+  background:var(--panel);
   color:var(--ink);
 }
-.field input:focus, .field select:focus{outline:none;border-color:var(--ink);}
+.field input:focus, .field select:focus{outline:none;border-color:var(--accent);}
 .submit-btn{
   width:100%;
   padding:12px;
-  background:var(--ink);
-  color:var(--paper);
+  background:var(--accent);
+  color:#141210;
   border:none;
   font-family:'Archivo Black',sans-serif;
   font-size:14px;
   letter-spacing:0.5px;
   cursor:pointer;
 }
-.submit-btn:hover{background:#000;}
+.submit-btn:hover{background:#F2C463;}
 .submit-btn:disabled{background:var(--hair);cursor:not-allowed;}
 
 .hint{
@@ -329,7 +333,6 @@ body{
 
   <div class="masthead">
     <h1>Daily Intake Calculator</h1>
-    <div class="sub">Manual food log</div>
   </div>
 
   <div class="datebar">
@@ -401,8 +404,6 @@ body{
     </div>
     <button type="button" class="submit-btn" id="addBtn">Add to log</button>
   </div>
-
-  <div class="hint">Daily Intake Calculator — everything you enter is saved automatically, just for you.</div>
 
 </div>
 
