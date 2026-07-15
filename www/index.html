@@ -369,4 +369,279 @@ body{
       <div class="value" id="remainingVal">0</div>
     </div>
 
-    <div class="bar-track"><div
+    <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+
+    <div class="macro-row">
+      <div>Protein<span id="totalProtein">0g</span></div>
+      <div>Carbs<span id="totalCarbs">0g</span></div>
+      <div>Fat<span id="totalFat">0g</span></div>
+    </div>
+  </div>
+
+  <div class="log-head">Today's log</div>
+  <div class="entries" id="entriesContainer"></div>
+
+  <div class="add-form">
+    <span class="eyebrow">Log food</span>
+    <div class="add-grid">
+      <div class="field full">
+        <label for="fName">Food</label>
+        <input type="text" id="fName" placeholder="e.g. Grilled chicken breast">
+      </div>
+      <div class="field">
+        <label for="fCal">Calories</label>
+        <input type="number" id="fCal" min="0" step="1" placeholder="0">
+      </div>
+      <div class="field">
+        <label for="fProtein">Protein (g)</label>
+        <input type="number" id="fProtein" min="0" step="1" placeholder="0">
+      </div>
+      <div class="field">
+        <label for="fCarbs">Carbs (g)</label>
+        <input type="number" id="fCarbs" min="0" step="1" placeholder="0">
+      </div>
+      <div class="field">
+        <label for="fFat">Fat (g)</label>
+        <input type="number" id="fFat" min="0" step="1" placeholder="0">
+      </div>
+    </div>
+    <button type="button" class="submit-btn" id="addBtn">Add to log</button>
+  </div>
+
+</div>
+
+<script>
+const DEFAULT_GOAL = 1600;
+
+let currentDate = todayStr();
+let currentGoal = DEFAULT_GOAL;
+let currentEntries = [];
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function formatDateLabel(dateStr){
+  const [y,m,d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  const isToday = dateStr === todayStr();
+  const label = dt.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric'});
+  return isToday ? "Today · " + label : label;
+}
+
+function hasStorage(){
+  try{
+    return typeof window.localStorage !== 'undefined' && window.localStorage !== null;
+  }catch(e){ return false; }
+}
+
+async function loadSettings(){
+  if(!hasStorage()) return;
+  try{
+    const raw = window.localStorage.getItem('dic:settings');
+    if(raw){
+      const s = JSON.parse(raw);
+      currentGoal = s.goal || DEFAULT_GOAL;
+    }
+  }catch(e){ currentGoal = DEFAULT_GOAL; }
+}
+
+async function saveSettings(){
+  if(!hasStorage()) return;
+  try{
+    window.localStorage.setItem('dic:settings', JSON.stringify({goal: currentGoal}));
+  }catch(e){ console.error('Failed to save settings', e); }
+}
+
+async function loadEntries(dateStr){
+  currentEntries = [];
+  if(!hasStorage()) return;
+  try{
+    const raw = window.localStorage.getItem('dic:log:'+dateStr);
+    if(raw){
+      currentEntries = JSON.parse(raw);
+    }
+  }catch(e){
+    currentEntries = [];
+  }
+}
+
+async function saveEntries(){
+  if(!hasStorage()) return;
+  try{
+    window.localStorage.setItem('dic:log:'+currentDate, JSON.stringify(currentEntries));
+  }catch(e){ console.error('Failed to save entries', e); }
+}
+
+function render(){
+  document.getElementById('dateInput').value = currentDate;
+  document.getElementById('factsDate').textContent = formatDateLabel(currentDate);
+  document.getElementById('goalInput').value = currentGoal;
+
+  const totals = currentEntries.reduce((acc,e)=>{
+    acc.cal += Number(e.calories)||0;
+    acc.protein += Number(e.protein)||0;
+    acc.carbs += Number(e.carbs)||0;
+    acc.fat += Number(e.fat)||0;
+    return acc;
+  }, {cal:0, protein:0, carbs:0, fat:0});
+
+  document.getElementById('totalCal').textContent = totals.cal.toLocaleString();
+  document.getElementById('totalProtein').textContent = totals.protein + 'g';
+  document.getElementById('totalCarbs').textContent = totals.carbs + 'g';
+  document.getElementById('totalFat').textContent = totals.fat + 'g';
+
+  const remaining = currentGoal - totals.cal;
+  const remainingRow = document.getElementById('remainingRow');
+  const remainingLabel = document.getElementById('remainingLabel');
+  const remainingVal = document.getElementById('remainingVal');
+  if(remaining < 0){
+    remainingRow.classList.add('over');
+    remainingLabel.textContent = 'Over goal';
+    remainingVal.textContent = Math.abs(remaining).toLocaleString();
+  } else {
+    remainingRow.classList.remove('over');
+    remainingLabel.textContent = 'Remaining';
+    remainingVal.textContent = remaining.toLocaleString();
+  }
+
+  const pct = currentGoal > 0 ? Math.min(100, (totals.cal/currentGoal)*100) : 0;
+  const barFill = document.getElementById('barFill');
+  barFill.style.width = pct + '%';
+  barFill.classList.toggle('over', totals.cal > currentGoal);
+
+  const container = document.getElementById('entriesContainer');
+  container.innerHTML = '';
+
+  if(currentEntries.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'empty-row';
+    empty.textContent = 'Nothing logged yet. Add your first food below.';
+    container.appendChild(empty);
+  } else {
+    currentEntries.forEach(item=>{
+      const row = document.createElement('div');
+      row.className = 'entry';
+      const macroBits = [];
+      if(item.protein) macroBits.push('P '+item.protein+'g');
+      if(item.carbs) macroBits.push('C '+item.carbs+'g');
+      if(item.fat) macroBits.push('F '+item.fat+'g');
+      row.innerHTML = `
+        <div>
+          <div class="name">${escapeHtml(item.name)}</div>
+          ${macroBits.length ? `<div class="macros">${macroBits.join(' · ')}</div>` : ''}
+        </div>
+        <div class="right">
+          <div class="cal">${(Number(item.calories)||0).toLocaleString()}</div>
+          <button class="del" data-id="${item.id}" aria-label="Delete entry">×</button>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  container.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-id');
+      currentEntries = currentEntries.filter(e=>e.id !== id);
+      await saveEntries();
+      render();
+    });
+  });
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function switchDate(newDate){
+  currentDate = newDate;
+  await loadEntries(currentDate);
+  render();
+}
+
+document.getElementById('dateInput').addEventListener('change', (e)=>{
+  if(e.target.value) switchDate(e.target.value);
+});
+
+document.getElementById('prevDay').addEventListener('click', ()=>{
+  const d = new Date(currentDate);
+  d.setDate(d.getDate()-1);
+  switchDate(d.toISOString().slice(0,10));
+});
+
+document.getElementById('nextDay').addEventListener('click', ()=>{
+  const d = new Date(currentDate);
+  d.setDate(d.getDate()+1);
+  switchDate(d.toISOString().slice(0,10));
+});
+
+document.getElementById('todayBtn').addEventListener('click', ()=>{
+  switchDate(todayStr());
+});
+
+document.getElementById('goalInput').addEventListener('change', async (e)=>{
+  const v = parseInt(e.target.value,10);
+  currentGoal = isNaN(v) || v < 0 ? DEFAULT_GOAL : v;
+  await saveSettings();
+  render();
+});
+
+document.getElementById('addBtn').addEventListener('click', function(){
+  try{
+    const name = document.getElementById('fName').value.trim();
+    const cal = document.getElementById('fCal').value;
+    const protein = document.getElementById('fProtein').value;
+    const carbs = document.getElementById('fCarbs').value;
+    const fat = document.getElementById('fFat').value;
+
+    if(!name || cal === ''){
+      document.getElementById(!name ? 'fName' : 'fCal').focus();
+      return;
+    }
+
+    const entry = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+      name,
+      calories: Number(cal)||0,
+      protein: Number(protein)||0,
+      carbs: Number(carbs)||0,
+      fat: Number(fat)||0
+    };
+
+    currentEntries.push(entry);
+    render();
+    saveEntries();
+
+    document.getElementById('fName').value = '';
+    document.getElementById('fCal').value = '';
+    document.getElementById('fProtein').value = '';
+    document.getElementById('fCarbs').value = '';
+    document.getElementById('fFat').value = '';
+    document.getElementById('fName').focus();
+  }catch(err){
+    console.error('Add to log failed', err);
+  }
+});
+
+// Allow Enter key in the name/cal fields to submit
+['fName','fCal','fProtein','fCarbs','fFat'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      document.getElementById('addBtn').click();
+    }
+  });
+});
+
+(async function init(){
+  await loadSettings();
+  await loadEntries(currentDate);
+  render();
+})();
+</script>
+</body>
+</html>
