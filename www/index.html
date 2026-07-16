@@ -29,7 +29,29 @@ body{
   min-height:100vh;
 }
 
-.wrap{max-width:520px;margin:0 auto;}
+.wrap{max-width:520px;margin:0 auto;position:relative;}
+
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:24px;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--accent);
+  color:#141210;
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  font-weight:700;
+  padding:10px 18px;
+  white-space:nowrap;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .25s ease, transform .25s ease;
+  z-index:50;
+}
+.toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
 
 /* ---- Header ---- */
 .masthead{
@@ -269,7 +291,7 @@ body{
   font-size:15px;
   color:var(--accent);
 }
-.entry .edit, .entry .del{
+.entry .edit, .entry .copy-next, .entry .del{
   background:none;
   border:1px solid var(--hair);
   color:var(--ink-soft);
@@ -279,6 +301,7 @@ body{
   line-height:1;
 }
 .entry .edit:hover{border-color:var(--accent);color:var(--accent);}
+.entry .copy-next:hover{border-color:var(--good);color:var(--good);}
 .entry .del:hover{border-color:var(--over);color:var(--over);}
 .empty-row{
   padding:14px 12px;
@@ -373,6 +396,7 @@ body{
 </head>
 <body>
 <div class="wrap">
+<div class="toast" id="toast"></div>
 
   <div class="masthead">
     <h1>Daily Intake Calculator</h1>
@@ -594,6 +618,7 @@ function render(){
         <div class="right">
           <div class="cal">${(Number(item.calories)||0).toLocaleString()}</div>
           <button class="edit" data-id="${item.id}" aria-label="Edit entry">✎</button>
+          <button class="copy-next" data-id="${item.id}" aria-label="Copy to next day">→</button>
           <button class="del" data-id="${item.id}" aria-label="Delete entry">×</button>
         </div>
       `;
@@ -619,6 +644,60 @@ function render(){
       enterEditMode(item);
     });
   });
+
+  container.querySelectorAll('.copy-next').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-id');
+      const item = currentEntries.find(e=>e.id === id);
+      if(!item) return;
+      const nextDateStr = await copyEntryToNextDay(item, currentDate);
+      if(nextDateStr){
+        showToast('Copied to ' + formatDateShort(nextDateStr));
+      } else {
+        showToast('Could not copy');
+      }
+    });
+  });
+}
+
+function nextDateFrom(dateStr){
+  const [y,m,d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate()+1);
+  return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
+}
+
+async function copyEntryToNextDay(item, fromDateStr){
+  if(!hasStorage()) return false;
+  try{
+    const nextDateStr = nextDateFrom(fromDateStr);
+    const raw = window.localStorage.getItem('dic:log:'+nextDateStr);
+    const arr = raw ? JSON.parse(raw) : [];
+    const copy = {
+      ...item,
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,7)
+    };
+    arr.push(copy);
+    window.localStorage.setItem('dic:log:'+nextDateStr, JSON.stringify(arr));
+    if(nextDateStr === currentDate){
+      currentEntries = arr;
+    }
+    return nextDateStr;
+  }catch(e){
+    console.error('Failed to copy entry to next day', e);
+    return false;
+  }
+}
+
+let toastTimer = null;
+function showToast(message){
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{
+    toast.classList.remove('show');
+  }, 2200);
 }
 
 function enterEditMode(item){
