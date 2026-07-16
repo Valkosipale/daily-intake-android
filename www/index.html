@@ -193,15 +193,18 @@ body{
 .bar-fill.over{background:var(--over);}
 
 .macro-row{
-  display:flex;
-  justify-content:space-between;
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px;
   padding:10px 14px 14px;
   font-family:'Space Mono',monospace;
   font-size:11px;
   color:var(--ink-soft);
   text-transform:uppercase;
   letter-spacing:0.5px;
+  text-align:center;
 }
+.macro-row div{min-width:0;}
 .macro-row div span{
   display:block;
   font-family:'Inter',sans-serif;
@@ -211,6 +214,7 @@ body{
   text-transform:none;
   letter-spacing:0;
   margin-top:2px;
+  word-break:break-word;
 }
 
 /* ---- Log entries ---- */
@@ -243,6 +247,11 @@ body{
   font-weight:600;
   font-size:14px;
 }
+.grams-badge{
+  font-weight:600;
+  font-size:14px;
+  color:var(--ink);
+}
 .entry .macros{
   font-family:'Space Mono',monospace;
   font-size:10.5px;
@@ -260,7 +269,7 @@ body{
   font-size:15px;
   color:var(--accent);
 }
-.entry .del{
+.entry .edit, .entry .del{
   background:none;
   border:1px solid var(--hair);
   color:var(--ink-soft);
@@ -269,6 +278,7 @@ body{
   font-size:13px;
   line-height:1;
 }
+.entry .edit:hover{border-color:var(--accent);color:var(--accent);}
 .entry .del:hover{border-color:var(--over);color:var(--over);}
 .empty-row{
   padding:14px 12px;
@@ -289,8 +299,24 @@ body{
   letter-spacing:1.5px;
   text-transform:uppercase;
   color:var(--ink-soft);
-  margin-bottom:10px;
   display:block;
+}
+.form-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+.cancel-edit{
+  background:none;
+  border:none;
+  color:var(--over);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  cursor:pointer;
+  padding:0;
 }
 .add-grid{
   display:grid;
@@ -397,11 +423,18 @@ body{
   <div class="entries" id="entriesContainer"></div>
 
   <div class="add-form">
-    <span class="eyebrow">Log food</span>
+    <div class="form-head">
+      <span class="eyebrow" id="formEyebrow">Log food</span>
+      <button type="button" id="cancelEditBtn" class="cancel-edit" style="display:none;">Cancel edit</button>
+    </div>
     <div class="add-grid">
       <div class="field full">
         <label for="fName">Food</label>
         <input type="text" id="fName" placeholder="e.g. Grilled chicken breast">
+      </div>
+      <div class="field full">
+        <label for="fGrams">Serving size (g)</label>
+        <input type="number" id="fGrams" min="0" step="1" placeholder="0">
       </div>
       <div class="field">
         <label for="fCal">Calories</label>
@@ -431,10 +464,15 @@ const DEFAULT_GOAL = 1600;
 let currentDate = todayStr();
 let currentGoal = DEFAULT_GOAL;
 let currentEntries = [];
+let editingId = null;
 
 function todayStr(){
   const d = new Date();
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function roundNum(n){
+  return Math.round((Number(n)||0) * 10) / 10;
 }
 
 function formatDateShort(dateStr){
@@ -509,9 +547,9 @@ function render(){
   }, {cal:0, protein:0, carbs:0, fat:0});
 
   document.getElementById('totalCal').textContent = totals.cal.toLocaleString();
-  document.getElementById('totalProtein').textContent = totals.protein + 'g';
-  document.getElementById('totalCarbs').textContent = totals.carbs + 'g';
-  document.getElementById('totalFat').textContent = totals.fat + 'g';
+  document.getElementById('totalProtein').textContent = roundNum(totals.protein) + 'g';
+  document.getElementById('totalCarbs').textContent = roundNum(totals.carbs) + 'g';
+  document.getElementById('totalFat').textContent = roundNum(totals.fat) + 'g';
 
   const remaining = currentGoal - totals.cal;
   const remainingRow = document.getElementById('remainingRow');
@@ -550,11 +588,12 @@ function render(){
       if(item.fat) macroBits.push('F '+item.fat+'g');
       row.innerHTML = `
         <div>
-          <div class="name">${escapeHtml(item.name)}</div>
+          <div class="name">${escapeHtml(item.name)}${item.grams ? ` <span class="grams-badge">${item.grams}g</span>` : ''}</div>
           ${macroBits.length ? `<div class="macros">${macroBits.join(' · ')}</div>` : ''}
         </div>
         <div class="right">
           <div class="cal">${(Number(item.calories)||0).toLocaleString()}</div>
+          <button class="edit" data-id="${item.id}" aria-label="Edit entry">✎</button>
           <button class="del" data-id="${item.id}" aria-label="Delete entry">×</button>
         </div>
       `;
@@ -565,11 +604,52 @@ function render(){
   container.querySelectorAll('.del').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const id = btn.getAttribute('data-id');
+      if(editingId === id) exitEditMode();
       currentEntries = currentEntries.filter(e=>e.id !== id);
       await saveEntries();
       render();
     });
   });
+
+  container.querySelectorAll('.edit').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.getAttribute('data-id');
+      const item = currentEntries.find(e=>e.id === id);
+      if(!item) return;
+      enterEditMode(item);
+    });
+  });
+}
+
+function enterEditMode(item){
+  editingId = item.id;
+  document.getElementById('fName').value = item.name;
+  document.getElementById('fGrams').value = item.grams || '';
+  document.getElementById('fCal').value = item.calories;
+  document.getElementById('fProtein').value = item.protein || '';
+  document.getElementById('fCarbs').value = item.carbs || '';
+  document.getElementById('fFat').value = item.fat || '';
+  document.getElementById('formEyebrow').textContent = 'Edit food';
+  document.getElementById('addBtn').textContent = 'Save changes';
+  document.getElementById('cancelEditBtn').style.display = 'inline';
+  const nameField = document.getElementById('fName');
+  if(typeof nameField.scrollIntoView === 'function'){
+    nameField.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+  nameField.focus();
+}
+
+function exitEditMode(){
+  editingId = null;
+  document.getElementById('formEyebrow').textContent = 'Log food';
+  document.getElementById('addBtn').textContent = 'Add to log';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+  document.getElementById('fName').value = '';
+  document.getElementById('fGrams').value = '';
+  document.getElementById('fCal').value = '';
+  document.getElementById('fProtein').value = '';
+  document.getElementById('fCarbs').value = '';
+  document.getElementById('fFat').value = '';
 }
 
 function escapeHtml(str){
@@ -579,6 +659,7 @@ function escapeHtml(str){
 }
 
 async function switchDate(newDate){
+  exitEditMode();
   currentDate = newDate;
   await loadEntries(currentDate);
   render();
@@ -623,6 +704,7 @@ document.getElementById('goalInput').addEventListener('change', async (e)=>{
 document.getElementById('addBtn').addEventListener('click', function(){
   try{
     const name = document.getElementById('fName').value.trim();
+    const grams = document.getElementById('fGrams').value;
     const cal = document.getElementById('fCal').value;
     const protein = document.getElementById('fProtein').value;
     const carbs = document.getElementById('fCarbs').value;
@@ -633,9 +715,29 @@ document.getElementById('addBtn').addEventListener('click', function(){
       return;
     }
 
+    if(editingId){
+      const idx = currentEntries.findIndex(e=>e.id === editingId);
+      if(idx !== -1){
+        currentEntries[idx] = {
+          ...currentEntries[idx],
+          name,
+          grams: Number(grams)||0,
+          calories: Number(cal)||0,
+          protein: Number(protein)||0,
+          carbs: Number(carbs)||0,
+          fat: Number(fat)||0
+        };
+      }
+      exitEditMode();
+      render();
+      saveEntries();
+      return;
+    }
+
     const entry = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
       name,
+      grams: Number(grams)||0,
       calories: Number(cal)||0,
       protein: Number(protein)||0,
       carbs: Number(carbs)||0,
@@ -647,6 +749,7 @@ document.getElementById('addBtn').addEventListener('click', function(){
     saveEntries();
 
     document.getElementById('fName').value = '';
+    document.getElementById('fGrams').value = '';
     document.getElementById('fCal').value = '';
     document.getElementById('fProtein').value = '';
     document.getElementById('fCarbs').value = '';
@@ -658,13 +761,17 @@ document.getElementById('addBtn').addEventListener('click', function(){
 });
 
 // Allow Enter key in the name/cal fields to submit
-['fName','fCal','fProtein','fCarbs','fFat'].forEach(id=>{
+['fName','fGrams','fCal','fProtein','fCarbs','fFat'].forEach(id=>{
   document.getElementById(id).addEventListener('keydown', (e)=>{
     if(e.key === 'Enter'){
       e.preventDefault();
       document.getElementById('addBtn').click();
     }
   });
+});
+
+document.getElementById('cancelEditBtn').addEventListener('click', ()=>{
+  exitEditMode();
 });
 
 (async function init(){
