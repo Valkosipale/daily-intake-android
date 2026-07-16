@@ -81,14 +81,28 @@ body{
 }
 .datebar button:hover{background:var(--accent);color:var(--paper);}
 .datebar input[type="date"]{
-  font-family:'Space Mono',monospace;
-  border:1px solid var(--hair);
-  padding:5px 8px;
-  background:var(--paper);
-  color:var(--ink);
-  max-width:120px;
-  min-width:0;
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
 }
+.date-display{
+  background:none;
+  border:1px solid var(--hair);
+  padding:6px 10px;
+  font-family:'Space Mono',monospace;
+  font-size:13px;
+  color:var(--ink);
+  cursor:pointer;
+  min-width:106px;
+  text-align:center;
+}
+.date-display:hover{border-color:var(--accent);}
 .datebar .today-btn{
   border:none;
   width:auto;
@@ -341,6 +355,7 @@ body{
   <div class="datebar">
     <button type="button" id="prevDay" aria-label="Previous day">‹</button>
     <input type="date" id="dateInput">
+    <button type="button" class="date-display" id="dateDisplay">—</button>
     <button type="button" class="today-btn" id="todayBtn">today</button>
     <button type="button" id="nextDay" aria-label="Next day">›</button>
   </div>
@@ -422,6 +437,11 @@ function todayStr(){
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
 
+function formatDateShort(dateStr){
+  const [y,m,d] = dateStr.split("-").map(Number);
+  return String(d).padStart(2,"0") + "/" + String(m).padStart(2,"0") + "/" + y;
+}
+
 function formatDateLabel(dateStr){
   const [y,m,d] = dateStr.split("-").map(Number);
   const dt = new Date(y, m-1, d);
@@ -476,6 +496,7 @@ async function saveEntries(){
 
 function render(){
   document.getElementById('dateInput').value = currentDate;
+  document.getElementById('dateDisplay').textContent = formatDateShort(currentDate);
   document.getElementById('factsDate').textContent = formatDateLabel(currentDate);
   document.getElementById('goalInput').value = currentGoal;
 
@@ -565,6 +586,15 @@ async function switchDate(newDate){
 
 document.getElementById('dateInput').addEventListener('change', (e)=>{
   if(e.target.value) switchDate(e.target.value);
+});
+
+document.getElementById('dateDisplay').addEventListener('click', ()=>{
+  const input = document.getElementById('dateInput');
+  if(typeof input.showPicker === 'function'){
+    try{ input.showPicker(); }catch(e){ input.click(); }
+  } else {
+    input.click();
+  }
 });
 
 document.getElementById('prevDay').addEventListener('click', ()=>{
