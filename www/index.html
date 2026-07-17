@@ -618,7 +618,7 @@ function render(){
         <div class="right">
           <div class="cal">${(Number(item.calories)||0).toLocaleString()}</div>
           <button class="edit" data-id="${item.id}" aria-label="Edit entry">✎</button>
-          <button class="copy-next" data-id="${item.id}" aria-label="Copy to next day">→</button>
+          <button class="copy-next" data-id="${item.id}" aria-label="Copy to today">→</button>
           <button class="del" data-id="${item.id}" aria-label="Delete entry">×</button>
         </div>
       `;
@@ -629,6 +629,9 @@ function render(){
   container.querySelectorAll('.del').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const id = btn.getAttribute('data-id');
+      const item = currentEntries.find(e=>e.id === id);
+      const label = item ? item.name : 'this item';
+      if(!window.confirm(`Delete "${label}" from the log?`)) return;
       if(editingId === id) exitEditMode();
       currentEntries = currentEntries.filter(e=>e.id !== id);
       await saveEntries();
@@ -650,9 +653,9 @@ function render(){
       const id = btn.getAttribute('data-id');
       const item = currentEntries.find(e=>e.id === id);
       if(!item) return;
-      const nextDateStr = await copyEntryToNextDay(item, currentDate);
-      if(nextDateStr){
-        showToast('Copied to ' + formatDateShort(nextDateStr));
+      const targetDateStr = await copyEntryToToday(item);
+      if(targetDateStr){
+        showToast(targetDateStr === currentDate ? 'Copied' : 'Copied to today');
       } else {
         showToast('Could not copy');
       }
@@ -660,31 +663,25 @@ function render(){
   });
 }
 
-function nextDateFrom(dateStr){
-  const [y,m,d] = dateStr.split("-").map(Number);
-  const dt = new Date(y, m-1, d);
-  dt.setDate(dt.getDate()+1);
-  return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
-}
-
-async function copyEntryToNextDay(item, fromDateStr){
+async function copyEntryToToday(item){
   if(!hasStorage()) return false;
   try{
-    const nextDateStr = nextDateFrom(fromDateStr);
-    const raw = window.localStorage.getItem('dic:log:'+nextDateStr);
+    const targetDateStr = todayStr();
+    const raw = window.localStorage.getItem('dic:log:'+targetDateStr);
     const arr = raw ? JSON.parse(raw) : [];
     const copy = {
       ...item,
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,7)
     };
     arr.push(copy);
-    window.localStorage.setItem('dic:log:'+nextDateStr, JSON.stringify(arr));
-    if(nextDateStr === currentDate){
+    window.localStorage.setItem('dic:log:'+targetDateStr, JSON.stringify(arr));
+    if(targetDateStr === currentDate){
       currentEntries = arr;
+      render();
     }
-    return nextDateStr;
+    return targetDateStr;
   }catch(e){
-    console.error('Failed to copy entry to next day', e);
+    console.error('Failed to copy entry to today', e);
     return false;
   }
 }
