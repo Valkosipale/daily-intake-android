@@ -53,6 +53,236 @@ body{
   transform:translateX(-50%) translateY(0);
 }
 
+.confirm-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  align-items:center;
+  justify-content:center;
+  z-index:100;
+  padding:20px;
+}
+.confirm-overlay.show{
+  display:flex;
+}
+.confirm-box{
+  background:var(--panel);
+  border:2px solid var(--accent);
+  padding:20px;
+  max-width:340px;
+  width:100%;
+}
+.confirm-msg{
+  font-size:15px;
+  font-weight:600;
+  color:var(--ink);
+  margin-bottom:18px;
+  line-height:1.4;
+}
+.confirm-actions{
+  display:flex;
+  gap:10px;
+}
+.confirm-actions button{
+  flex:1;
+  padding:11px;
+  border:1px solid var(--hair);
+  font-family:'Archivo Black',sans-serif;
+  font-size:13px;
+  cursor:pointer;
+}
+.confirm-cancel{
+  background:none;
+  color:var(--ink);
+}
+.confirm-cancel:hover{border-color:var(--ink);}
+.confirm-delete{
+  background:var(--over);
+  color:#1a0d0a;
+  border-color:var(--over);
+}
+.confirm-delete:hover{background:#F3735E;}
+
+.backup-section{
+  border:1px solid var(--line);
+  padding:14px;
+  margin-top:16px;
+}
+.backup-desc{
+  font-size:12px;
+  color:var(--ink-soft);
+  margin:6px 0 12px;
+  line-height:1.4;
+}
+.backup-actions{
+  display:flex;
+  gap:10px;
+}
+.backup-btn{
+  flex:1;
+  padding:10px;
+  background:none;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  cursor:pointer;
+}
+.backup-btn:hover{background:var(--accent);color:#141210;}
+
+.data-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.75);
+  align-items:center;
+  justify-content:center;
+  z-index:110;
+  padding:20px;
+}
+.data-overlay.show{display:flex;}
+.data-box{
+  background:var(--panel);
+  border:2px solid var(--accent);
+  padding:18px;
+  max-width:420px;
+  width:100%;
+  max-height:82vh;
+  display:flex;
+  flex-direction:column;
+}
+.data-title{
+  font-family:'Archivo Black',sans-serif;
+  font-size:16px;
+  margin-bottom:8px;
+}
+.data-desc{
+  font-size:12px;
+  color:var(--ink-soft);
+  margin:0 0 10px;
+  line-height:1.4;
+}
+.data-box textarea{
+  width:100%;
+  flex:1;
+  min-height:140px;
+  background:#0D0D0D;
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  padding:8px;
+  resize:vertical;
+}
+.data-actions{
+  display:flex;
+  gap:10px;
+  margin-top:12px;
+}
+.data-actions button{
+  flex:1;
+  padding:11px;
+  font-family:'Archivo Black',sans-serif;
+  font-size:13px;
+  cursor:pointer;
+  border:1px solid var(--hair);
+}
+.data-actions .primary{background:var(--accent);color:#141210;border-color:var(--accent);}
+.data-actions .primary:hover{background:#F2C463;}
+.data-actions .secondary{background:none;color:var(--ink);}
+.data-actions .secondary:hover{border-color:var(--ink);}
+
+.beta-tag{
+  font-size:9px;
+  color:var(--accent);
+  border:1px solid var(--accent);
+  padding:1px 5px;
+  margin-left:4px;
+  vertical-align:middle;
+}
+
+.api-key-input{
+  width:100%;
+  background:#0D0D0D;
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Space Mono',monospace;
+  font-size:13px;
+  padding:10px;
+}
+.api-key-input:focus{outline:none;border-color:var(--accent);}
+
+.photo-loading-box{
+  align-items:center;
+  text-align:center;
+}
+.spinner{
+  width:36px;
+  height:36px;
+  border:3px solid var(--hair);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{
+  to{transform:rotate(360deg);}
+}
+
+.photo-result-name{
+  font-family:'Archivo Black',sans-serif;
+  font-size:17px;
+  color:var(--ink);
+  margin-bottom:4px;
+}
+.photo-result-note{
+  font-size:11px;
+  color:var(--ink-soft);
+  margin-bottom:12px;
+  line-height:1.4;
+}
+.photo-result-macros{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:8px;
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  text-align:center;
+  border:1px solid var(--hair);
+  padding:10px 4px;
+  margin-bottom:14px;
+}
+.photo-result-macros div span{
+  display:block;
+  font-family:'Inter',sans-serif;
+  color:var(--accent);
+  font-size:14px;
+  font-weight:700;
+  text-transform:none;
+  margin-top:2px;
+}
+.photo-grams-field label{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  display:block;
+  margin-bottom:4px;
+}
+.photo-grams-field input{
+  width:100%;
+  background:#0D0D0D;
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Inter',sans-serif;
+  font-size:15px;
+  padding:9px;
+}
+.photo-grams-field input:focus{outline:none;border-color:var(--accent);}
+
 /* ---- Header ---- */
 .masthead{
   display:flex;
@@ -397,6 +627,15 @@ body{
 <body>
 <div class="wrap">
 <div class="toast" id="toast"></div>
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-msg" id="confirmMsg">Delete this item?</div>
+    <div class="confirm-actions">
+      <button type="button" class="confirm-cancel" id="confirmCancelBtn">Cancel</button>
+      <button type="button" class="confirm-delete" id="confirmDeleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
 
   <div class="masthead">
     <h1>Daily Intake Calculator</h1>
@@ -480,6 +719,79 @@ body{
     <button type="button" class="submit-btn" id="addBtn">Add to log</button>
   </div>
 
+  <div class="backup-section">
+    <span class="eyebrow">Photo macros <span class="beta-tag">Beta</span></span>
+    <p class="backup-desc">Take a photo of your food to get an estimated macro breakdown (via Google Gemini, free tier).</p>
+    <div class="backup-actions">
+      <button type="button" id="photoBtn" class="backup-btn">📷 Take photo</button>
+      <button type="button" id="apiKeyBtn" class="backup-btn">API key</button>
+    </div>
+  </div>
+
+  <div class="backup-section">
+    <span class="eyebrow">Backup</span>
+    <p class="backup-desc">Export your data before updating the app, then import it back afterward.</p>
+    <div class="backup-actions">
+      <button type="button" id="exportBtn" class="backup-btn">Export data</button>
+      <button type="button" id="importBtn" class="backup-btn">Import data</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="data-overlay" id="apiKeyOverlay">
+  <div class="data-box">
+    <div class="data-title">Gemini API key</div>
+    <p class="data-desc">Paste your free API key from Google AI Studio (aistudio.google.com → Get API key). It's stored only on this device and never leaves it except to call Gemini directly.</p>
+    <input type="password" id="apiKeyInput" placeholder="Paste your API key here" class="api-key-input">
+    <div class="data-actions">
+      <button type="button" id="apiKeyCloseBtn" class="secondary">Cancel</button>
+      <button type="button" id="apiKeySaveBtn" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="data-overlay" id="photoLoadingOverlay">
+  <div class="data-box photo-loading-box">
+    <div class="spinner"></div>
+    <div class="data-title" style="margin-top:14px;">Analyzing photo…</div>
+    <p class="data-desc">This can take a few seconds.</p>
+  </div>
+</div>
+
+<div class="data-overlay" id="photoResultOverlay">
+  <div class="data-box">
+    <div class="data-title">Photo analysis</div>
+    <div id="photoResultBody"></div>
+    <div class="data-actions">
+      <button type="button" id="photoResultCancelBtn" class="secondary">Cancel</button>
+      <button type="button" id="photoResultUseBtn" class="primary">Use this</button>
+    </div>
+  </div>
+</div>
+
+<div class="data-overlay" id="exportOverlay">
+  <div class="data-box">
+    <div class="data-title">Export data</div>
+    <p class="data-desc">Copy this text and save it somewhere safe (notes app, email to yourself, etc). Paste it back in via Import after updating the app.</p>
+    <textarea id="exportText" readonly></textarea>
+    <div class="data-actions">
+      <button type="button" id="exportCloseBtn" class="secondary">Close</button>
+      <button type="button" id="exportCopyBtn" class="primary">Copy</button>
+    </div>
+  </div>
+</div>
+
+<div class="data-overlay" id="importOverlay">
+  <div class="data-box">
+    <div class="data-title">Import data</div>
+    <p class="data-desc">Paste your previously exported backup text below. This replaces your current log data.</p>
+    <textarea id="importText" placeholder="Paste backup text here..."></textarea>
+    <div class="data-actions">
+      <button type="button" id="importCloseBtn" class="secondary">Cancel</button>
+      <button type="button" id="importConfirmBtn" class="primary">Import</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -631,7 +943,8 @@ function render(){
       const id = btn.getAttribute('data-id');
       const item = currentEntries.find(e=>e.id === id);
       const label = item ? item.name : 'this item';
-      if(!window.confirm(`Delete "${label}" from the log?`)) return;
+      const confirmed = await showConfirmModal(`Delete "${label}" from the log?`);
+      if(!confirmed) return;
       if(editingId === id) exitEditMode();
       currentEntries = currentEntries.filter(e=>e.id !== id);
       await saveEntries();
@@ -695,6 +1008,33 @@ function showToast(message){
   toastTimer = setTimeout(()=>{
     toast.classList.remove('show');
   }, 2200);
+}
+
+function showConfirmModal(message){
+  return new Promise((resolve)=>{
+    const overlay = document.getElementById('confirmOverlay');
+    const msgEl = document.getElementById('confirmMsg');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+
+    msgEl.textContent = message;
+    overlay.classList.add('show');
+
+    function cleanup(result){
+      overlay.classList.remove('show');
+      cancelBtn.removeEventListener('click', onCancel);
+      deleteBtn.removeEventListener('click', onDelete);
+      overlay.removeEventListener('click', onOverlayClick);
+      resolve(result);
+    }
+    function onCancel(){ cleanup(false); }
+    function onDelete(){ cleanup(true); }
+    function onOverlayClick(e){ if(e.target === overlay) cleanup(false); }
+
+    cancelBtn.addEventListener('click', onCancel);
+    deleteBtn.addEventListener('click', onDelete);
+    overlay.addEventListener('click', onOverlayClick);
+  });
 }
 
 function enterEditMode(item){
@@ -848,6 +1188,303 @@ document.getElementById('addBtn').addEventListener('click', function(){
 
 document.getElementById('cancelEditBtn').addEventListener('click', ()=>{
   exitEditMode();
+});
+
+function collectAllData(){
+  const data = {app:'daily-intake-calculator', exportedAt:new Date().toISOString(), version:1, settings:null, logs:{}};
+  if(!hasStorage()) return data;
+  try{
+    const settingsRaw = window.localStorage.getItem('dic:settings');
+    data.settings = settingsRaw ? JSON.parse(settingsRaw) : null;
+    for(let i=0;i<window.localStorage.length;i++){
+      const key = window.localStorage.key(i);
+      if(key && key.indexOf('dic:log:') === 0){
+        const dateStr = key.slice('dic:log:'.length);
+        try{ data.logs[dateStr] = JSON.parse(window.localStorage.getItem(key)); }catch(e){}
+      }
+    }
+  }catch(e){ console.error('Failed to collect data', e); }
+  return data;
+}
+
+function restoreAllData(data){
+  if(!hasStorage()) return false;
+  if(!data || typeof data !== 'object') return false;
+  try{
+    if(data.settings){
+      window.localStorage.setItem('dic:settings', JSON.stringify(data.settings));
+    }
+    if(data.logs && typeof data.logs === 'object'){
+      Object.keys(data.logs).forEach(dateStr=>{
+        window.localStorage.setItem('dic:log:'+dateStr, JSON.stringify(data.logs[dateStr]));
+      });
+    }
+    return true;
+  }catch(e){
+    console.error('Failed to restore data', e);
+    return false;
+  }
+}
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const data = collectAllData();
+  document.getElementById('exportText').value = JSON.stringify(data);
+  document.getElementById('exportOverlay').classList.add('show');
+});
+
+document.getElementById('exportCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('exportOverlay').classList.remove('show');
+});
+
+document.getElementById('exportCopyBtn').addEventListener('click', async ()=>{
+  const textarea = document.getElementById('exportText');
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(textarea.value);
+    } else {
+      textarea.select();
+      document.execCommand('copy');
+    }
+    showToast('Copied to clipboard');
+  }catch(e){
+    textarea.select();
+    showToast('Select and copy manually');
+  }
+});
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  document.getElementById('importText').value = '';
+  document.getElementById('importOverlay').classList.add('show');
+});
+
+document.getElementById('importCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('importOverlay').classList.remove('show');
+});
+
+document.getElementById('importConfirmBtn').addEventListener('click', async ()=>{
+  const raw = document.getElementById('importText').value.trim();
+  if(!raw){ showToast('Paste your backup text first'); return; }
+
+  let parsed;
+  try{
+    parsed = JSON.parse(raw);
+  }catch(e){
+    showToast("That doesn't look like valid backup text");
+    return;
+  }
+
+  const confirmed = await showConfirmModal('This replaces your current log data with the imported backup. Continue?');
+  if(!confirmed) return;
+
+  const ok = restoreAllData(parsed);
+  if(ok){
+    document.getElementById('importOverlay').classList.remove('show');
+    await loadSettings();
+    await loadEntries(currentDate);
+    render();
+    showToast('Data imported');
+  } else {
+    showToast('Import failed');
+  }
+});
+
+const GEMINI_MODEL = 'gemini-2.5-flash';
+
+function getGeminiKey(){
+  if(!hasStorage()) return '';
+  try{
+    return window.localStorage.getItem('dic:geminiKey') || '';
+  }catch(e){ return ''; }
+}
+
+function setGeminiKey(key){
+  if(!hasStorage()) return;
+  try{
+    window.localStorage.setItem('dic:geminiKey', key);
+  }catch(e){ console.error('Failed to save API key', e); }
+}
+
+document.getElementById('apiKeyBtn').addEventListener('click', ()=>{
+  document.getElementById('apiKeyInput').value = getGeminiKey();
+  document.getElementById('apiKeyOverlay').classList.add('show');
+});
+
+document.getElementById('apiKeyCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('apiKeyOverlay').classList.remove('show');
+});
+
+document.getElementById('apiKeySaveBtn').addEventListener('click', ()=>{
+  const key = document.getElementById('apiKeyInput').value.trim();
+  setGeminiKey(key);
+  document.getElementById('apiKeyOverlay').classList.remove('show');
+  showToast(key ? 'API key saved' : 'API key cleared');
+});
+
+document.getElementById('photoBtn').addEventListener('click', async ()=>{
+  const key = getGeminiKey();
+  if(!key){
+    showToast('Set your Gemini API key first');
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiKeyOverlay').classList.add('show');
+    return;
+  }
+  await takePhotoAndAnalyze(key);
+});
+
+async function takePhotoAndAnalyze(apiKey){
+  const CapCamera = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
+  if(!CapCamera){
+    showToast('Camera is only available in the installed app');
+    return;
+  }
+
+  let photo;
+  try{
+    photo = await CapCamera.getPhoto({
+      quality: 70,
+      resultType: 'base64',
+      source: 'PROMPT',
+      correctOrientation: true
+    });
+  }catch(e){
+    // User cancelled the camera/picker — not an error worth showing
+    return;
+  }
+
+  if(!photo || !photo.base64String){
+    showToast('Could not read that photo');
+    return;
+  }
+
+  const mimeType = 'image/' + (photo.format || 'jpeg');
+  document.getElementById('photoLoadingOverlay').classList.add('show');
+
+  let result;
+  try{
+    result = await analyzeImageWithGemini(photo.base64String, mimeType, apiKey);
+  }catch(e){
+    console.error('Gemini analysis failed', e);
+    document.getElementById('photoLoadingOverlay').classList.remove('show');
+    showToast('Photo analysis failed — check your API key and connection');
+    return;
+  }
+
+  document.getElementById('photoLoadingOverlay').classList.remove('show');
+
+  if(!result){
+    showToast('Could not analyze that photo');
+    return;
+  }
+
+  showPhotoResult(result);
+}
+
+async function analyzeImageWithGemini(base64Data, mimeType, apiKey){
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
+
+  const prompt = 'You are a nutrition estimation assistant. Look at this food photo and identify the food. ' +
+    'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' +
+    '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number}. ' +
+    'Give your best realistic estimate even if you are not fully certain what the food is.';
+
+  const body = {
+    contents: [{
+      parts: [
+        {text: prompt},
+        {inline_data: {mime_type: mimeType, data: base64Data}}
+      ]
+    }],
+    generationConfig: {
+      responseMimeType: 'application/json'
+    }
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+
+  if(!res.ok){
+    const errText = await res.text().catch(()=> '');
+    throw new Error('Gemini API error ' + res.status + ': ' + errText);
+  }
+
+  const data = await res.json();
+  const text = data && data.candidates && data.candidates[0] && data.candidates[0].content &&
+    data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+    data.candidates[0].content.parts[0].text;
+
+  if(!text) throw new Error('No response text from Gemini');
+
+  const parsed = JSON.parse(text);
+  return {
+    name: String(parsed.food_name || 'Food'),
+    calPer100: Number(parsed.calories_per_100g) || 0,
+    proteinPer100: Number(parsed.protein_per_100g) || 0,
+    carbsPer100: Number(parsed.carbs_per_100g) || 0,
+    fatPer100: Number(parsed.fat_per_100g) || 0
+  };
+}
+
+let lastPhotoResult = null;
+
+function showPhotoResult(result){
+  lastPhotoResult = result;
+  const body = document.getElementById('photoResultBody');
+  body.innerHTML = `
+    <div class="photo-result-name">${escapeHtml(result.name)}</div>
+    <div class="photo-result-note">Estimated values, per 100g. Enter your actual serving size below to fill in the log.</div>
+    <div class="photo-result-macros">
+      <div>Cal<span>${roundNum(result.calPer100)}</span></div>
+      <div>Protein<span>${roundNum(result.proteinPer100)}g</span></div>
+      <div>Carbs<span>${roundNum(result.carbsPer100)}g</span></div>
+      <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
+    </div>
+    <div class="photo-grams-field">
+      <label for="photoGramsInput">Serving size (g)</label>
+      <input type="number" id="photoGramsInput" min="0" step="1" placeholder="e.g. 150">
+    </div>
+  `;
+  document.getElementById('photoResultOverlay').classList.add('show');
+  setTimeout(()=>{
+    const gramsInput = document.getElementById('photoGramsInput');
+    if(gramsInput) gramsInput.focus();
+  }, 50);
+}
+
+document.getElementById('photoResultCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('photoResultOverlay').classList.remove('show');
+  lastPhotoResult = null;
+});
+
+document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
+  if(!lastPhotoResult) return;
+  const gramsInput = document.getElementById('photoGramsInput');
+  const grams = Number(gramsInput && gramsInput.value) || 0;
+
+  if(grams <= 0){
+    showToast('Enter a serving size first');
+    if(gramsInput) gramsInput.focus();
+    return;
+  }
+
+  const scale = grams / 100;
+  document.getElementById('fName').value = lastPhotoResult.name;
+  document.getElementById('fGrams').value = grams;
+  document.getElementById('fCal').value = Math.round(lastPhotoResult.calPer100 * scale);
+  document.getElementById('fProtein').value = roundNum(lastPhotoResult.proteinPer100 * scale);
+  document.getElementById('fCarbs').value = roundNum(lastPhotoResult.carbsPer100 * scale);
+  document.getElementById('fFat').value = roundNum(lastPhotoResult.fatPer100 * scale);
+
+  document.getElementById('photoResultOverlay').classList.remove('show');
+  lastPhotoResult = null;
+
+  showToast('Filled in — review and tap Add to log');
+  const nameField = document.getElementById('fName');
+  if(typeof nameField.scrollIntoView === 'function'){
+    nameField.scrollIntoView({behavior:'smooth', block:'center'});
+  }
 });
 
 (async function init(){
