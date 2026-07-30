@@ -60,7 +60,7 @@ body{
   background:rgba(0,0,0,0.7);
   align-items:center;
   justify-content:center;
-  z-index:100;
+  z-index:200;
   padding:20px;
 }
 .confirm-overlay.show{
@@ -282,6 +282,52 @@ body{
   padding:9px;
 }
 .photo-grams-field input:focus{outline:none;border-color:var(--accent);}
+
+.photo-refine-field{
+  border-top:1px solid var(--hair);
+  margin-top:14px;
+  padding-top:12px;
+}
+.photo-refine-field label{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  display:block;
+  margin-bottom:6px;
+}
+.photo-refine-row{
+  display:flex;
+  gap:8px;
+}
+.photo-refine-row input{
+  flex:1;
+  min-width:0;
+  background:#0D0D0D;
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  padding:9px;
+}
+.photo-refine-row input:focus{outline:none;border-color:var(--accent);}
+.photo-refine-row button{
+  flex-shrink:0;
+  background:none;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  padding:0 12px;
+  cursor:pointer;
+}
+.photo-refine-row button:hover{background:var(--accent);color:#141210;}
+.photo-refine-row button:disabled{
+  border-color:var(--hair);
+  color:var(--ink-soft);
+  cursor:not-allowed;
+}
 
 /* ---- Header ---- */
 .masthead{
@@ -720,7 +766,7 @@ body{
   </div>
 
   <div class="backup-section">
-    <span class="eyebrow">Photo macros <span class="beta-tag">Beta</span></span>
+    <span class="eyebrow">Photo macros</span>
     <p class="backup-desc">Take a photo of your food to get an estimated macro breakdown (via Google Gemini, free tier).</p>
     <div class="backup-actions">
       <button type="button" id="photoBtn" class="backup-btn">📷 Take photo</button>
@@ -763,6 +809,13 @@ body{
   <div class="data-box">
     <div class="data-title">Photo analysis</div>
     <div id="photoResultBody"></div>
+    <div class="photo-refine-field">
+      <label for="photoRefineInput">Not quite right? Add a note and re-analyze</label>
+      <div class="photo-refine-row">
+        <input type="text" id="photoRefineInput" placeholder="e.g. it's salmon, not tuna">
+        <button type="button" id="photoRefineBtn">Re-analyze</button>
+      </div>
+    </div>
     <div class="data-actions">
       <button type="button" id="photoResultCancelBtn" class="secondary">Cancel</button>
       <button type="button" id="photoResultUseBtn" class="primary">Use this</button>
@@ -1047,7 +1100,7 @@ document.getElementById('errorCopyBtn').addEventListener('click', async ()=>{
   }
 });
 
-function showConfirmModal(message){
+function showConfirmModal(message, confirmLabel){
   return new Promise((resolve)=>{
     const overlay = document.getElementById('confirmOverlay');
     const msgEl = document.getElementById('confirmMsg');
@@ -1055,6 +1108,7 @@ function showConfirmModal(message){
     const deleteBtn = document.getElementById('confirmDeleteBtn');
 
     msgEl.textContent = message;
+    deleteBtn.textContent = confirmLabel || 'Delete';
     overlay.classList.add('show');
 
     function cleanup(result){
@@ -1310,7 +1364,7 @@ document.getElementById('importConfirmBtn').addEventListener('click', async ()=>
     return;
   }
 
-  const confirmed = await showConfirmModal('This replaces your current log data with the imported backup. Continue?');
+  const confirmed = await showConfirmModal('This replaces your current log data with the imported backup. Continue?', 'Import');
   if(!confirmed) return;
 
   const ok = restoreAllData(parsed);
@@ -1394,11 +1448,15 @@ async function takePhotoAndAnalyze(apiKey){
   }
 
   const mimeType = 'image/' + (photo.format || 'jpeg');
+  lastPhotoBase64 = photo.base64String;
+  lastPhotoMimeType = mimeType;
+  refinementNotes = [];
+
   document.getElementById('photoLoadingOverlay').classList.add('show');
 
   let result;
   try{
-    result = await analyzeImageWithGemini(photo.base64String, mimeType, apiKey);
+    result = await analyzeImageWithGemini(lastPhotoBase64, mimeType, apiKey, '');
   }catch(e){
     console.error('Gemini analysis failed', e);
     document.getElementById('photoLoadingOverlay').classList.remove('show');
@@ -1417,13 +1475,17 @@ async function takePhotoAndAnalyze(apiKey){
   showPhotoResult(result);
 }
 
-async function analyzeImageWithGemini(base64Data, mimeType, apiKey){
+async function analyzeImageWithGemini(base64Data, mimeType, apiKey, extraContext){
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
 
-  const prompt = 'You are a nutrition estimation assistant. Look at this food photo and identify the food. ' +
+  let prompt = 'You are a nutrition estimation assistant. Look at this food photo and identify the food. ' +
     'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' +
     '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number}. ' +
     'Give your best realistic estimate even if you are not fully certain what the food is.';
+
+  if(extraContext){
+    prompt += ' The user has provided corrections or additional context to improve accuracy — treat this as more reliable than your own visual guess: "' + extraContext + '". Update your estimate accordingly.';
+  }
 
   const body = {
     contents: [{
@@ -1491,8 +1553,11 @@ async function analyzeImageWithGemini(base64Data, mimeType, apiKey){
 }
 
 let lastPhotoResult = null;
+let lastPhotoBase64 = null;
+let lastPhotoMimeType = null;
+let refinementNotes = [];
 
-function showPhotoResult(result){
+function showPhotoResult(result, presetGrams){
   lastPhotoResult = result;
   const body = document.getElementById('photoResultBody');
   body.innerHTML = `
@@ -1506,19 +1571,27 @@ function showPhotoResult(result){
     </div>
     <div class="photo-grams-field">
       <label for="photoGramsInput">Serving size (g)</label>
-      <input type="number" id="photoGramsInput" min="0" step="1" placeholder="e.g. 150">
+      <input type="number" id="photoGramsInput" min="0" step="1" placeholder="e.g. 150" value="${presetGrams ? escapeHtml(String(presetGrams)) : ''}">
     </div>
   `;
+  document.getElementById('photoRefineInput').value = '';
   document.getElementById('photoResultOverlay').classList.add('show');
   setTimeout(()=>{
     const gramsInput = document.getElementById('photoGramsInput');
-    if(gramsInput) gramsInput.focus();
+    if(gramsInput && !presetGrams) gramsInput.focus();
   }, 50);
+}
+
+function resetPhotoState(){
+  lastPhotoResult = null;
+  lastPhotoBase64 = null;
+  lastPhotoMimeType = null;
+  refinementNotes = [];
 }
 
 document.getElementById('photoResultCancelBtn').addEventListener('click', ()=>{
   document.getElementById('photoResultOverlay').classList.remove('show');
-  lastPhotoResult = null;
+  resetPhotoState();
 });
 
 document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
@@ -1541,13 +1614,70 @@ document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
   document.getElementById('fFat').value = roundNum(lastPhotoResult.fatPer100 * scale);
 
   document.getElementById('photoResultOverlay').classList.remove('show');
-  lastPhotoResult = null;
+  resetPhotoState();
 
   showToast('Filled in — review and tap Add to log');
   const nameField = document.getElementById('fName');
   if(typeof nameField.scrollIntoView === 'function'){
     nameField.scrollIntoView({behavior:'smooth', block:'center'});
   }
+});
+
+document.getElementById('photoRefineBtn').addEventListener('click', async ()=>{
+  const note = document.getElementById('photoRefineInput').value.trim();
+  if(!note){
+    showToast('Type a note first');
+    return;
+  }
+  if(!lastPhotoBase64){
+    showToast('No photo to re-analyze — take a new photo');
+    return;
+  }
+
+  const apiKey = getGeminiKey();
+  if(!apiKey){
+    showToast('Set your Gemini API key first');
+    return;
+  }
+
+  const gramsInput = document.getElementById('photoGramsInput');
+  const preservedGrams = gramsInput ? gramsInput.value : '';
+
+  refinementNotes.push(note);
+  const combinedNote = refinementNotes.join('; ');
+
+  const refineBtn = document.getElementById('photoRefineBtn');
+  refineBtn.disabled = true;
+  refineBtn.textContent = '…';
+
+  document.getElementById('photoResultOverlay').classList.remove('show');
+  document.getElementById('photoLoadingOverlay').classList.add('show');
+
+  let result;
+  try{
+    result = await analyzeImageWithGemini(lastPhotoBase64, lastPhotoMimeType, apiKey, combinedNote);
+  }catch(e){
+    console.error('Gemini re-analysis failed', e);
+    document.getElementById('photoLoadingOverlay').classList.remove('show');
+    refineBtn.disabled = false;
+    refineBtn.textContent = 'Re-analyze';
+    const detail = (e && e.message) ? e.message : 'Unknown error';
+    showErrorModal(detail);
+    return;
+  }
+
+  document.getElementById('photoLoadingOverlay').classList.remove('show');
+  refineBtn.disabled = false;
+  refineBtn.textContent = 'Re-analyze';
+
+  if(!result){
+    showToast('Could not re-analyze that photo');
+    document.getElementById('photoResultOverlay').classList.add('show');
+    return;
+  }
+
+  showPhotoResult(result, preservedGrams);
+  showToast('Updated based on your note');
 });
 
 (async function init(){
