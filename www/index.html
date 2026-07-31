@@ -312,21 +312,57 @@ body{
   padding:9px;
 }
 .photo-refine-row input:focus{outline:none;border-color:var(--accent);}
-.photo-refine-row button{
-  flex-shrink:0;
+.photo-refine-actions{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+}
+.photo-refine-actions button{
+  flex:1;
   background:none;
   border:1px solid var(--accent);
   color:var(--accent);
   font-family:'Space Mono',monospace;
   font-size:11px;
-  padding:0 12px;
+  padding:9px 6px;
   cursor:pointer;
 }
-.photo-refine-row button:hover{background:var(--accent);color:#141210;}
-.photo-refine-row button:disabled{
+.photo-refine-actions button:hover{background:var(--accent);color:#141210;}
+.photo-refine-actions button:disabled{
   border-color:var(--hair);
   color:var(--ink-soft);
   cursor:not-allowed;
+  background:none;
+}
+.photo-ask-answer{
+  margin-top:10px;
+  padding:10px;
+  border:1px solid var(--hair);
+  background:#0D0D0D;
+  font-size:13px;
+  color:var(--ink);
+  line-height:1.4;
+}
+
+.ask-gemini-row{
+  display:flex;
+  gap:8px;
+}
+.ask-gemini-row input{
+  flex:1;
+  min-width:0;
+  background:var(--panel);
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  padding:9px;
+}
+.ask-gemini-row input:focus{outline:none;border-color:var(--accent);}
+.ask-gemini-row .backup-btn{
+  flex-shrink:0;
+  width:auto;
+  padding:0 16px;
 }
 
 /* ---- Header ---- */
@@ -642,6 +678,25 @@ body{
   color:var(--ink);
 }
 .field input:focus, .field select:focus{outline:none;border-color:var(--accent);}
+
+.serving-preview{
+  border:1px solid var(--hair);
+  padding:10px 12px;
+  margin-bottom:12px;
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  color:var(--ink-soft);
+  text-align:center;
+}
+.serving-preview .total-cal{
+  font-family:'Archivo Black',sans-serif;
+  font-size:16px;
+  color:var(--accent);
+}
+.serving-preview .total-macros{
+  color:var(--ink);
+}
+
 .submit-btn{
   width:100%;
   padding:12px;
@@ -746,22 +801,23 @@ body{
         <input type="number" id="fGrams" min="0" step="1" placeholder="0">
       </div>
       <div class="field">
-        <label for="fCal">Calories</label>
+        <label for="fCal">Calories per 100g</label>
         <input type="number" id="fCal" min="0" step="1" placeholder="0">
       </div>
       <div class="field">
-        <label for="fProtein">Protein (g)</label>
+        <label for="fProtein">Protein per 100g (g)</label>
         <input type="number" id="fProtein" min="0" step="1" placeholder="0">
       </div>
       <div class="field">
-        <label for="fCarbs">Carbs (g)</label>
+        <label for="fCarbs">Carbs per 100g (g)</label>
         <input type="number" id="fCarbs" min="0" step="1" placeholder="0">
       </div>
       <div class="field">
-        <label for="fFat">Fat (g)</label>
+        <label for="fFat">Fat per 100g (g)</label>
         <input type="number" id="fFat" min="0" step="1" placeholder="0">
       </div>
     </div>
+    <div class="serving-preview" id="servingPreview">Enter serving size and per-100g values to see the total</div>
     <button type="button" class="submit-btn" id="addBtn">Add to log</button>
   </div>
 
@@ -772,6 +828,16 @@ body{
       <button type="button" id="photoBtn" class="backup-btn">📷 Take photo</button>
       <button type="button" id="apiKeyBtn" class="backup-btn">API key</button>
     </div>
+  </div>
+
+  <div class="backup-section">
+    <span class="eyebrow">Ask Gemini</span>
+    <p class="backup-desc">Describe a food for a macro estimate, or ask a direct question (e.g. "how many grams is a Snickers bar?").</p>
+    <div class="ask-gemini-row">
+      <input type="text" id="askGeminiInput" placeholder="e.g. Snickers bar, or 'how many grams is a Snickers bar?'">
+      <button type="button" id="askGeminiBtn" class="backup-btn">Ask</button>
+    </div>
+    <div class="photo-ask-answer" id="askGeminiAnswer" style="display:none;"></div>
   </div>
 
   <div class="backup-section">
@@ -807,14 +873,18 @@ body{
 
 <div class="data-overlay" id="photoResultOverlay">
   <div class="data-box">
-    <div class="data-title">Photo analysis</div>
+    <div class="data-title" id="photoResultTitle">Photo analysis</div>
     <div id="photoResultBody"></div>
     <div class="photo-refine-field">
-      <label for="photoRefineInput">Not quite right? Add a note and re-analyze</label>
+      <label for="photoRefineInput">Correction, or a question (e.g. "it's salmon" or "how many grams is this?")</label>
       <div class="photo-refine-row">
-        <input type="text" id="photoRefineInput" placeholder="e.g. it's salmon, not tuna">
-        <button type="button" id="photoRefineBtn">Re-analyze</button>
+        <input type="text" id="photoRefineInput" placeholder="Type here">
       </div>
+      <div class="photo-refine-actions">
+        <button type="button" id="photoRefineBtn">Re-analyze macros</button>
+        <button type="button" id="photoAskBtn">Ask a question</button>
+      </div>
+      <div class="photo-ask-answer" id="photoAskAnswer" style="display:none;"></div>
     </div>
     <div class="data-actions">
       <button type="button" id="photoResultCancelBtn" class="secondary">Cancel</button>
@@ -1130,15 +1200,23 @@ function showConfirmModal(message, confirmLabel){
 
 function enterEditMode(item){
   editingId = item.id;
+  const grams = item.grams || 0;
+  // Prefer stored per-100g values; fall back to reverse-calculating from the total for entries saved before this feature existed
+  const calPer100 = (item.calPer100 !== undefined) ? item.calPer100 : (grams > 0 ? roundNum((item.calories||0) / (grams/100)) : (item.calories||0));
+  const proteinPer100 = (item.proteinPer100 !== undefined) ? item.proteinPer100 : (grams > 0 ? roundNum((item.protein||0) / (grams/100)) : (item.protein||0));
+  const carbsPer100 = (item.carbsPer100 !== undefined) ? item.carbsPer100 : (grams > 0 ? roundNum((item.carbs||0) / (grams/100)) : (item.carbs||0));
+  const fatPer100 = (item.fatPer100 !== undefined) ? item.fatPer100 : (grams > 0 ? roundNum((item.fat||0) / (grams/100)) : (item.fat||0));
+
   document.getElementById('fName').value = item.name;
-  document.getElementById('fGrams').value = item.grams || '';
-  document.getElementById('fCal').value = item.calories;
-  document.getElementById('fProtein').value = item.protein || '';
-  document.getElementById('fCarbs').value = item.carbs || '';
-  document.getElementById('fFat').value = item.fat || '';
+  document.getElementById('fGrams').value = grams || '';
+  document.getElementById('fCal').value = calPer100 || '';
+  document.getElementById('fProtein').value = proteinPer100 || '';
+  document.getElementById('fCarbs').value = carbsPer100 || '';
+  document.getElementById('fFat').value = fatPer100 || '';
   document.getElementById('formEyebrow').textContent = 'Edit food';
   document.getElementById('addBtn').textContent = 'Save changes';
   document.getElementById('cancelEditBtn').style.display = 'inline';
+  updateServingPreview();
   const nameField = document.getElementById('fName');
   if(typeof nameField.scrollIntoView === 'function'){
     nameField.scrollIntoView({behavior:'smooth', block:'center'});
@@ -1157,6 +1235,7 @@ function exitEditMode(){
   document.getElementById('fProtein').value = '';
   document.getElementById('fCarbs').value = '';
   document.getElementById('fFat').value = '';
+  updateServingPreview();
 }
 
 function escapeHtml(str){
@@ -1208,19 +1287,60 @@ document.getElementById('goalInput').addEventListener('change', async (e)=>{
   render();
 });
 
+function computeScaledTotals(grams, calPer100, proteinPer100, carbsPer100, fatPer100){
+  const scale = grams > 0 ? grams / 100 : 0;
+  return {
+    calories: Math.round((Number(calPer100)||0) * scale),
+    protein: roundNum((Number(proteinPer100)||0) * scale),
+    carbs: roundNum((Number(carbsPer100)||0) * scale),
+    fat: roundNum((Number(fatPer100)||0) * scale)
+  };
+}
+
+function updateServingPreview(){
+  const preview = document.getElementById('servingPreview');
+  const grams = Number(document.getElementById('fGrams').value) || 0;
+  const cal = document.getElementById('fCal').value;
+  const protein = document.getElementById('fProtein').value;
+  const carbs = document.getElementById('fCarbs').value;
+  const fat = document.getElementById('fFat').value;
+
+  if(grams <= 0 || cal === ''){
+    preview.textContent = 'Enter serving size and per-100g values to see the total';
+    return;
+  }
+
+  const totals = computeScaledTotals(grams, cal, protein, carbs, fat);
+  preview.innerHTML = `Total for ${grams}g: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g</span>`;
+}
+
+['fGrams','fCal','fProtein','fCarbs','fFat'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updateServingPreview);
+});
+
 document.getElementById('addBtn').addEventListener('click', function(){
   try{
     const name = document.getElementById('fName').value.trim();
-    const grams = document.getElementById('fGrams').value;
+    const grams = Number(document.getElementById('fGrams').value) || 0;
     const cal = document.getElementById('fCal').value;
     const protein = document.getElementById('fProtein').value;
     const carbs = document.getElementById('fCarbs').value;
     const fat = document.getElementById('fFat').value;
 
-    if(!name || cal === ''){
-      document.getElementById(!name ? 'fName' : 'fCal').focus();
+    if(!name || cal === '' || grams <= 0){
+      const targetId = !name ? 'fName' : (cal === '' ? 'fCal' : 'fGrams');
+      document.getElementById(targetId).focus();
+      if(grams <= 0 && name && cal !== '') showToast('Enter a serving size in grams');
       return;
     }
+
+    const totals = computeScaledTotals(grams, cal, protein, carbs, fat);
+    const per100g = {
+      calPer100: Number(cal)||0,
+      proteinPer100: Number(protein)||0,
+      carbsPer100: Number(carbs)||0,
+      fatPer100: Number(fat)||0
+    };
 
     if(editingId){
       const idx = currentEntries.findIndex(e=>e.id === editingId);
@@ -1228,11 +1348,12 @@ document.getElementById('addBtn').addEventListener('click', function(){
         currentEntries[idx] = {
           ...currentEntries[idx],
           name,
-          grams: Number(grams)||0,
-          calories: Number(cal)||0,
-          protein: Number(protein)||0,
-          carbs: Number(carbs)||0,
-          fat: Number(fat)||0
+          grams,
+          ...per100g,
+          calories: totals.calories,
+          protein: totals.protein,
+          carbs: totals.carbs,
+          fat: totals.fat
         };
       }
       exitEditMode();
@@ -1244,11 +1365,12 @@ document.getElementById('addBtn').addEventListener('click', function(){
     const entry = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
       name,
-      grams: Number(grams)||0,
-      calories: Number(cal)||0,
-      protein: Number(protein)||0,
-      carbs: Number(carbs)||0,
-      fat: Number(fat)||0
+      grams,
+      ...per100g,
+      calories: totals.calories,
+      protein: totals.protein,
+      carbs: totals.carbs,
+      fat: totals.fat
     };
 
     currentEntries.push(entry);
@@ -1262,6 +1384,7 @@ document.getElementById('addBtn').addEventListener('click', function(){
     document.getElementById('fCarbs').value = '';
     document.getElementById('fFat').value = '';
     document.getElementById('fName').focus();
+    updateServingPreview();
   }catch(err){
     console.error('Add to log failed', err);
   }
@@ -1419,10 +1542,63 @@ document.getElementById('photoBtn').addEventListener('click', async ()=>{
     document.getElementById('apiKeyOverlay').classList.add('show');
     return;
   }
-  await takePhotoAndAnalyze(key);
+  await takePhotoAndAnalyze();
 });
 
-async function takePhotoAndAnalyze(apiKey){
+function looksLikeAQuestion(text){
+  if(text.indexOf('?') !== -1) return true;
+  return /\b(gram|grams|weigh|weighs|weight|how many|how much)\b/i.test(text);
+}
+
+document.getElementById('askGeminiBtn').addEventListener('click', async ()=>{
+  const key = getGeminiKey();
+  if(!key){
+    showToast('Set your Gemini API key first');
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiKeyOverlay').classList.add('show');
+    return;
+  }
+  const input = document.getElementById('askGeminiInput').value.trim();
+  if(!input){
+    showToast('Type a food or a question first');
+    return;
+  }
+
+  if(looksLikeAQuestion(input)){
+    await askGeminiDirectQuestion(input);
+  } else {
+    await askGeminiTextQuery(input);
+  }
+});
+
+async function askGeminiDirectQuestion(question){
+  const askBtn = document.getElementById('askGeminiBtn');
+  const answerBox = document.getElementById('askGeminiAnswer');
+  askBtn.disabled = true;
+  const originalLabel = askBtn.textContent;
+  askBtn.textContent = '…';
+
+  const prompt = 'Answer this food/nutrition question directly, concisely, and in plain text (not JSON, not markdown): "' + question + '"';
+
+  let answer;
+  try{
+    answer = await callGeminiRaw([{text: prompt}], false);
+  }catch(e){
+    console.error('Gemini question failed', e);
+    askBtn.disabled = false;
+    askBtn.textContent = originalLabel;
+    showErrorModal((e && e.message) ? e.message : 'Unknown error');
+    return;
+  }
+
+  askBtn.disabled = false;
+  askBtn.textContent = originalLabel;
+  answerBox.textContent = answer.trim();
+  answerBox.style.display = 'block';
+  // No macro fields or serving size are touched here — this is just a direct answer.
+}
+
+async function takePhotoAndAnalyze(){
   const CapCamera = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
   if(!CapCamera){
     showToast('Camera is only available in the installed app');
@@ -1447,21 +1623,22 @@ async function takePhotoAndAnalyze(apiKey){
     return;
   }
 
-  const mimeType = 'image/' + (photo.format || 'jpeg');
   lastPhotoBase64 = photo.base64String;
-  lastPhotoMimeType = mimeType;
+  lastPhotoMimeType = 'image/' + (photo.format || 'jpeg');
+  lastTextQuery = null;
   refinementNotes = [];
+  document.getElementById('photoAskAnswer').style.display = 'none';
+  document.getElementById('photoResultTitle').textContent = 'Photo analysis';
 
   document.getElementById('photoLoadingOverlay').classList.add('show');
 
   let result;
   try{
-    result = await analyzeImageWithGemini(lastPhotoBase64, mimeType, apiKey, '');
+    result = await requestMacroEstimate('Look at this food photo and identify the food.', '');
   }catch(e){
     console.error('Gemini analysis failed', e);
     document.getElementById('photoLoadingOverlay').classList.remove('show');
-    const detail = (e && e.message) ? e.message : 'Unknown error';
-    showErrorModal(detail);
+    showErrorModal((e && e.message) ? e.message : 'Unknown error');
     return;
   }
 
@@ -1475,29 +1652,50 @@ async function takePhotoAndAnalyze(apiKey){
   showPhotoResult(result);
 }
 
-async function analyzeImageWithGemini(base64Data, mimeType, apiKey, extraContext){
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
+async function askGeminiTextQuery(description){
+  lastPhotoBase64 = null;
+  lastPhotoMimeType = null;
+  lastTextQuery = description;
+  refinementNotes = [];
+  document.getElementById('photoAskAnswer').style.display = 'none';
+  document.getElementById('askGeminiAnswer').style.display = 'none';
+  document.getElementById('photoResultTitle').textContent = 'Estimate';
 
-  let prompt = 'You are a nutrition estimation assistant. Look at this food photo and identify the food. ' +
-    'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' +
-    '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number}. ' +
-    'Give your best realistic estimate even if you are not fully certain what the food is.';
+  document.getElementById('photoLoadingOverlay').classList.add('show');
 
-  if(extraContext){
-    prompt += ' The user has provided corrections or additional context to improve accuracy — treat this as more reliable than your own visual guess: "' + extraContext + '". Update your estimate accordingly.';
+  let result;
+  try{
+    result = await requestMacroEstimate('The user describes this food: "' + description + '". Identify it and estimate its nutrition.', '');
+  }catch(e){
+    console.error('Gemini query failed', e);
+    document.getElementById('photoLoadingOverlay').classList.remove('show');
+    showErrorModal((e && e.message) ? e.message : 'Unknown error');
+    return;
   }
 
-  const body = {
-    contents: [{
-      parts: [
-        {text: prompt},
-        {inline_data: {mime_type: mimeType, data: base64Data}}
-      ]
-    }],
-    generationConfig: {
-      responseMimeType: 'application/json'
-    }
-  };
+  document.getElementById('photoLoadingOverlay').classList.remove('show');
+
+  if(!result){
+    showToast('Could not get an estimate for that');
+    return;
+  }
+
+  document.getElementById('askGeminiInput').value = '';
+  showPhotoResult(result);
+}
+
+// Low-level call to Gemini's generateContent endpoint. Returns the raw text response.
+// jsonMode=true requests structured JSON output; jsonMode=false leaves it as free-form text.
+async function callGeminiRaw(parts, jsonMode){
+  const apiKey = getGeminiKey();
+  if(!apiKey) throw new Error('No Gemini API key set');
+
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
+
+  const body = { contents: [{ parts }] };
+  if(jsonMode){
+    body.generationConfig = { responseMimeType: 'application/json' };
+  }
 
   let res;
   try{
@@ -1531,6 +1729,10 @@ async function analyzeImageWithGemini(base64Data, mimeType, apiKey, extraContext
     throw new Error('No response text from Gemini. finishReason: ' + (finishReason || 'unknown') + '. Raw: ' + JSON.stringify(data).slice(0, 300));
   }
 
+  return text;
+}
+
+function parseMacroJSON(text){
   let cleanText = text.trim();
   if(cleanText.indexOf('```') === 0){
     cleanText = cleanText.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
@@ -1540,7 +1742,17 @@ async function analyzeImageWithGemini(base64Data, mimeType, apiKey, extraContext
   try{
     parsed = JSON.parse(cleanText);
   }catch(parseErr){
-    throw new Error('Could not parse Gemini response as JSON. Raw text: ' + cleanText.slice(0, 300));
+    const firstBrace = cleanText.indexOf('{');
+    const lastBrace = cleanText.lastIndexOf('}');
+    if(firstBrace !== -1 && lastBrace > firstBrace){
+      try{
+        parsed = JSON.parse(cleanText.slice(firstBrace, lastBrace + 1));
+      }catch(secondErr){
+        throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total). Raw text: ' + cleanText.slice(0, 1500));
+      }
+    } else {
+      throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total). Raw text: ' + cleanText.slice(0, 1500));
+    }
   }
 
   return {
@@ -1552,9 +1764,45 @@ async function analyzeImageWithGemini(base64Data, mimeType, apiKey, extraContext
   };
 }
 
+// Builds the prompt parts array, attaching the stored photo if this session started from one.
+function buildPromptParts(promptText){
+  const parts = [{text: promptText}];
+  if(lastPhotoBase64){
+    parts.push({inline_data: {mime_type: lastPhotoMimeType, data: lastPhotoBase64}});
+  }
+  return parts;
+}
+
+async function requestMacroEstimate(baseContext, extraContext){
+  let prompt = 'You are a nutrition estimation assistant. ' + baseContext + ' ' +
+    'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' +
+    '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number}. ' +
+    'Give your best realistic estimate even if you are not fully certain.';
+
+  if(extraContext){
+    prompt += ' The user has provided corrections or additional context to improve accuracy — treat this as more reliable than your own guess: "' + extraContext + '". Update your estimate accordingly.';
+  }
+
+  const rawText = await callGeminiRaw(buildPromptParts(prompt), true);
+  return parseMacroJSON(rawText);
+}
+
+async function askGeminiFreeform(question){
+  let context = '';
+  if(lastPhotoBase64){
+    context = 'Look at the attached food photo. ';
+  } else if(lastTextQuery){
+    context = 'The user previously described this food: "' + lastTextQuery + '". ';
+  }
+  const prompt = context + 'Answer the user\'s question directly, concisely, and in plain text (not JSON, not markdown). Question: "' + question + '"';
+  const rawText = await callGeminiRaw(buildPromptParts(prompt), false);
+  return rawText.trim();
+}
+
 let lastPhotoResult = null;
 let lastPhotoBase64 = null;
 let lastPhotoMimeType = null;
+let lastTextQuery = null;
 let refinementNotes = [];
 
 function showPhotoResult(result, presetGrams){
@@ -1570,11 +1818,13 @@ function showPhotoResult(result, presetGrams){
       <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
     </div>
     <div class="photo-grams-field">
-      <label for="photoGramsInput">Serving size (g)</label>
+      <label for="photoGramsInput">Serving size (g) — only needed if you want to ask "how many grams is this"</label>
       <input type="number" id="photoGramsInput" min="0" step="1" placeholder="e.g. 150" value="${presetGrams ? escapeHtml(String(presetGrams)) : ''}">
     </div>
   `;
   document.getElementById('photoRefineInput').value = '';
+  document.getElementById('photoAskAnswer').style.display = 'none';
+  document.getElementById('photoAskAnswer').textContent = '';
   document.getElementById('photoResultOverlay').classList.add('show');
   setTimeout(()=>{
     const gramsInput = document.getElementById('photoGramsInput');
@@ -1586,6 +1836,7 @@ function resetPhotoState(){
   lastPhotoResult = null;
   lastPhotoBase64 = null;
   lastPhotoMimeType = null;
+  lastTextQuery = null;
   refinementNotes = [];
 }
 
@@ -1599,24 +1850,19 @@ document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
   const gramsInput = document.getElementById('photoGramsInput');
   const grams = Number(gramsInput && gramsInput.value) || 0;
 
-  if(grams <= 0){
-    showToast('Enter a serving size first');
-    if(gramsInput) gramsInput.focus();
-    return;
-  }
-
-  const scale = grams / 100;
+  // Fields now hold per-100g values, matching the manual entry form
   document.getElementById('fName').value = lastPhotoResult.name;
-  document.getElementById('fGrams').value = grams;
-  document.getElementById('fCal').value = Math.round(lastPhotoResult.calPer100 * scale);
-  document.getElementById('fProtein').value = roundNum(lastPhotoResult.proteinPer100 * scale);
-  document.getElementById('fCarbs').value = roundNum(lastPhotoResult.carbsPer100 * scale);
-  document.getElementById('fFat').value = roundNum(lastPhotoResult.fatPer100 * scale);
+  document.getElementById('fGrams').value = grams || '';
+  document.getElementById('fCal').value = roundNum(lastPhotoResult.calPer100);
+  document.getElementById('fProtein').value = roundNum(lastPhotoResult.proteinPer100);
+  document.getElementById('fCarbs').value = roundNum(lastPhotoResult.carbsPer100);
+  document.getElementById('fFat').value = roundNum(lastPhotoResult.fatPer100);
+  updateServingPreview();
 
   document.getElementById('photoResultOverlay').classList.remove('show');
   resetPhotoState();
 
-  showToast('Filled in — review and tap Add to log');
+  showToast(grams > 0 ? 'Filled in — review and tap Add to log' : 'Filled in — enter your serving size, then tap Add to log');
   const nameField = document.getElementById('fName');
   if(typeof nameField.scrollIntoView === 'function'){
     nameField.scrollIntoView({behavior:'smooth', block:'center'});
@@ -1629,14 +1875,8 @@ document.getElementById('photoRefineBtn').addEventListener('click', async ()=>{
     showToast('Type a note first');
     return;
   }
-  if(!lastPhotoBase64){
-    showToast('No photo to re-analyze — take a new photo');
-    return;
-  }
-
-  const apiKey = getGeminiKey();
-  if(!apiKey){
-    showToast('Set your Gemini API key first');
+  if(!lastPhotoBase64 && !lastTextQuery){
+    showToast('Nothing to re-analyze — take a photo or ask about a food first');
     return;
   }
 
@@ -1647,37 +1887,85 @@ document.getElementById('photoRefineBtn').addEventListener('click', async ()=>{
   const combinedNote = refinementNotes.join('; ');
 
   const refineBtn = document.getElementById('photoRefineBtn');
+  const askBtn = document.getElementById('photoAskBtn');
   refineBtn.disabled = true;
+  askBtn.disabled = true;
   refineBtn.textContent = '…';
 
   document.getElementById('photoResultOverlay').classList.remove('show');
   document.getElementById('photoLoadingOverlay').classList.add('show');
 
+  const baseContext = lastPhotoBase64
+    ? 'Look at this food photo and identify the food.'
+    : 'The user describes this food: "' + lastTextQuery + '". Identify it and estimate its nutrition.';
+
   let result;
   try{
-    result = await analyzeImageWithGemini(lastPhotoBase64, lastPhotoMimeType, apiKey, combinedNote);
+    result = await requestMacroEstimate(baseContext, combinedNote);
   }catch(e){
     console.error('Gemini re-analysis failed', e);
     document.getElementById('photoLoadingOverlay').classList.remove('show');
     refineBtn.disabled = false;
-    refineBtn.textContent = 'Re-analyze';
-    const detail = (e && e.message) ? e.message : 'Unknown error';
-    showErrorModal(detail);
+    askBtn.disabled = false;
+    refineBtn.textContent = 'Re-analyze macros';
+    showErrorModal((e && e.message) ? e.message : 'Unknown error');
     return;
   }
 
   document.getElementById('photoLoadingOverlay').classList.remove('show');
   refineBtn.disabled = false;
-  refineBtn.textContent = 'Re-analyze';
+  askBtn.disabled = false;
+  refineBtn.textContent = 'Re-analyze macros';
 
   if(!result){
-    showToast('Could not re-analyze that photo');
+    showToast('Could not re-analyze that');
     document.getElementById('photoResultOverlay').classList.add('show');
     return;
   }
 
   showPhotoResult(result, preservedGrams);
   showToast('Updated based on your note');
+});
+
+document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
+  const question = document.getElementById('photoRefineInput').value.trim();
+  if(!question){
+    showToast('Type a question first');
+    return;
+  }
+  if(!lastPhotoBase64 && !lastTextQuery){
+    showToast('Nothing to ask about yet');
+    return;
+  }
+
+  const refineBtn = document.getElementById('photoRefineBtn');
+  const askBtn = document.getElementById('photoAskBtn');
+  const originalLabel = askBtn.textContent;
+  refineBtn.disabled = true;
+  askBtn.disabled = true;
+  askBtn.textContent = '…';
+
+  let answer;
+  try{
+    answer = await askGeminiFreeform(question);
+  }catch(e){
+    console.error('Gemini question failed', e);
+    refineBtn.disabled = false;
+    askBtn.disabled = false;
+    askBtn.textContent = originalLabel;
+    showErrorModal((e && e.message) ? e.message : 'Unknown error');
+    return;
+  }
+
+  refineBtn.disabled = false;
+  askBtn.disabled = false;
+  askBtn.textContent = originalLabel;
+
+  const answerBox = document.getElementById('photoAskAnswer');
+  answerBox.textContent = answer;
+  answerBox.style.display = 'block';
+  // This intentionally does NOT touch the grams field or any macro field —
+  // it's just information, not something that gets auto-filled in.
 });
 
 (async function init(){
