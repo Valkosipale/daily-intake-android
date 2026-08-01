@@ -196,12 +196,31 @@ body{
   color:var(--ink);
   margin-bottom:2px;
 }
-.multi-photo-per100{
-  font-family:'Space Mono',monospace;
-  font-size:10px;
-  color:var(--ink-soft);
-  margin-bottom:6px;
+.multi-photo-macro-grid{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:5px;
+  margin-bottom:8px;
 }
+.multi-photo-macro-grid label{
+  display:block;
+  font-family:'Space Mono',monospace;
+  font-size:8px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:0.3px;
+  margin-bottom:2px;
+}
+.multi-photo-macro-grid input{
+  width:100%;
+  background:#0D0D0D;
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Inter',sans-serif;
+  font-size:11px;
+  padding:5px 4px;
+}
+.multi-photo-macro-grid input:focus{outline:none;border-color:var(--accent);}
 .multi-photo-grams-row{
   display:flex;
   align-items:center;
@@ -351,6 +370,9 @@ body{
   padding:10px 4px;
   margin-bottom:14px;
 }
+.photo-result-macros div{
+  min-width:0;
+}
 .photo-result-macros div span{
   display:block;
   font-family:'Inter',sans-serif;
@@ -359,6 +381,7 @@ body{
   font-weight:700;
   text-transform:none;
   margin-top:2px;
+  word-break:break-word;
 }
 .photo-grams-field label{
   font-family:'Space Mono',monospace;
@@ -819,6 +842,8 @@ body{
 @media (max-width:400px){
   .facts-row .value.big{font-size:28px;}
   .add-grid{grid-template-columns:1fr;}
+  .multi-photo-macro-grid{grid-template-columns:repeat(2, 1fr);}
+  .multi-photo-thumb{width:40px;height:40px;}
 }
 </style>
 </head>
@@ -888,34 +913,36 @@ body{
       <span class="eyebrow" id="formEyebrow">Log food</span>
       <button type="button" id="cancelEditBtn" class="cancel-edit" style="display:none;">Cancel edit</button>
     </div>
-    <div class="add-grid">
-      <div class="field full">
-        <label for="fName">Food</label>
-        <input type="text" id="fName" placeholder="e.g. Grilled chicken breast">
+    <form id="addFoodForm">
+      <div class="add-grid">
+        <div class="field full">
+          <label for="fName">Food</label>
+          <input type="text" id="fName" placeholder="e.g. Grilled chicken breast">
+        </div>
+        <div class="field full">
+          <label for="fGrams">Serving size (g)</label>
+          <input type="number" id="fGrams" min="0" step="1" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="fCal">Calories per 100g</label>
+          <input type="number" id="fCal" min="0" step="1" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="fProtein">Protein per 100g (g)</label>
+          <input type="number" id="fProtein" min="0" step="1" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="fCarbs">Carbs per 100g (g)</label>
+          <input type="number" id="fCarbs" min="0" step="1" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="fFat">Fat per 100g (g)</label>
+          <input type="number" id="fFat" min="0" step="1" placeholder="0">
+        </div>
       </div>
-      <div class="field full">
-        <label for="fGrams">Serving size (g)</label>
-        <input type="number" id="fGrams" min="0" step="1" placeholder="0">
-      </div>
-      <div class="field">
-        <label for="fCal">Calories per 100g</label>
-        <input type="number" id="fCal" min="0" step="1" placeholder="0">
-      </div>
-      <div class="field">
-        <label for="fProtein">Protein per 100g (g)</label>
-        <input type="number" id="fProtein" min="0" step="1" placeholder="0">
-      </div>
-      <div class="field">
-        <label for="fCarbs">Carbs per 100g (g)</label>
-        <input type="number" id="fCarbs" min="0" step="1" placeholder="0">
-      </div>
-      <div class="field">
-        <label for="fFat">Fat per 100g (g)</label>
-        <input type="number" id="fFat" min="0" step="1" placeholder="0">
-      </div>
-    </div>
-    <div class="serving-preview" id="servingPreview">Enter serving size and per-100g values to see the total</div>
-    <button type="button" class="submit-btn" id="addBtn">Add to log</button>
+      <div class="serving-preview" id="servingPreview">Enter serving size and per-100g values to see the total</div>
+      <button type="submit" class="submit-btn" id="addBtn">Add to log</button>
+    </form>
   </div>
 
   <div class="backup-section">
@@ -985,7 +1012,7 @@ body{
 <div class="data-overlay" id="photoLoadingOverlay">
   <div class="data-box photo-loading-box">
     <div class="spinner"></div>
-    <div class="data-title" style="margin-top:14px;">Analyzing photo…</div>
+    <div class="data-title" id="photoLoadingTitle" style="margin-top:14px;">Analyzing photo…</div>
     <p class="data-desc">This can take a few seconds.</p>
   </div>
 </div>
@@ -1437,7 +1464,8 @@ function updateServingPreview(){
   document.getElementById(id).addEventListener('input', updateServingPreview);
 });
 
-document.getElementById('addBtn').addEventListener('click', function(){
+document.getElementById('addFoodForm').addEventListener('submit', function(e){
+  e.preventDefault();
   try{
     const name = document.getElementById('fName').value.trim();
     const grams = Number(document.getElementById('fGrams').value) || 0;
@@ -1507,16 +1535,6 @@ document.getElementById('addBtn').addEventListener('click', function(){
   }catch(err){
     console.error('Add to log failed', err);
   }
-});
-
-// Allow Enter key in the name/cal fields to submit
-['fName','fGrams','fCal','fProtein','fCarbs','fFat'].forEach(id=>{
-  document.getElementById(id).addEventListener('keydown', (e)=>{
-    if(e.key === 'Enter'){
-      e.preventDefault();
-      document.getElementById('addBtn').click();
-    }
-  });
 });
 
 document.getElementById('cancelEditBtn').addEventListener('click', ()=>{
@@ -1664,6 +1682,15 @@ document.getElementById('photoBtn').addEventListener('click', async ()=>{
   await takePhotoAndAnalyze();
 });
 
+function showLoadingOverlay(text){
+  document.getElementById('photoLoadingTitle').textContent = text || 'Analyzing…';
+  document.getElementById('photoLoadingOverlay').classList.add('show');
+}
+
+function hideLoadingOverlay(){
+  document.getElementById('photoLoadingOverlay').classList.remove('show');
+}
+
 function mentionsWeight(text){
   return /\b(gram|grams|weigh|weighs|weight|how many grams|how much does)\b/i.test(text);
 }
@@ -1723,19 +1750,19 @@ async function takePhotoAndAnalyze(){
   document.getElementById('photoAskAnswer').style.display = 'none';
   document.getElementById('photoResultTitle').textContent = 'Photo analysis';
 
-  document.getElementById('photoLoadingOverlay').classList.add('show');
+  showLoadingOverlay('Analyzing photo…');
 
   let result;
   try{
     result = await requestMacroEstimate('Look at this food photo and identify the food.', '');
   }catch(e){
     console.error('Gemini analysis failed', e);
-    document.getElementById('photoLoadingOverlay').classList.remove('show');
+    hideLoadingOverlay();
     showErrorModal((e && e.message) ? e.message : 'Unknown error');
     return;
   }
 
-  document.getElementById('photoLoadingOverlay').classList.remove('show');
+  hideLoadingOverlay();
 
   if(!result){
     showToast('Could not analyze that photo');
@@ -1754,19 +1781,19 @@ async function askGeminiTextQuery(description){
   document.getElementById('askGeminiAnswer').style.display = 'none';
   document.getElementById('photoResultTitle').textContent = 'Estimate';
 
-  document.getElementById('photoLoadingOverlay').classList.add('show');
+  showLoadingOverlay('Getting estimate…');
 
   let result;
   try{
     result = await requestMacroEstimate('The user describes this food: "' + description + '". Identify it and estimate its nutrition.', '');
   }catch(e){
     console.error('Gemini query failed', e);
-    document.getElementById('photoLoadingOverlay').classList.remove('show');
+    hideLoadingOverlay();
     showErrorModal((e && e.message) ? e.message : 'Unknown error');
     return;
   }
 
-  document.getElementById('photoLoadingOverlay').classList.remove('show');
+  hideLoadingOverlay();
 
   if(!result){
     showToast('Could not get an estimate for that');
@@ -1949,7 +1976,7 @@ document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>
   }
 
   const mimeType = 'image/' + (photo.format || 'jpeg');
-  document.getElementById('photoLoadingOverlay').classList.add('show');
+  showLoadingOverlay('Analyzing photo…');
 
   let result;
   try{
@@ -1962,12 +1989,12 @@ document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>
     result = parseMacroJSON(rawText);
   }catch(e){
     console.error('Gemini analysis failed', e);
-    document.getElementById('photoLoadingOverlay').classList.remove('show');
+    hideLoadingOverlay();
     showErrorModal((e && e.message) ? e.message : 'Unknown error');
     return;
   }
 
-  document.getElementById('photoLoadingOverlay').classList.remove('show');
+  hideLoadingOverlay();
 
   multiPhotoItems.push({
     id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
@@ -2016,7 +2043,24 @@ function renderMultiPhotoList(){
       <img class="multi-photo-thumb" src="${item.thumbnail}" alt="">
       <div class="multi-photo-info">
         <div class="multi-photo-name">${escapeHtml(item.name)}</div>
-        <div class="multi-photo-per100">${roundNum(item.calPer100)} cal · P${roundNum(item.proteinPer100)}g · C${roundNum(item.carbsPer100)}g · F${roundNum(item.fatPer100)}g per 100g</div>
+        <div class="multi-photo-macro-grid">
+          <div>
+            <label>Cal/100g</label>
+            <input type="number" class="mp-cal-input" data-id="${item.id}" min="0" step="1" value="${roundNum(item.calPer100)}">
+          </div>
+          <div>
+            <label>Prot/100g</label>
+            <input type="number" class="mp-protein-input" data-id="${item.id}" min="0" step="1" value="${roundNum(item.proteinPer100)}">
+          </div>
+          <div>
+            <label>Carb/100g</label>
+            <input type="number" class="mp-carbs-input" data-id="${item.id}" min="0" step="1" value="${roundNum(item.carbsPer100)}">
+          </div>
+          <div>
+            <label>Fat/100g</label>
+            <input type="number" class="mp-fat-input" data-id="${item.id}" min="0" step="1" value="${roundNum(item.fatPer100)}">
+          </div>
+        </div>
         <div class="multi-photo-grams-row">
           <input type="number" class="multi-photo-grams-input" data-id="${item.id}" min="0" step="1" placeholder="grams" value="${item.grams || ''}">
           <span class="multi-photo-subtotal">${g > 0 ? subtotalCal + ' cal' : ''}</span>
@@ -2027,17 +2071,62 @@ function renderMultiPhotoList(){
     list.appendChild(row);
   });
 
+  function refreshRowSubtotal(id){
+    const item = multiPhotoItems.find(i=>i.id === id);
+    if(!item) return;
+    const g = Number(item.grams) || 0;
+    const subtotalCal = Math.round(item.calPer100 * (g/100));
+    const row = list.querySelector(`.multi-photo-item .multi-photo-grams-input[data-id="${id}"]`).closest('.multi-photo-item');
+    row.querySelector('.multi-photo-subtotal').textContent = g > 0 ? subtotalCal + ' cal' : '';
+  }
+
   list.querySelectorAll('.multi-photo-grams-input').forEach(input=>{
     input.addEventListener('input', ()=>{
       const id = input.getAttribute('data-id');
       const item = multiPhotoItems.find(i=>i.id === id);
       if(item){
         item.grams = input.value;
-        const g = Number(item.grams) || 0;
-        const subtotalCal = Math.round(item.calPer100 * (g/100));
-        const row = input.closest('.multi-photo-item');
-        row.querySelector('.multi-photo-subtotal').textContent = g > 0 ? subtotalCal + ' cal' : '';
+        refreshRowSubtotal(id);
       }
+      updateMultiPhotoTotalDisplay();
+    });
+  });
+
+  list.querySelectorAll('.mp-cal-input').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const id = input.getAttribute('data-id');
+      const item = multiPhotoItems.find(i=>i.id === id);
+      if(item){
+        item.calPer100 = Number(input.value) || 0;
+        refreshRowSubtotal(id);
+      }
+      updateMultiPhotoTotalDisplay();
+    });
+  });
+
+  list.querySelectorAll('.mp-protein-input').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const id = input.getAttribute('data-id');
+      const item = multiPhotoItems.find(i=>i.id === id);
+      if(item) item.proteinPer100 = Number(input.value) || 0;
+      updateMultiPhotoTotalDisplay();
+    });
+  });
+
+  list.querySelectorAll('.mp-carbs-input').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const id = input.getAttribute('data-id');
+      const item = multiPhotoItems.find(i=>i.id === id);
+      if(item) item.carbsPer100 = Number(input.value) || 0;
+      updateMultiPhotoTotalDisplay();
+    });
+  });
+
+  list.querySelectorAll('.mp-fat-input').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const id = input.getAttribute('data-id');
+      const item = multiPhotoItems.find(i=>i.id === id);
+      if(item) item.fatPer100 = Number(input.value) || 0;
       updateMultiPhotoTotalDisplay();
     });
   });
@@ -2120,7 +2209,7 @@ function showPhotoResult(result, presetGrams){
     <div class="photo-result-note">Estimated values, per 100g. Enter your actual serving size below to fill in the log.</div>
     <div class="photo-result-macros">
       <div>Cal<span>${roundNum(result.calPer100)}</span></div>
-      <div>Protein<span>${roundNum(result.proteinPer100)}g</span></div>
+      <div>Prot<span>${roundNum(result.proteinPer100)}g</span></div>
       <div>Carbs<span>${roundNum(result.carbsPer100)}g</span></div>
       <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
     </div>
@@ -2201,7 +2290,7 @@ document.getElementById('photoRefineBtn').addEventListener('click', async ()=>{
   refineBtn.textContent = '…';
 
   document.getElementById('photoResultOverlay').classList.remove('show');
-  document.getElementById('photoLoadingOverlay').classList.add('show');
+  showLoadingOverlay('Re-analyzing…');
 
   const baseContext = lastPhotoBase64
     ? 'Look at this food photo and identify the food.'
@@ -2212,7 +2301,7 @@ document.getElementById('photoRefineBtn').addEventListener('click', async ()=>{
     result = await requestMacroEstimate(baseContext, combinedNote);
   }catch(e){
     console.error('Gemini re-analysis failed', e);
-    document.getElementById('photoLoadingOverlay').classList.remove('show');
+    hideLoadingOverlay();
     refineBtn.disabled = false;
     askBtn.disabled = false;
     refineBtn.textContent = 'Re-analyze macros';
@@ -2220,7 +2309,7 @@ document.getElementById('photoRefineBtn').addEventListener('click', async ()=>{
     return;
   }
 
-  document.getElementById('photoLoadingOverlay').classList.remove('show');
+  hideLoadingOverlay();
   refineBtn.disabled = false;
   askBtn.disabled = false;
   refineBtn.textContent = 'Re-analyze macros';
