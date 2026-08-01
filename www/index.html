@@ -163,6 +163,97 @@ body{
   margin:0 0 10px;
   line-height:1.4;
 }
+
+.multi-photo-box{ max-width:440px; }
+#multiPhotoList{
+  max-height:280px;
+  overflow-y:auto;
+  margin-bottom:10px;
+}
+.multi-photo-item{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid var(--hair);
+}
+.multi-photo-item:last-child{border-bottom:none;}
+.multi-photo-thumb{
+  width:48px;
+  height:48px;
+  object-fit:cover;
+  flex-shrink:0;
+  border:1px solid var(--hair);
+  background:#0D0D0D;
+}
+.multi-photo-info{
+  flex:1;
+  min-width:0;
+}
+.multi-photo-name{
+  font-size:13px;
+  font-weight:600;
+  color:var(--ink);
+  margin-bottom:2px;
+}
+.multi-photo-per100{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  margin-bottom:6px;
+}
+.multi-photo-grams-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.multi-photo-grams-input{
+  width:70px;
+  background:#0D0D0D;
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  padding:6px 8px;
+}
+.multi-photo-grams-input:focus{outline:none;border-color:var(--accent);}
+.multi-photo-subtotal{
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--accent);
+}
+.multi-photo-remove{
+  flex-shrink:0;
+  background:none;
+  border:1px solid var(--hair);
+  color:var(--ink-soft);
+  width:24px;
+  height:24px;
+  cursor:pointer;
+  font-size:13px;
+}
+.multi-photo-remove:hover{border-color:var(--over);color:var(--over);}
+.multi-photo-add-btn{
+  width:100%;
+  margin-bottom:12px;
+}
+.multi-photo-total{
+  border:1px solid var(--hair);
+  padding:10px 12px;
+  margin-bottom:12px;
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  color:var(--ink-soft);
+  text-align:center;
+}
+.multi-photo-total .total-cal{
+  font-family:'Archivo Black',sans-serif;
+  font-size:16px;
+  color:var(--accent);
+}
+.multi-photo-total .total-macros{
+  color:var(--ink);
+}
 .data-box textarea{
   width:100%;
   flex:1;
@@ -239,6 +330,12 @@ body{
   font-size:11px;
   color:var(--ink-soft);
   margin-bottom:12px;
+  line-height:1.4;
+}
+.photo-typical-weight{
+  font-size:12px;
+  color:var(--good);
+  margin:-6px 0 12px;
   line-height:1.4;
 }
 .photo-result-macros{
@@ -826,7 +923,7 @@ body{
     <p class="backup-desc">Take a photo of your food to get an estimated macro breakdown (via Google Gemini, free tier).</p>
     <div class="backup-actions">
       <button type="button" id="photoBtn" class="backup-btn">📷 Take photo</button>
-      <button type="button" id="apiKeyBtn" class="backup-btn">API key</button>
+      <button type="button" id="multiPhotoBtn" class="backup-btn">📷📷 Multiple photos</button>
     </div>
   </div>
 
@@ -849,6 +946,28 @@ body{
     </div>
   </div>
 
+  <div class="backup-section">
+    <span class="eyebrow">Settings</span>
+    <p class="backup-desc">Your Gemini API key, used by Photo macros and Ask Gemini above.</p>
+    <div class="backup-actions">
+      <button type="button" id="apiKeyBtn" class="backup-btn">API key</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="data-overlay" id="multiPhotoOverlay">
+  <div class="data-box multi-photo-box">
+    <div class="data-title">Multiple photos macro</div>
+    <p class="data-desc">Photograph each item, enter how many grams of each you're having, and the totals combine automatically.</p>
+    <div id="multiPhotoList"></div>
+    <button type="button" id="multiPhotoAddBtn" class="backup-btn multi-photo-add-btn">📷 Add photo</button>
+    <div class="multi-photo-total" id="multiPhotoTotal">Add at least one photo to see the combined total</div>
+    <div class="data-actions">
+      <button type="button" id="multiPhotoCancelBtn" class="secondary">Cancel</button>
+      <button type="button" id="multiPhotoUseBtn" class="primary">Add combined to log</button>
+    </div>
+  </div>
 </div>
 
 <div class="data-overlay" id="apiKeyOverlay">
@@ -1545,9 +1664,14 @@ document.getElementById('photoBtn').addEventListener('click', async ()=>{
   await takePhotoAndAnalyze();
 });
 
-function looksLikeAQuestion(text){
-  if(text.indexOf('?') !== -1) return true;
-  return /\b(gram|grams|weigh|weighs|weight|how many|how much)\b/i.test(text);
+function mentionsWeight(text){
+  return /\b(gram|grams|weigh|weighs|weight|how many grams|how much does)\b/i.test(text);
+}
+
+function extractGramsFromText(text){
+  const match = text.match(/(\d+(?:\.\d+)?)\s*(?:g\b|grams?\b)/i);
+  if(match) return Math.round(parseFloat(match[1]));
+  return null;
 }
 
 document.getElementById('askGeminiBtn').addEventListener('click', async ()=>{
@@ -1560,43 +1684,12 @@ document.getElementById('askGeminiBtn').addEventListener('click', async ()=>{
   }
   const input = document.getElementById('askGeminiInput').value.trim();
   if(!input){
-    showToast('Type a food or a question first');
+    showToast('Type a food, e.g. "Snickers bar" or "Snickers bar macros and weight"');
     return;
   }
-
-  if(looksLikeAQuestion(input)){
-    await askGeminiDirectQuestion(input);
-  } else {
-    await askGeminiTextQuery(input);
-  }
+  await askGeminiTextQuery(input);
 });
 
-async function askGeminiDirectQuestion(question){
-  const askBtn = document.getElementById('askGeminiBtn');
-  const answerBox = document.getElementById('askGeminiAnswer');
-  askBtn.disabled = true;
-  const originalLabel = askBtn.textContent;
-  askBtn.textContent = '…';
-
-  const prompt = 'Answer this food/nutrition question directly, concisely, and in plain text (not JSON, not markdown): "' + question + '"';
-
-  let answer;
-  try{
-    answer = await callGeminiRaw([{text: prompt}], false);
-  }catch(e){
-    console.error('Gemini question failed', e);
-    askBtn.disabled = false;
-    askBtn.textContent = originalLabel;
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-
-  askBtn.disabled = false;
-  askBtn.textContent = originalLabel;
-  answerBox.textContent = answer.trim();
-  answerBox.style.display = 'block';
-  // No macro fields or serving size are touched here — this is just a direct answer.
-}
 
 async function takePhotoAndAnalyze(){
   const CapCamera = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
@@ -1760,7 +1853,8 @@ function parseMacroJSON(text){
     calPer100: Number(parsed.calories_per_100g) || 0,
     proteinPer100: Number(parsed.protein_per_100g) || 0,
     carbsPer100: Number(parsed.carbs_per_100g) || 0,
-    fatPer100: Number(parsed.fat_per_100g) || 0
+    fatPer100: Number(parsed.fat_per_100g) || 0,
+    typicalWeightG: Number(parsed.typical_weight_g) || 0
   };
 }
 
@@ -1774,10 +1868,21 @@ function buildPromptParts(promptText){
 }
 
 async function requestMacroEstimate(baseContext, extraContext){
+  const wantsWeight = mentionsWeight(baseContext) || mentionsWeight(extraContext || '');
+
+  let schema = '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number';
+  if(wantsWeight){
+    schema += ', "typical_weight_g": number';
+  }
+  schema += '}';
+
   let prompt = 'You are a nutrition estimation assistant. ' + baseContext + ' ' +
-    'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' +
-    '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number}. ' +
+    'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' + schema + '. ' +
     'Give your best realistic estimate even if you are not fully certain.';
+
+  if(wantsWeight){
+    prompt += ' Include typical_weight_g as your best estimate of a typical single serving/item weight in grams for this specific food (e.g. one bar, one portion) — this is separate from the per-100g values.';
+  }
 
   if(extraContext){
     prompt += ' The user has provided corrections or additional context to improve accuracy — treat this as more reliable than your own guess: "' + extraContext + '". Update your estimate accordingly.';
@@ -1799,6 +1904,205 @@ async function askGeminiFreeform(question){
   return rawText.trim();
 }
 
+let multiPhotoItems = [];
+
+document.getElementById('multiPhotoBtn').addEventListener('click', ()=>{
+  const key = getGeminiKey();
+  if(!key){
+    showToast('Set your Gemini API key first');
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiKeyOverlay').classList.add('show');
+    return;
+  }
+  multiPhotoItems = [];
+  renderMultiPhotoList();
+  document.getElementById('multiPhotoOverlay').classList.add('show');
+});
+
+document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('multiPhotoOverlay').classList.remove('show');
+  multiPhotoItems = [];
+});
+
+document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>{
+  const CapCamera = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
+  if(!CapCamera){
+    showToast('Camera is only available in the installed app');
+    return;
+  }
+
+  let photo;
+  try{
+    photo = await CapCamera.getPhoto({
+      quality: 70,
+      resultType: 'base64',
+      source: 'PROMPT',
+      correctOrientation: true
+    });
+  }catch(e){
+    return; // user cancelled
+  }
+
+  if(!photo || !photo.base64String){
+    showToast('Could not read that photo');
+    return;
+  }
+
+  const mimeType = 'image/' + (photo.format || 'jpeg');
+  document.getElementById('photoLoadingOverlay').classList.add('show');
+
+  let result;
+  try{
+    const prompt = 'You are a nutrition estimation assistant. Look at this food photo and identify the food. ' +
+      'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' +
+      '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number}. ' +
+      'Give your best realistic estimate even if you are not fully certain.';
+    const parts = [{text: prompt}, {inline_data: {mime_type: mimeType, data: photo.base64String}}];
+    const rawText = await callGeminiRaw(parts, true);
+    result = parseMacroJSON(rawText);
+  }catch(e){
+    console.error('Gemini analysis failed', e);
+    document.getElementById('photoLoadingOverlay').classList.remove('show');
+    showErrorModal((e && e.message) ? e.message : 'Unknown error');
+    return;
+  }
+
+  document.getElementById('photoLoadingOverlay').classList.remove('show');
+
+  multiPhotoItems.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+    name: result.name,
+    calPer100: result.calPer100,
+    proteinPer100: result.proteinPer100,
+    carbsPer100: result.carbsPer100,
+    fatPer100: result.fatPer100,
+    grams: '',
+    thumbnail: 'data:' + mimeType + ';base64,' + photo.base64String
+  });
+
+  renderMultiPhotoList();
+});
+
+function computeMultiPhotoTotals(){
+  let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalGrams = 0;
+  multiPhotoItems.forEach(item=>{
+    const g = Number(item.grams) || 0;
+    const scale = g / 100;
+    totalGrams += g;
+    totalCal += item.calPer100 * scale;
+    totalProtein += item.proteinPer100 * scale;
+    totalCarbs += item.carbsPer100 * scale;
+    totalFat += item.fatPer100 * scale;
+  });
+  return {
+    calories: Math.round(totalCal),
+    protein: roundNum(totalProtein),
+    carbs: roundNum(totalCarbs),
+    fat: roundNum(totalFat),
+    grams: totalGrams
+  };
+}
+
+function renderMultiPhotoList(){
+  const list = document.getElementById('multiPhotoList');
+  list.innerHTML = '';
+
+  multiPhotoItems.forEach(item=>{
+    const g = Number(item.grams) || 0;
+    const subtotalCal = Math.round(item.calPer100 * (g/100));
+    const row = document.createElement('div');
+    row.className = 'multi-photo-item';
+    row.innerHTML = `
+      <img class="multi-photo-thumb" src="${item.thumbnail}" alt="">
+      <div class="multi-photo-info">
+        <div class="multi-photo-name">${escapeHtml(item.name)}</div>
+        <div class="multi-photo-per100">${roundNum(item.calPer100)} cal · P${roundNum(item.proteinPer100)}g · C${roundNum(item.carbsPer100)}g · F${roundNum(item.fatPer100)}g per 100g</div>
+        <div class="multi-photo-grams-row">
+          <input type="number" class="multi-photo-grams-input" data-id="${item.id}" min="0" step="1" placeholder="grams" value="${item.grams || ''}">
+          <span class="multi-photo-subtotal">${g > 0 ? subtotalCal + ' cal' : ''}</span>
+        </div>
+      </div>
+      <button type="button" class="multi-photo-remove" data-id="${item.id}" aria-label="Remove">×</button>
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('.multi-photo-grams-input').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const id = input.getAttribute('data-id');
+      const item = multiPhotoItems.find(i=>i.id === id);
+      if(item){
+        item.grams = input.value;
+        const g = Number(item.grams) || 0;
+        const subtotalCal = Math.round(item.calPer100 * (g/100));
+        const row = input.closest('.multi-photo-item');
+        row.querySelector('.multi-photo-subtotal').textContent = g > 0 ? subtotalCal + ' cal' : '';
+      }
+      updateMultiPhotoTotalDisplay();
+    });
+  });
+
+  list.querySelectorAll('.multi-photo-remove').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.getAttribute('data-id');
+      multiPhotoItems = multiPhotoItems.filter(i=>i.id !== id);
+      renderMultiPhotoList();
+    });
+  });
+
+  updateMultiPhotoTotalDisplay();
+}
+
+function updateMultiPhotoTotalDisplay(){
+  const totalBox = document.getElementById('multiPhotoTotal');
+  if(multiPhotoItems.length === 0){
+    totalBox.textContent = 'Add at least one photo to see the combined total';
+    return;
+  }
+  const totals = computeMultiPhotoTotals();
+  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g</span> (${totals.grams}g total)`;
+}
+
+document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
+  if(multiPhotoItems.length === 0){
+    showToast('Add at least one photo first');
+    return;
+  }
+  const totals = computeMultiPhotoTotals();
+  if(totals.grams <= 0){
+    showToast('Enter grams for at least one item');
+    return;
+  }
+
+  const scale = totals.grams / 100;
+  const blendedCalPer100 = Math.round(totals.calories / scale);
+  const blendedProteinPer100 = roundNum(totals.protein / scale);
+  const blendedCarbsPer100 = roundNum(totals.carbs / scale);
+  const blendedFatPer100 = roundNum(totals.fat / scale);
+
+  const names = multiPhotoItems.map(i=>i.name);
+  const combinedName = names.length > 3
+    ? names.slice(0,3).join(', ') + ' + ' + (names.length - 3) + ' more'
+    : names.join(', ');
+
+  document.getElementById('fName').value = combinedName;
+  document.getElementById('fGrams').value = totals.grams;
+  document.getElementById('fCal').value = blendedCalPer100;
+  document.getElementById('fProtein').value = blendedProteinPer100;
+  document.getElementById('fCarbs').value = blendedCarbsPer100;
+  document.getElementById('fFat').value = blendedFatPer100;
+  updateServingPreview();
+
+  document.getElementById('multiPhotoOverlay').classList.remove('show');
+  multiPhotoItems = [];
+
+  showToast('Combined total filled in — review and tap Add to log');
+  const nameField = document.getElementById('fName');
+  if(typeof nameField.scrollIntoView === 'function'){
+    nameField.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+});
+
 let lastPhotoResult = null;
 let lastPhotoBase64 = null;
 let lastPhotoMimeType = null;
@@ -1808,6 +2112,9 @@ let refinementNotes = [];
 function showPhotoResult(result, presetGrams){
   lastPhotoResult = result;
   const body = document.getElementById('photoResultBody');
+  const hasTypicalWeight = result.typicalWeightG && result.typicalWeightG > 0;
+  const autoGrams = presetGrams || (hasTypicalWeight ? Math.round(result.typicalWeightG) : '');
+
   body.innerHTML = `
     <div class="photo-result-name">${escapeHtml(result.name)}</div>
     <div class="photo-result-note">Estimated values, per 100g. Enter your actual serving size below to fill in the log.</div>
@@ -1817,9 +2124,10 @@ function showPhotoResult(result, presetGrams){
       <div>Carbs<span>${roundNum(result.carbsPer100)}g</span></div>
       <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
     </div>
+    ${hasTypicalWeight ? `<div class="photo-typical-weight">Typical weight: ~${Math.round(result.typicalWeightG)}g — filled in below, adjust if needed</div>` : ''}
     <div class="photo-grams-field">
-      <label for="photoGramsInput">Serving size (g) — only needed if you want to ask "how many grams is this"</label>
-      <input type="number" id="photoGramsInput" min="0" step="1" placeholder="e.g. 150" value="${presetGrams ? escapeHtml(String(presetGrams)) : ''}">
+      <label for="photoGramsInput">Serving size (g) — ask "how many grams is this" below to estimate</label>
+      <input type="number" id="photoGramsInput" min="0" step="1" placeholder="e.g. 150" value="${autoGrams ? escapeHtml(String(autoGrams)) : ''}">
     </div>
   `;
   document.getElementById('photoRefineInput').value = '';
@@ -1828,7 +2136,7 @@ function showPhotoResult(result, presetGrams){
   document.getElementById('photoResultOverlay').classList.add('show');
   setTimeout(()=>{
     const gramsInput = document.getElementById('photoGramsInput');
-    if(gramsInput && !presetGrams) gramsInput.focus();
+    if(gramsInput && !autoGrams) gramsInput.focus();
   }, 50);
 }
 
@@ -1964,8 +2272,17 @@ document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
   const answerBox = document.getElementById('photoAskAnswer');
   answerBox.textContent = answer;
   answerBox.style.display = 'block';
-  // This intentionally does NOT touch the grams field or any macro field —
-  // it's just information, not something that gets auto-filled in.
+
+  if(mentionsWeight(question)){
+    const grams = extractGramsFromText(answer);
+    if(grams){
+      const gramsInput = document.getElementById('photoGramsInput');
+      if(gramsInput){
+        gramsInput.value = grams;
+        showToast('Serving size filled in: ' + grams + 'g');
+      }
+    }
+  }
 });
 
 (async function init(){
