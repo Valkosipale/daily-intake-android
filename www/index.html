@@ -886,7 +886,7 @@ body{
     <div class="facts-row">
       <div class="label">Daily goal</div>
       <div class="facts-goal-edit">
-        <input type="number" id="goalInput" min="0" step="10">
+        <input type="text" inputmode="decimal" id="goalInput">
         <span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--ink-soft);">cal</span>
       </div>
     </div>
@@ -921,23 +921,23 @@ body{
         </div>
         <div class="field full">
           <label for="fGrams">Serving size (g)</label>
-          <input type="number" id="fGrams" min="0" step="1" placeholder="0">
+          <input type="text" inputmode="decimal" id="fGrams" placeholder="0">
         </div>
         <div class="field">
           <label for="fCal">Calories per 100g</label>
-          <input type="number" id="fCal" min="0" step="1" placeholder="0">
+          <input type="text" inputmode="decimal" id="fCal" placeholder="0">
         </div>
         <div class="field">
           <label for="fProtein">Protein per 100g (g)</label>
-          <input type="number" id="fProtein" min="0" step="1" placeholder="0">
+          <input type="text" inputmode="decimal" id="fProtein" placeholder="0">
         </div>
         <div class="field">
           <label for="fCarbs">Carbs per 100g (g)</label>
-          <input type="number" id="fCarbs" min="0" step="1" placeholder="0">
+          <input type="text" inputmode="decimal" id="fCarbs" placeholder="0">
         </div>
         <div class="field">
           <label for="fFat">Fat per 100g (g)</label>
-          <input type="number" id="fFat" min="0" step="1" placeholder="0">
+          <input type="text" inputmode="decimal" id="fFat" placeholder="0">
         </div>
       </div>
       <div class="serving-preview" id="servingPreview">Enter serving size and per-100g values to see the total</div>
@@ -1090,6 +1090,16 @@ function todayStr(){
 
 function roundNum(n){
   return Math.round((Number(n)||0) * 10) / 10;
+}
+
+// Accepts numbers typed with a comma decimal separator (common on non-US keyboards),
+// since the fields are text+inputmode="decimal" rather than type="number" to avoid
+// the browser's native number validation rejecting commas entirely.
+function parseLocaleNumber(str){
+  if(str === null || str === undefined) return 0;
+  const cleaned = String(str).trim().replace(',', '.');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
 }
 
 function formatDateShort(dateStr){
@@ -1427,25 +1437,26 @@ document.getElementById('todayBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('goalInput').addEventListener('change', async (e)=>{
-  const v = parseInt(e.target.value,10);
-  currentGoal = isNaN(v) || v < 0 ? DEFAULT_GOAL : v;
+  const v = Math.round(parseLocaleNumber(e.target.value));
+  currentGoal = (!v || v < 0) ? DEFAULT_GOAL : v;
   await saveSettings();
   render();
 });
 
 function computeScaledTotals(grams, calPer100, proteinPer100, carbsPer100, fatPer100){
-  const scale = grams > 0 ? grams / 100 : 0;
+  const g = parseLocaleNumber(grams);
+  const scale = g > 0 ? g / 100 : 0;
   return {
-    calories: Math.round((Number(calPer100)||0) * scale),
-    protein: roundNum((Number(proteinPer100)||0) * scale),
-    carbs: roundNum((Number(carbsPer100)||0) * scale),
-    fat: roundNum((Number(fatPer100)||0) * scale)
+    calories: Math.round(parseLocaleNumber(calPer100) * scale),
+    protein: roundNum(parseLocaleNumber(proteinPer100) * scale),
+    carbs: roundNum(parseLocaleNumber(carbsPer100) * scale),
+    fat: roundNum(parseLocaleNumber(fatPer100) * scale)
   };
 }
 
 function updateServingPreview(){
   const preview = document.getElementById('servingPreview');
-  const grams = Number(document.getElementById('fGrams').value) || 0;
+  const grams = parseLocaleNumber(document.getElementById('fGrams').value);
   const cal = document.getElementById('fCal').value;
   const protein = document.getElementById('fProtein').value;
   const carbs = document.getElementById('fCarbs').value;
@@ -1468,7 +1479,7 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
   e.preventDefault();
   try{
     const name = document.getElementById('fName').value.trim();
-    const grams = Number(document.getElementById('fGrams').value) || 0;
+    const grams = parseLocaleNumber(document.getElementById('fGrams').value);
     const cal = document.getElementById('fCal').value;
     const protein = document.getElementById('fProtein').value;
     const carbs = document.getElementById('fCarbs').value;
@@ -1483,10 +1494,10 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
 
     const totals = computeScaledTotals(grams, cal, protein, carbs, fat);
     const per100g = {
-      calPer100: Number(cal)||0,
-      proteinPer100: Number(protein)||0,
-      carbsPer100: Number(carbs)||0,
-      fatPer100: Number(fat)||0
+      calPer100: parseLocaleNumber(cal),
+      proteinPer100: parseLocaleNumber(protein),
+      carbsPer100: parseLocaleNumber(carbs),
+      fatPer100: parseLocaleNumber(fat)
     };
 
     if(editingId){
@@ -2013,7 +2024,7 @@ document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>
 function computeMultiPhotoTotals(){
   let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalGrams = 0;
   multiPhotoItems.forEach(item=>{
-    const g = Number(item.grams) || 0;
+    const g = parseLocaleNumber(item.grams);
     const scale = g / 100;
     totalGrams += g;
     totalCal += item.calPer100 * scale;
@@ -2035,7 +2046,7 @@ function renderMultiPhotoList(){
   list.innerHTML = '';
 
   multiPhotoItems.forEach(item=>{
-    const g = Number(item.grams) || 0;
+    const g = parseLocaleNumber(item.grams);
     const subtotalCal = Math.round(item.calPer100 * (g/100));
     const row = document.createElement('div');
     row.className = 'multi-photo-item';
@@ -2046,23 +2057,23 @@ function renderMultiPhotoList(){
         <div class="multi-photo-macro-grid">
           <div>
             <label>Cal/100g</label>
-            <input type="number" class="mp-cal-input" data-id="${item.id}" min="0" step="1" value="${roundNum(item.calPer100)}">
+            <input type="text" inputmode="decimal" class="mp-cal-input" data-id="${item.id}" value="${roundNum(item.calPer100)}">
           </div>
           <div>
             <label>Prot/100g</label>
-            <input type="number" class="mp-protein-input" data-id="${item.id}" min="0" step="1" value="${roundNum(item.proteinPer100)}">
+            <input type="text" inputmode="decimal" class="mp-protein-input" data-id="${item.id}" value="${roundNum(item.proteinPer100)}">
           </div>
           <div>
             <label>Carb/100g</label>
-            <input type="number" class="mp-carbs-input" data-id="${item.id}" min="0" step="1" value="${roundNum(item.carbsPer100)}">
+            <input type="text" inputmode="decimal" class="mp-carbs-input" data-id="${item.id}" value="${roundNum(item.carbsPer100)}">
           </div>
           <div>
             <label>Fat/100g</label>
-            <input type="number" class="mp-fat-input" data-id="${item.id}" min="0" step="1" value="${roundNum(item.fatPer100)}">
+            <input type="text" inputmode="decimal" class="mp-fat-input" data-id="${item.id}" value="${roundNum(item.fatPer100)}">
           </div>
         </div>
         <div class="multi-photo-grams-row">
-          <input type="number" class="multi-photo-grams-input" data-id="${item.id}" min="0" step="1" placeholder="grams" value="${item.grams || ''}">
+          <input type="text" inputmode="decimal" class="multi-photo-grams-input" data-id="${item.id}" placeholder="grams" value="${item.grams || ''}">
           <span class="multi-photo-subtotal">${g > 0 ? subtotalCal + ' cal' : ''}</span>
         </div>
       </div>
@@ -2074,7 +2085,7 @@ function renderMultiPhotoList(){
   function refreshRowSubtotal(id){
     const item = multiPhotoItems.find(i=>i.id === id);
     if(!item) return;
-    const g = Number(item.grams) || 0;
+    const g = parseLocaleNumber(item.grams);
     const subtotalCal = Math.round(item.calPer100 * (g/100));
     const row = list.querySelector(`.multi-photo-item .multi-photo-grams-input[data-id="${id}"]`).closest('.multi-photo-item');
     row.querySelector('.multi-photo-subtotal').textContent = g > 0 ? subtotalCal + ' cal' : '';
@@ -2097,7 +2108,7 @@ function renderMultiPhotoList(){
       const id = input.getAttribute('data-id');
       const item = multiPhotoItems.find(i=>i.id === id);
       if(item){
-        item.calPer100 = Number(input.value) || 0;
+        item.calPer100 = parseLocaleNumber(input.value);
         refreshRowSubtotal(id);
       }
       updateMultiPhotoTotalDisplay();
@@ -2108,7 +2119,7 @@ function renderMultiPhotoList(){
     input.addEventListener('input', ()=>{
       const id = input.getAttribute('data-id');
       const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.proteinPer100 = Number(input.value) || 0;
+      if(item) item.proteinPer100 = parseLocaleNumber(input.value);
       updateMultiPhotoTotalDisplay();
     });
   });
@@ -2117,7 +2128,7 @@ function renderMultiPhotoList(){
     input.addEventListener('input', ()=>{
       const id = input.getAttribute('data-id');
       const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.carbsPer100 = Number(input.value) || 0;
+      if(item) item.carbsPer100 = parseLocaleNumber(input.value);
       updateMultiPhotoTotalDisplay();
     });
   });
@@ -2126,7 +2137,7 @@ function renderMultiPhotoList(){
     input.addEventListener('input', ()=>{
       const id = input.getAttribute('data-id');
       const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.fatPer100 = Number(input.value) || 0;
+      if(item) item.fatPer100 = parseLocaleNumber(input.value);
       updateMultiPhotoTotalDisplay();
     });
   });
@@ -2216,7 +2227,7 @@ function showPhotoResult(result, presetGrams){
     ${hasTypicalWeight ? `<div class="photo-typical-weight">Typical weight: ~${Math.round(result.typicalWeightG)}g — filled in below, adjust if needed</div>` : ''}
     <div class="photo-grams-field">
       <label for="photoGramsInput">Serving size (g) — ask "how many grams is this" below to estimate</label>
-      <input type="number" id="photoGramsInput" min="0" step="1" placeholder="e.g. 150" value="${autoGrams ? escapeHtml(String(autoGrams)) : ''}">
+      <input type="text" inputmode="decimal" id="photoGramsInput" placeholder="e.g. 150" value="${autoGrams ? escapeHtml(String(autoGrams)) : ''}">
     </div>
   `;
   document.getElementById('photoRefineInput').value = '';
@@ -2245,7 +2256,7 @@ document.getElementById('photoResultCancelBtn').addEventListener('click', ()=>{
 document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
   if(!lastPhotoResult) return;
   const gramsInput = document.getElementById('photoGramsInput');
-  const grams = Number(gramsInput && gramsInput.value) || 0;
+  const grams = parseLocaleNumber(gramsInput && gramsInput.value);
 
   // Fields now hold per-100g values, matching the manual entry form
   document.getElementById('fName').value = lastPhotoResult.name;
