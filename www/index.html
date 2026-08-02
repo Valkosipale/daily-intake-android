@@ -1824,8 +1824,9 @@ async function callGeminiRaw(parts, jsonMode){
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
 
   const body = { contents: [{ parts }] };
+  body.generationConfig = { maxOutputTokens: 1024 };
   if(jsonMode){
-    body.generationConfig = { responseMimeType: 'application/json' };
+    body.generationConfig.responseMimeType = 'application/json';
   }
 
   let res;
@@ -1860,10 +1861,10 @@ async function callGeminiRaw(parts, jsonMode){
     throw new Error('No response text from Gemini. finishReason: ' + (finishReason || 'unknown') + '. Raw: ' + JSON.stringify(data).slice(0, 300));
   }
 
-  return text;
+  return {text, finishReason};
 }
 
-function parseMacroJSON(text){
+function parseMacroJSON(text, finishReason){
   let cleanText = text.trim();
   if(cleanText.indexOf('```') === 0){
     cleanText = cleanText.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
@@ -1879,10 +1880,10 @@ function parseMacroJSON(text){
       try{
         parsed = JSON.parse(cleanText.slice(firstBrace, lastBrace + 1));
       }catch(secondErr){
-        throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total). Raw text: ' + cleanText.slice(0, 1500));
+        throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total, finishReason: ' + (finishReason || 'unknown') + '). Raw text: ' + cleanText.slice(0, 1500));
       }
     } else {
-      throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total). Raw text: ' + cleanText.slice(0, 1500));
+      throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total, finishReason: ' + (finishReason || 'unknown') + '). Raw text: ' + cleanText.slice(0, 1500));
     }
   }
 
@@ -1903,6 +1904,25 @@ function buildPromptParts(promptText){
     parts.push({inline_data: {mime_type: lastPhotoMimeType, data: lastPhotoBase64}});
   }
   return parts;
+}
+
+// Retries a flaky async call once after a brief pause. Gemini occasionally returns
+// a truncated/malformed response; a silent retry resolves this most of the time
+// without the user ever needing to notice or intervene.
+async function withRetry(fn, retries){
+  if(retries === undefined) retries = 1;
+  let lastErr;
+  for(let attempt = 0; attempt <= retries; attempt++){
+    try{
+      return await fn();
+    }catch(e){
+      lastErr = e;
+      if(attempt < retries){
+        await new Promise(resolve=>setTimeout(resolve, 400));
+      }
+    }
+  }
+  throw lastErr;
 }
 
 async function requestMacroEstimate(baseContext, extraContext){
@@ -1926,8 +1946,11 @@ async function requestMacroEstimate(baseContext, extraContext){
     prompt += ' The user has provided corrections or additional context to improve accuracy — treat this as more reliable than your own guess: "' + extraContext + '". Update your estimate accordingly.';
   }
 
-  const rawText = await callGeminiRaw(buildPromptParts(prompt), true);
-  return parseMacroJSON(rawText);
+  const parts = buildPromptParts(prompt);
+  return await withRetry(async ()=>{
+    const result = await callGeminiRaw(parts, true);
+    return parseMacroJSON(result.text, result.finishReason);
+  }, 1);
 }
 
 async function askGeminiFreeform(question){
@@ -1938,8 +1961,9 @@ async function askGeminiFreeform(question){
     context = 'The user previously described this food: "' + lastTextQuery + '". ';
   }
   const prompt = context + 'Answer the user\'s question directly, concisely, and in plain text (not JSON, not markdown). Question: "' + question + '"';
-  const rawText = await callGeminiRaw(buildPromptParts(prompt), false);
-  return rawText.trim();
+  const parts = buildPromptParts(prompt);
+  const result = await withRetry(()=>callGeminiRaw(parts, false), 1);
+  return result.text.trim();
 }
 
 let multiPhotoItems = [];
@@ -1996,8 +2020,10 @@ document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>
       '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number}. ' +
       'Give your best realistic estimate even if you are not fully certain.';
     const parts = [{text: prompt}, {inline_data: {mime_type: mimeType, data: photo.base64String}}];
-    const rawText = await callGeminiRaw(parts, true);
-    result = parseMacroJSON(rawText);
+    result = await withRetry(async ()=>{
+      const raw = await callGeminiRaw(parts, true);
+      return parseMacroJSON(raw.text, raw.finishReason);
+    }, 1);
   }catch(e){
     console.error('Gemini analysis failed', e);
     hideLoadingOverlay();
