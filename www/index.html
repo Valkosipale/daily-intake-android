@@ -198,7 +198,7 @@ body{
 }
 .multi-photo-macro-grid{
   display:grid;
-  grid-template-columns:repeat(4, 1fr);
+  grid-template-columns:repeat(3, 1fr);
   gap:5px;
   margin-bottom:8px;
 }
@@ -285,6 +285,16 @@ body{
   padding:8px;
   resize:vertical;
 }
+.copy-to-day-input{
+  width:100%;
+  background:#0D0D0D;
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Space Mono',monospace;
+  font-size:14px;
+  padding:10px;
+}
+.copy-to-day-input:focus{outline:none;border-color:var(--accent);}
 .data-actions{
   display:flex;
   gap:10px;
@@ -359,8 +369,8 @@ body{
 }
 .photo-result-macros{
   display:grid;
-  grid-template-columns:repeat(4, 1fr);
-  gap:8px;
+  grid-template-columns:repeat(3, 1fr);
+  gap:8px 8px;
   font-family:'Space Mono',monospace;
   font-size:10px;
   color:var(--ink-soft);
@@ -649,7 +659,7 @@ body{
 .macro-row{
   display:grid;
   grid-template-columns:repeat(3, 1fr);
-  gap:10px;
+  gap:10px 10px;
   padding:10px 14px 14px;
   font-family:'Space Mono',monospace;
   font-size:11px;
@@ -788,6 +798,29 @@ body{
   text-transform:uppercase;
   letter-spacing:0.5px;
 }
+.unit-toggle{
+  display:flex;
+  gap:8px;
+  margin-bottom:2px;
+}
+.unit-btn{
+  flex:1;
+  padding:9px;
+  background:none;
+  border:1px solid var(--hair);
+  color:var(--ink-soft);
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  cursor:pointer;
+}
+.unit-btn.active{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#141210;
+  font-weight:700;
+}
 .field input, .field select{
   width:100%;
   border:1px solid var(--hair);
@@ -902,6 +935,8 @@ body{
       <div>Protein<span id="totalProtein">0g</span></div>
       <div>Carbs<span id="totalCarbs">0g</span></div>
       <div>Fat<span id="totalFat">0g</span></div>
+      <div>Fiber<span id="totalFiber">0g</span></div>
+      <div>Salt<span id="totalSalt">0g</span></div>
     </div>
   </div>
 
@@ -920,24 +955,38 @@ body{
           <input type="text" id="fName" placeholder="e.g. Grilled chicken breast">
         </div>
         <div class="field full">
-          <label for="fGrams">Serving size (g)</label>
+          <div class="unit-toggle">
+            <button type="button" class="unit-btn active" id="unitGramsBtn">Per 100g</button>
+            <button type="button" class="unit-btn" id="unitItemBtn">Per item</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label for="fGrams" id="fGramsLabel">Serving size (g)</label>
           <input type="text" inputmode="decimal" id="fGrams" placeholder="0">
         </div>
         <div class="field">
-          <label for="fCal">Calories per 100g</label>
+          <label for="fCal" id="fCalLabel">Calories per 100g</label>
           <input type="text" inputmode="decimal" id="fCal" placeholder="0">
         </div>
         <div class="field">
-          <label for="fProtein">Protein per 100g (g)</label>
+          <label for="fProtein" id="fProteinLabel">Protein per 100g (g)</label>
           <input type="text" inputmode="decimal" id="fProtein" placeholder="0">
         </div>
         <div class="field">
-          <label for="fCarbs">Carbs per 100g (g)</label>
+          <label for="fCarbs" id="fCarbsLabel">Carbs per 100g (g)</label>
           <input type="text" inputmode="decimal" id="fCarbs" placeholder="0">
         </div>
         <div class="field">
-          <label for="fFat">Fat per 100g (g)</label>
+          <label for="fFat" id="fFatLabel">Fat per 100g (g)</label>
           <input type="text" inputmode="decimal" id="fFat" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="fFiber" id="fFiberLabel">Fiber per 100g (g)</label>
+          <input type="text" inputmode="decimal" id="fFiber" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="fSalt" id="fSaltLabel">Salt per 100g (g)</label>
+          <input type="text" inputmode="decimal" id="fSalt" placeholder="0">
         </div>
       </div>
       <div class="serving-preview" id="servingPreview">Enter serving size and per-100g values to see the total</div>
@@ -1047,6 +1096,18 @@ body{
     <div class="data-actions">
       <button type="button" id="errorCloseBtn" class="secondary">Close</button>
       <button type="button" id="errorCopyBtn" class="primary">Copy</button>
+    </div>
+  </div>
+</div>
+
+<div class="data-overlay" id="copyToDayOverlay">
+  <div class="data-box">
+    <div class="data-title">Copy to which day?</div>
+    <p class="data-desc" id="copyToDayFoodName">Choose a date to copy this item to.</p>
+    <input type="date" id="copyToDayInput" class="copy-to-day-input">
+    <div class="data-actions">
+      <button type="button" id="copyToDayCancelBtn" class="secondary">Cancel</button>
+      <button type="button" id="copyToDayConfirmBtn" class="primary">Copy</button>
     </div>
   </div>
 </div>
@@ -1170,13 +1231,17 @@ function render(){
     acc.protein += Number(e.protein)||0;
     acc.carbs += Number(e.carbs)||0;
     acc.fat += Number(e.fat)||0;
+    acc.fiber += Number(e.fiber)||0;
+    acc.salt += Number(e.salt)||0;
     return acc;
-  }, {cal:0, protein:0, carbs:0, fat:0});
+  }, {cal:0, protein:0, carbs:0, fat:0, fiber:0, salt:0});
 
   document.getElementById('totalCal').textContent = totals.cal.toLocaleString();
   document.getElementById('totalProtein').textContent = roundNum(totals.protein) + 'g';
   document.getElementById('totalCarbs').textContent = roundNum(totals.carbs) + 'g';
   document.getElementById('totalFat').textContent = roundNum(totals.fat) + 'g';
+  document.getElementById('totalFiber').textContent = roundNum(totals.fiber) + 'g';
+  document.getElementById('totalSalt').textContent = roundNum(totals.salt) + 'g';
 
   const remaining = currentGoal - totals.cal;
   const remainingRow = document.getElementById('remainingRow');
@@ -1213,15 +1278,17 @@ function render(){
       if(item.protein) macroBits.push('P '+item.protein+'g');
       if(item.carbs) macroBits.push('C '+item.carbs+'g');
       if(item.fat) macroBits.push('F '+item.fat+'g');
+      if(item.fiber) macroBits.push('Fiber '+item.fiber+'g');
+      if(item.salt) macroBits.push('Salt '+item.salt+'g');
       row.innerHTML = `
         <div>
-          <div class="name">${escapeHtml(item.name)}${item.grams ? ` <span class="grams-badge">${item.grams}g</span>` : ''}</div>
+          <div class="name">${escapeHtml(item.name)}${item.grams ? ` <span class="grams-badge">${item.servingUnit === 'item' ? item.grams + (item.grams === 1 ? ' item' : ' items') : item.grams + 'g'}</span>` : ''}</div>
           ${macroBits.length ? `<div class="macros">${macroBits.join(' · ')}</div>` : ''}
         </div>
         <div class="right">
           <div class="cal">${(Number(item.calories)||0).toLocaleString()}</div>
           <button class="edit" data-id="${item.id}" aria-label="Edit entry">✎</button>
-          <button class="copy-next" data-id="${item.id}" aria-label="Copy to today">→</button>
+          <button class="copy-next" data-id="${item.id}" aria-label="Copy to a day">→</button>
           <button class="del" data-id="${item.id}" aria-label="Delete entry">×</button>
         </div>
       `;
@@ -1253,24 +1320,56 @@ function render(){
   });
 
   container.querySelectorAll('.copy-next').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
+    btn.addEventListener('click', ()=>{
       const id = btn.getAttribute('data-id');
       const item = currentEntries.find(e=>e.id === id);
       if(!item) return;
-      const targetDateStr = await copyEntryToToday(item);
-      if(targetDateStr){
-        showToast(targetDateStr === currentDate ? 'Copied' : 'Copied to today');
-      } else {
-        showToast('Could not copy');
-      }
+      openCopyToDayModal(item);
     });
   });
 }
 
-async function copyEntryToToday(item){
+let pendingCopyItem = null;
+
+function openCopyToDayModal(item){
+  pendingCopyItem = item;
+  document.getElementById('copyToDayFoodName').textContent = `Choose a date to copy "${item.name}" to.`;
+  document.getElementById('copyToDayInput').value = todayStr();
+  document.getElementById('copyToDayOverlay').classList.add('show');
+}
+
+document.getElementById('copyToDayCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('copyToDayOverlay').classList.remove('show');
+  pendingCopyItem = null;
+});
+
+document.getElementById('copyToDayOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'copyToDayOverlay'){
+    document.getElementById('copyToDayOverlay').classList.remove('show');
+    pendingCopyItem = null;
+  }
+});
+
+document.getElementById('copyToDayConfirmBtn').addEventListener('click', async ()=>{
+  if(!pendingCopyItem) return;
+  const targetDateStr = document.getElementById('copyToDayInput').value;
+  if(!targetDateStr){
+    showToast('Pick a date first');
+    return;
+  }
+  const ok = await copyEntryToDate(pendingCopyItem, targetDateStr);
+  document.getElementById('copyToDayOverlay').classList.remove('show');
+  pendingCopyItem = null;
+  if(ok){
+    showToast(targetDateStr === currentDate ? 'Copied' : 'Copied to ' + formatDateShort(targetDateStr));
+  } else {
+    showToast('Could not copy');
+  }
+});
+
+async function copyEntryToDate(item, targetDateStr){
   if(!hasStorage()) return false;
   try{
-    const targetDateStr = todayStr();
     const raw = window.localStorage.getItem('dic:log:'+targetDateStr);
     const arr = raw ? JSON.parse(raw) : [];
     const copy = {
@@ -1283,9 +1382,9 @@ async function copyEntryToToday(item){
       currentEntries = arr;
       render();
     }
-    return targetDateStr;
+    return true;
   }catch(e){
-    console.error('Failed to copy entry to today', e);
+    console.error('Failed to copy entry to ' + targetDateStr, e);
     return false;
   }
 }
@@ -1357,11 +1456,17 @@ function showConfirmModal(message, confirmLabel){
 function enterEditMode(item){
   editingId = item.id;
   const grams = item.grams || 0;
-  // Prefer stored per-100g values; fall back to reverse-calculating from the total for entries saved before this feature existed
-  const calPer100 = (item.calPer100 !== undefined) ? item.calPer100 : (grams > 0 ? roundNum((item.calories||0) / (grams/100)) : (item.calories||0));
-  const proteinPer100 = (item.proteinPer100 !== undefined) ? item.proteinPer100 : (grams > 0 ? roundNum((item.protein||0) / (grams/100)) : (item.protein||0));
-  const carbsPer100 = (item.carbsPer100 !== undefined) ? item.carbsPer100 : (grams > 0 ? roundNum((item.carbs||0) / (grams/100)) : (item.carbs||0));
-  const fatPer100 = (item.fatPer100 !== undefined) ? item.fatPer100 : (grams > 0 ? roundNum((item.fat||0) / (grams/100)) : (item.fat||0));
+  const unit = item.servingUnit || 'g';
+  const divisor = unit === 'item' ? grams : (grams/100);
+  // Prefer stored per-100g/per-item values; fall back to reverse-calculating from the total for entries saved before this feature existed
+  const calPer100 = (item.calPer100 !== undefined) ? item.calPer100 : (grams > 0 ? roundNum((item.calories||0) / divisor) : (item.calories||0));
+  const proteinPer100 = (item.proteinPer100 !== undefined) ? item.proteinPer100 : (grams > 0 ? roundNum((item.protein||0) / divisor) : (item.protein||0));
+  const carbsPer100 = (item.carbsPer100 !== undefined) ? item.carbsPer100 : (grams > 0 ? roundNum((item.carbs||0) / divisor) : (item.carbs||0));
+  const fatPer100 = (item.fatPer100 !== undefined) ? item.fatPer100 : (grams > 0 ? roundNum((item.fat||0) / divisor) : (item.fat||0));
+  const fiberPer100 = (item.fiberPer100 !== undefined) ? item.fiberPer100 : (grams > 0 ? roundNum((item.fiber||0) / divisor) : (item.fiber||0));
+  const saltPer100 = (item.saltPer100 !== undefined) ? item.saltPer100 : (grams > 0 ? roundNum((item.salt||0) / divisor) : (item.salt||0));
+
+  setEntryUnit(unit);
 
   document.getElementById('fName').value = item.name;
   document.getElementById('fGrams').value = grams || '';
@@ -1369,6 +1474,8 @@ function enterEditMode(item){
   document.getElementById('fProtein').value = proteinPer100 || '';
   document.getElementById('fCarbs').value = carbsPer100 || '';
   document.getElementById('fFat').value = fatPer100 || '';
+  document.getElementById('fFiber').value = fiberPer100 || '';
+  document.getElementById('fSalt').value = saltPer100 || '';
   document.getElementById('formEyebrow').textContent = 'Edit food';
   document.getElementById('addBtn').textContent = 'Save changes';
   document.getElementById('cancelEditBtn').style.display = 'inline';
@@ -1391,7 +1498,9 @@ function exitEditMode(){
   document.getElementById('fProtein').value = '';
   document.getElementById('fCarbs').value = '';
   document.getElementById('fFat').value = '';
-  updateServingPreview();
+  document.getElementById('fFiber').value = '';
+  document.getElementById('fSalt').value = '';
+  setEntryUnit('g');
 }
 
 function escapeHtml(str){
@@ -1443,35 +1552,91 @@ document.getElementById('goalInput').addEventListener('change', async (e)=>{
   render();
 });
 
-function computeScaledTotals(grams, calPer100, proteinPer100, carbsPer100, fatPer100){
-  const g = parseLocaleNumber(grams);
-  const scale = g > 0 ? g / 100 : 0;
+let entryUnit = 'g';
+
+function computeScale(amount, unit){
+  const a = parseLocaleNumber(amount);
+  if(unit === 'item') return a;
+  return a > 0 ? a / 100 : 0;
+}
+
+function computeScaledTotals(amount, calPerUnit, proteinPerUnit, carbsPerUnit, fatPerUnit, fiberPerUnit, saltPerUnit, unit){
+  const scale = computeScale(amount, unit || entryUnit);
   return {
-    calories: Math.round(parseLocaleNumber(calPer100) * scale),
-    protein: roundNum(parseLocaleNumber(proteinPer100) * scale),
-    carbs: roundNum(parseLocaleNumber(carbsPer100) * scale),
-    fat: roundNum(parseLocaleNumber(fatPer100) * scale)
+    calories: Math.round(parseLocaleNumber(calPerUnit) * scale),
+    protein: roundNum(parseLocaleNumber(proteinPerUnit) * scale),
+    carbs: roundNum(parseLocaleNumber(carbsPerUnit) * scale),
+    fat: roundNum(parseLocaleNumber(fatPerUnit) * scale),
+    fiber: roundNum(parseLocaleNumber(fiberPerUnit) * scale),
+    salt: roundNum(parseLocaleNumber(saltPerUnit) * scale)
   };
 }
 
+function setEntryUnit(unit){
+  entryUnit = unit;
+  document.getElementById('unitGramsBtn').classList.toggle('active', unit === 'g');
+  document.getElementById('unitItemBtn').classList.toggle('active', unit === 'item');
+
+  if(unit === 'item'){
+    document.getElementById('fGramsLabel').textContent = 'Quantity (items)';
+    document.getElementById('fGrams').placeholder = 'e.g. 1';
+    document.getElementById('fCalLabel').textContent = 'Calories per item';
+    document.getElementById('fProteinLabel').textContent = 'Protein per item (g)';
+    document.getElementById('fCarbsLabel').textContent = 'Carbs per item (g)';
+    document.getElementById('fFatLabel').textContent = 'Fat per item (g)';
+    document.getElementById('fFiberLabel').textContent = 'Fiber per item (g)';
+    document.getElementById('fSaltLabel').textContent = 'Salt per item (g)';
+  } else {
+    document.getElementById('fGramsLabel').textContent = 'Serving size (g)';
+    document.getElementById('fGrams').placeholder = '0';
+    document.getElementById('fCalLabel').textContent = 'Calories per 100g';
+    document.getElementById('fProteinLabel').textContent = 'Protein per 100g (g)';
+    document.getElementById('fCarbsLabel').textContent = 'Carbs per 100g (g)';
+    document.getElementById('fFatLabel').textContent = 'Fat per 100g (g)';
+    document.getElementById('fFiberLabel').textContent = 'Fiber per 100g (g)';
+    document.getElementById('fSaltLabel').textContent = 'Salt per 100g (g)';
+  }
+  updateServingPreview();
+}
+
+document.getElementById('unitGramsBtn').addEventListener('click', ()=>setEntryUnit('g'));
+document.getElementById('unitItemBtn').addEventListener('click', ()=>setEntryUnit('item'));
+
 function updateServingPreview(){
   const preview = document.getElementById('servingPreview');
-  const grams = parseLocaleNumber(document.getElementById('fGrams').value);
+  const amount = parseLocaleNumber(document.getElementById('fGrams').value);
   const cal = document.getElementById('fCal').value;
   const protein = document.getElementById('fProtein').value;
   const carbs = document.getElementById('fCarbs').value;
   const fat = document.getElementById('fFat').value;
+  const fiber = document.getElementById('fFiber').value;
+  const salt = document.getElementById('fSalt').value;
 
-  if(grams <= 0 || cal === ''){
-    preview.textContent = 'Enter serving size and per-100g values to see the total';
+  if(cal === ''){
+    preview.textContent = entryUnit === 'item'
+      ? 'Enter quantity and per-item values to see the total'
+      : 'Enter serving size and per-100g values to see the total';
     return;
   }
 
-  const totals = computeScaledTotals(grams, cal, protein, carbs, fat);
-  preview.innerHTML = `Total for ${grams}g: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g</span>`;
+  if(amount <= 0){
+    const c = Math.round(parseLocaleNumber(cal));
+    const p = roundNum(parseLocaleNumber(protein));
+    const cb = roundNum(parseLocaleNumber(carbs));
+    const f = roundNum(parseLocaleNumber(fat));
+    const fb = roundNum(parseLocaleNumber(fiber));
+    const s = roundNum(parseLocaleNumber(salt));
+    const label = entryUnit === 'item' ? 'No quantity' : 'No serving size';
+    preview.innerHTML = `${label} — will save as entered: <span class="total-cal">${c} cal</span> · <span class="total-macros">P ${p}g · C ${cb}g · F ${f}g · Fiber ${fb}g · Salt ${s}g</span>`;
+    return;
+  }
+
+  const totals = computeScaledTotals(amount, cal, protein, carbs, fat, fiber, salt, entryUnit);
+  const amountLabel = entryUnit === 'item' ? (amount + (amount === 1 ? ' item' : ' items')) : (amount + 'g');
+  preview.innerHTML = `Total for ${amountLabel}: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span>`;
 }
 
-['fGrams','fCal','fProtein','fCarbs','fFat'].forEach(id=>{
+['fGrams','fCal','fProtein','fCarbs','fFat','fFiber','fSalt'].forEach(id=>{
   document.getElementById(id).addEventListener('input', updateServingPreview);
 });
 
@@ -1479,26 +1644,52 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
   e.preventDefault();
   try{
     const name = document.getElementById('fName').value.trim();
-    const grams = parseLocaleNumber(document.getElementById('fGrams').value);
+    const amount = parseLocaleNumber(document.getElementById('fGrams').value);
     const cal = document.getElementById('fCal').value;
     const protein = document.getElementById('fProtein').value;
     const carbs = document.getElementById('fCarbs').value;
     const fat = document.getElementById('fFat').value;
+    const fiber = document.getElementById('fFiber').value;
+    const salt = document.getElementById('fSalt').value;
+    const unit = entryUnit;
 
-    if(!name || cal === '' || grams <= 0){
-      const targetId = !name ? 'fName' : (cal === '' ? 'fCal' : 'fGrams');
-      document.getElementById(targetId).focus();
-      if(grams <= 0 && name && cal !== '') showToast('Enter a serving size in grams');
+    if(!name || cal === ''){
+      document.getElementById(!name ? 'fName' : 'fCal').focus();
       return;
     }
 
-    const totals = computeScaledTotals(grams, cal, protein, carbs, fat);
-    const per100g = {
-      calPer100: parseLocaleNumber(cal),
-      proteinPer100: parseLocaleNumber(protein),
-      carbsPer100: parseLocaleNumber(carbs),
-      fatPer100: parseLocaleNumber(fat)
-    };
+    // With a quantity/serving size, the entered values are treated as per-unit and scaled.
+    // Without one, whatever was typed is saved directly as the total — no scaling.
+    const totals = amount > 0
+      ? computeScaledTotals(amount, cal, protein, carbs, fat, fiber, salt, unit)
+      : {
+          calories: Math.round(parseLocaleNumber(cal)),
+          protein: roundNum(parseLocaleNumber(protein)),
+          carbs: roundNum(parseLocaleNumber(carbs)),
+          fat: roundNum(parseLocaleNumber(fat)),
+          fiber: roundNum(parseLocaleNumber(fiber)),
+          salt: roundNum(parseLocaleNumber(salt))
+        };
+
+    const per100g = amount > 0
+      ? {
+          calPer100: parseLocaleNumber(cal),
+          proteinPer100: parseLocaleNumber(protein),
+          carbsPer100: parseLocaleNumber(carbs),
+          fatPer100: parseLocaleNumber(fat),
+          fiberPer100: parseLocaleNumber(fiber),
+          saltPer100: parseLocaleNumber(salt),
+          servingUnit: unit
+        }
+      : {
+          calPer100: undefined,
+          proteinPer100: undefined,
+          carbsPer100: undefined,
+          fatPer100: undefined,
+          fiberPer100: undefined,
+          saltPer100: undefined,
+          servingUnit: unit
+        };
 
     if(editingId){
       const idx = currentEntries.findIndex(e=>e.id === editingId);
@@ -1506,12 +1697,14 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
         currentEntries[idx] = {
           ...currentEntries[idx],
           name,
-          grams,
+          grams: amount,
           ...per100g,
           calories: totals.calories,
           protein: totals.protein,
           carbs: totals.carbs,
-          fat: totals.fat
+          fat: totals.fat,
+          fiber: totals.fiber,
+          salt: totals.salt
         };
       }
       exitEditMode();
@@ -1523,12 +1716,14 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
     const entry = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
       name,
-      grams,
+      grams: amount,
       ...per100g,
       calories: totals.calories,
       protein: totals.protein,
       carbs: totals.carbs,
-      fat: totals.fat
+      fat: totals.fat,
+      fiber: totals.fiber,
+      salt: totals.salt
     };
 
     currentEntries.push(entry);
@@ -1541,6 +1736,8 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
     document.getElementById('fProtein').value = '';
     document.getElementById('fCarbs').value = '';
     document.getElementById('fFat').value = '';
+    document.getElementById('fFiber').value = '';
+    document.getElementById('fSalt').value = '';
     document.getElementById('fName').focus();
     updateServingPreview();
   }catch(err){
@@ -1893,6 +2090,8 @@ function parseMacroJSON(text, finishReason){
     proteinPer100: Number(parsed.protein_per_100g) || 0,
     carbsPer100: Number(parsed.carbs_per_100g) || 0,
     fatPer100: Number(parsed.fat_per_100g) || 0,
+    fiberPer100: Number(parsed.fiber_per_100g) || 0,
+    saltPer100: Number(parsed.salt_per_100g) || 0,
     typicalWeightG: Number(parsed.typical_weight_g) || 0
   };
 }
@@ -1928,7 +2127,7 @@ async function withRetry(fn, retries){
 async function requestMacroEstimate(baseContext, extraContext){
   const wantsWeight = mentionsWeight(baseContext) || mentionsWeight(extraContext || '');
 
-  let schema = '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number';
+  let schema = '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number, "fiber_per_100g": number, "salt_per_100g": number';
   if(wantsWeight){
     schema += ', "typical_weight_g": number';
   }
@@ -1936,6 +2135,7 @@ async function requestMacroEstimate(baseContext, extraContext){
 
   let prompt = 'You are a nutrition estimation assistant. ' + baseContext + ' ' +
     'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' + schema + '. ' +
+    'salt_per_100g is the salt content in grams per 100g (not sodium in mg) — typical foods range roughly 0 to 2g salt per 100g. ' +
     'Give your best realistic estimate even if you are not fully certain.';
 
   if(wantsWeight){
@@ -2017,7 +2217,8 @@ document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>
   try{
     const prompt = 'You are a nutrition estimation assistant. Look at this food photo and identify the food. ' +
       'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' +
-      '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number}. ' +
+      '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number, "fiber_per_100g": number, "salt_per_100g": number}. ' +
+      'salt_per_100g is the salt content in grams per 100g (not sodium in mg). ' +
       'Give your best realistic estimate even if you are not fully certain.';
     const parts = [{text: prompt}, {inline_data: {mime_type: mimeType, data: photo.base64String}}];
     result = await withRetry(async ()=>{
@@ -2040,6 +2241,8 @@ document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>
     proteinPer100: result.proteinPer100,
     carbsPer100: result.carbsPer100,
     fatPer100: result.fatPer100,
+    fiberPer100: result.fiberPer100,
+    saltPer100: result.saltPer100,
     grams: '',
     thumbnail: 'data:' + mimeType + ';base64,' + photo.base64String
   });
@@ -2048,7 +2251,7 @@ document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>
 });
 
 function computeMultiPhotoTotals(){
-  let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalGrams = 0;
+  let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFiber = 0, totalSalt = 0, totalGrams = 0;
   multiPhotoItems.forEach(item=>{
     const g = parseLocaleNumber(item.grams);
     const scale = g / 100;
@@ -2057,12 +2260,16 @@ function computeMultiPhotoTotals(){
     totalProtein += item.proteinPer100 * scale;
     totalCarbs += item.carbsPer100 * scale;
     totalFat += item.fatPer100 * scale;
+    totalFiber += (item.fiberPer100 || 0) * scale;
+    totalSalt += (item.saltPer100 || 0) * scale;
   });
   return {
     calories: Math.round(totalCal),
     protein: roundNum(totalProtein),
     carbs: roundNum(totalCarbs),
     fat: roundNum(totalFat),
+    fiber: roundNum(totalFiber),
+    salt: roundNum(totalSalt),
     grams: totalGrams
   };
 }
@@ -2096,6 +2303,14 @@ function renderMultiPhotoList(){
           <div>
             <label>Fat/100g</label>
             <input type="text" inputmode="decimal" class="mp-fat-input" data-id="${item.id}" value="${roundNum(item.fatPer100)}">
+          </div>
+          <div>
+            <label>Fiber/100g</label>
+            <input type="text" inputmode="decimal" class="mp-fiber-input" data-id="${item.id}" value="${roundNum(item.fiberPer100)}">
+          </div>
+          <div>
+            <label>Salt/100g</label>
+            <input type="text" inputmode="decimal" class="mp-salt-input" data-id="${item.id}" value="${roundNum(item.saltPer100)}">
           </div>
         </div>
         <div class="multi-photo-grams-row">
@@ -2168,6 +2383,24 @@ function renderMultiPhotoList(){
     });
   });
 
+  list.querySelectorAll('.mp-fiber-input').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const id = input.getAttribute('data-id');
+      const item = multiPhotoItems.find(i=>i.id === id);
+      if(item) item.fiberPer100 = parseLocaleNumber(input.value);
+      updateMultiPhotoTotalDisplay();
+    });
+  });
+
+  list.querySelectorAll('.mp-salt-input').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const id = input.getAttribute('data-id');
+      const item = multiPhotoItems.find(i=>i.id === id);
+      if(item) item.saltPer100 = parseLocaleNumber(input.value);
+      updateMultiPhotoTotalDisplay();
+    });
+  });
+
   list.querySelectorAll('.multi-photo-remove').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const id = btn.getAttribute('data-id');
@@ -2186,7 +2419,7 @@ function updateMultiPhotoTotalDisplay(){
     return;
   }
   const totals = computeMultiPhotoTotals();
-  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g</span> (${totals.grams}g total)`;
+  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span> (${totals.grams}g total)`;
 }
 
 document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
@@ -2205,11 +2438,16 @@ document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
   const blendedProteinPer100 = roundNum(totals.protein / scale);
   const blendedCarbsPer100 = roundNum(totals.carbs / scale);
   const blendedFatPer100 = roundNum(totals.fat / scale);
+  const blendedFiberPer100 = roundNum(totals.fiber / scale);
+  const blendedSaltPer100 = roundNum(totals.salt / scale);
 
   const names = multiPhotoItems.map(i=>i.name);
   const combinedName = names.length > 3
     ? names.slice(0,3).join(', ') + ' + ' + (names.length - 3) + ' more'
     : names.join(', ');
+
+  // The blended values are per-100g, so force the form back to that mode
+  setEntryUnit('g');
 
   document.getElementById('fName').value = combinedName;
   document.getElementById('fGrams').value = totals.grams;
@@ -2217,6 +2455,8 @@ document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
   document.getElementById('fProtein').value = blendedProteinPer100;
   document.getElementById('fCarbs').value = blendedCarbsPer100;
   document.getElementById('fFat').value = blendedFatPer100;
+  document.getElementById('fFiber').value = blendedFiberPer100;
+  document.getElementById('fSalt').value = blendedSaltPer100;
   updateServingPreview();
 
   document.getElementById('multiPhotoOverlay').classList.remove('show');
@@ -2249,6 +2489,8 @@ function showPhotoResult(result, presetGrams){
       <div>Prot<span>${roundNum(result.proteinPer100)}g</span></div>
       <div>Carbs<span>${roundNum(result.carbsPer100)}g</span></div>
       <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
+      <div>Fiber<span>${roundNum(result.fiberPer100)}g</span></div>
+      <div>Salt<span>${roundNum(result.saltPer100)}g</span></div>
     </div>
     ${hasTypicalWeight ? `<div class="photo-typical-weight">Typical weight: ~${Math.round(result.typicalWeightG)}g — filled in below, adjust if needed</div>` : ''}
     <div class="photo-grams-field">
@@ -2284,13 +2526,18 @@ document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
   const gramsInput = document.getElementById('photoGramsInput');
   const grams = parseLocaleNumber(gramsInput && gramsInput.value);
 
-  // Fields now hold per-100g values, matching the manual entry form
+  // Gemini always estimates per-100g, so force the form back to that mode
+  // regardless of whatever the toggle was last left on.
+  setEntryUnit('g');
+
   document.getElementById('fName').value = lastPhotoResult.name;
   document.getElementById('fGrams').value = grams || '';
   document.getElementById('fCal').value = roundNum(lastPhotoResult.calPer100);
   document.getElementById('fProtein').value = roundNum(lastPhotoResult.proteinPer100);
   document.getElementById('fCarbs').value = roundNum(lastPhotoResult.carbsPer100);
   document.getElementById('fFat').value = roundNum(lastPhotoResult.fatPer100);
+  document.getElementById('fFiber').value = roundNum(lastPhotoResult.fiberPer100);
+  document.getElementById('fSalt').value = roundNum(lastPhotoResult.saltPer100);
   updateServingPreview();
 
   document.getElementById('photoResultOverlay').classList.remove('show');
