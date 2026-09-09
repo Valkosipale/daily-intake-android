@@ -656,11 +656,11 @@ body{
 }
 .bar-fill.over{background:var(--over);}
 
-.macro-row{
+.macro-row-main{
   display:grid;
   grid-template-columns:repeat(3, 1fr);
   gap:10px 10px;
-  padding:10px 14px 14px;
+  padding:10px 14px 8px;
   font-family:'Space Mono',monospace;
   font-size:11px;
   color:var(--ink-soft);
@@ -668,8 +668,22 @@ body{
   letter-spacing:0.5px;
   text-align:center;
 }
-.macro-row div{min-width:0;}
-.macro-row div span{
+.macro-row-sub{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px 10px;
+  padding:0 14px 14px;
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  text-align:center;
+}
+.macro-row-sub .span-left{grid-column:1 / 3; grid-row:1;}
+.macro-row-sub .span-right{grid-column:2 / 4; grid-row:1;}
+.macro-row-main div, .macro-row-sub div{min-width:0;}
+.macro-row-main div span, .macro-row-sub div span{
   display:block;
   font-family:'Inter',sans-serif;
   color:var(--accent);
@@ -691,7 +705,22 @@ body{
   letter-spacing:1.5px;
   text-transform:uppercase;
   margin-bottom:0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
 }
+.copy-day-btn{
+  background:none;
+  border:1px solid #141210;
+  color:#141210;
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.5px;
+  text-transform:uppercase;
+  padding:4px 8px;
+  cursor:pointer;
+}
+.copy-day-btn:hover{background:#141210;color:var(--accent);}
 .entries{
   border-left:1px solid var(--hair);
   border-right:1px solid var(--hair);
@@ -931,16 +960,21 @@ body{
 
     <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
 
-    <div class="macro-row">
+    <div class="macro-row-main">
       <div>Protein<span id="totalProtein">0g</span></div>
       <div>Carbs<span id="totalCarbs">0g</span></div>
       <div>Fat<span id="totalFat">0g</span></div>
-      <div>Fiber<span id="totalFiber">0g</span></div>
-      <div>Salt<span id="totalSalt">0g</span></div>
+    </div>
+    <div class="macro-row-sub">
+      <div class="span-left">Fiber<span id="totalFiber">0g</span></div>
+      <div class="span-right">Salt<span id="totalSalt">0g</span></div>
     </div>
   </div>
 
-  <div class="log-head">Today's log</div>
+  <div class="log-head">
+    <span>Today's log</span>
+    <button type="button" class="copy-day-btn" id="copyDayBtn">Copy day</button>
+  </div>
   <div class="entries" id="entriesContainer"></div>
 
   <div class="add-form">
@@ -973,20 +1007,20 @@ body{
           <input type="text" inputmode="decimal" id="fProtein" placeholder="0">
         </div>
         <div class="field">
-          <label for="fCarbs" id="fCarbsLabel">Carbs per 100g (g)</label>
-          <input type="text" inputmode="decimal" id="fCarbs" placeholder="0">
-        </div>
-        <div class="field">
-          <label for="fFat" id="fFatLabel">Fat per 100g (g)</label>
-          <input type="text" inputmode="decimal" id="fFat" placeholder="0">
-        </div>
-        <div class="field">
           <label for="fFiber" id="fFiberLabel">Fiber per 100g (g)</label>
           <input type="text" inputmode="decimal" id="fFiber" placeholder="0">
         </div>
         <div class="field">
+          <label for="fCarbs" id="fCarbsLabel">Carbs per 100g (g)</label>
+          <input type="text" inputmode="decimal" id="fCarbs" placeholder="0">
+        </div>
+        <div class="field">
           <label for="fSalt" id="fSaltLabel">Salt per 100g (g)</label>
           <input type="text" inputmode="decimal" id="fSalt" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="fFat" id="fFatLabel">Fat per 100g (g)</label>
+          <input type="text" inputmode="decimal" id="fFat" placeholder="0">
         </div>
       </div>
       <div class="serving-preview" id="servingPreview">Enter serving size and per-100g values to see the total</div>
@@ -1276,10 +1310,10 @@ function render(){
       row.className = 'entry';
       const macroBits = [];
       if(item.protein) macroBits.push('P '+item.protein+'g');
-      if(item.carbs) macroBits.push('C '+item.carbs+'g');
-      if(item.fat) macroBits.push('F '+item.fat+'g');
       if(item.fiber) macroBits.push('Fiber '+item.fiber+'g');
+      if(item.carbs) macroBits.push('C '+item.carbs+'g');
       if(item.salt) macroBits.push('Salt '+item.salt+'g');
+      if(item.fat) macroBits.push('F '+item.fat+'g');
       row.innerHTML = `
         <div>
           <div class="name">${escapeHtml(item.name)}${item.grams ? ` <span class="grams-badge">${item.servingUnit === 'item' ? item.grams + (item.grams === 1 ? ' item' : ' items') : item.grams + 'g'}</span>` : ''}</div>
@@ -1330,13 +1364,31 @@ function render(){
 }
 
 let pendingCopyItem = null;
+let pendingCopyMode = 'item'; // 'item' or 'day'
 
 function openCopyToDayModal(item){
   pendingCopyItem = item;
+  pendingCopyMode = 'item';
   document.getElementById('copyToDayFoodName').textContent = `Choose a date to copy "${item.name}" to.`;
   document.getElementById('copyToDayInput').value = todayStr();
   document.getElementById('copyToDayOverlay').classList.add('show');
 }
+
+function openCopyDayModal(){
+  if(currentEntries.length === 0){
+    showToast('Nothing logged on this day yet');
+    return;
+  }
+  pendingCopyMode = 'day';
+  const label = formatDateLabel(currentDate).replace('Today · ', '');
+  document.getElementById('copyToDayFoodName').textContent = `Choose a date to copy all ${currentEntries.length} item${currentEntries.length === 1 ? '' : 's'} from ${label} to.`;
+  const suggested = new Date(currentDate);
+  suggested.setDate(suggested.getDate() + 1);
+  document.getElementById('copyToDayInput').value = suggested.getFullYear()+"-"+String(suggested.getMonth()+1).padStart(2,"0")+"-"+String(suggested.getDate()).padStart(2,"0");
+  document.getElementById('copyToDayOverlay').classList.add('show');
+}
+
+document.getElementById('copyDayBtn').addEventListener('click', openCopyDayModal);
 
 document.getElementById('copyToDayCancelBtn').addEventListener('click', ()=>{
   document.getElementById('copyToDayOverlay').classList.remove('show');
@@ -1351,12 +1403,29 @@ document.getElementById('copyToDayOverlay').addEventListener('click', (e)=>{
 });
 
 document.getElementById('copyToDayConfirmBtn').addEventListener('click', async ()=>{
-  if(!pendingCopyItem) return;
   const targetDateStr = document.getElementById('copyToDayInput').value;
   if(!targetDateStr){
     showToast('Pick a date first');
     return;
   }
+
+  if(pendingCopyMode === 'day'){
+    if(targetDateStr === currentDate){
+      document.getElementById('copyToDayOverlay').classList.remove('show');
+      showToast('Pick a different day to copy to');
+      return;
+    }
+    const count = await copyDayToDate(currentEntries, targetDateStr);
+    document.getElementById('copyToDayOverlay').classList.remove('show');
+    if(count > 0){
+      showToast(`Copied ${count} item${count === 1 ? '' : 's'} to ${formatDateShort(targetDateStr)}`);
+    } else {
+      showToast('Could not copy');
+    }
+    return;
+  }
+
+  if(!pendingCopyItem) return;
   const ok = await copyEntryToDate(pendingCopyItem, targetDateStr);
   document.getElementById('copyToDayOverlay').classList.remove('show');
   pendingCopyItem = null;
@@ -1386,6 +1455,25 @@ async function copyEntryToDate(item, targetDateStr){
   }catch(e){
     console.error('Failed to copy entry to ' + targetDateStr, e);
     return false;
+  }
+}
+
+async function copyDayToDate(entries, targetDateStr){
+  if(!hasStorage()) return 0;
+  try{
+    const raw = window.localStorage.getItem('dic:log:'+targetDateStr);
+    const arr = raw ? JSON.parse(raw) : [];
+    entries.forEach((item, i)=>{
+      arr.push({
+        ...item,
+        id: Date.now().toString(36) + i.toString(36) + Math.random().toString(36).slice(2,5)
+      });
+    });
+    window.localStorage.setItem('dic:log:'+targetDateStr, JSON.stringify(arr));
+    return entries.length;
+  }catch(e){
+    console.error('Failed to copy day to ' + targetDateStr, e);
+    return 0;
   }
 }
 
@@ -1627,13 +1715,13 @@ function updateServingPreview(){
     const fb = roundNum(parseLocaleNumber(fiber));
     const s = roundNum(parseLocaleNumber(salt));
     const label = entryUnit === 'item' ? 'No quantity' : 'No serving size';
-    preview.innerHTML = `${label} — will save as entered: <span class="total-cal">${c} cal</span> · <span class="total-macros">P ${p}g · C ${cb}g · F ${f}g · Fiber ${fb}g · Salt ${s}g</span>`;
+    preview.innerHTML = `${label} — will save as entered: <span class="total-cal">${c} cal</span> · <span class="total-macros">P ${p}g · Fiber ${fb}g · C ${cb}g · Salt ${s}g · F ${f}g</span>`;
     return;
   }
 
   const totals = computeScaledTotals(amount, cal, protein, carbs, fat, fiber, salt, entryUnit);
   const amountLabel = entryUnit === 'item' ? (amount + (amount === 1 ? ' item' : ' items')) : (amount + 'g');
-  preview.innerHTML = `Total for ${amountLabel}: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span>`;
+  preview.innerHTML = `Total for ${amountLabel}: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · Fiber ${totals.fiber}g · C ${totals.carbs}g · Salt ${totals.salt}g · F ${totals.fat}g</span>`;
 }
 
 ['fGrams','fCal','fProtein','fCarbs','fFat','fFiber','fSalt'].forEach(id=>{
@@ -1785,9 +1873,59 @@ function restoreAllData(data){
   }
 }
 
-document.getElementById('exportBtn').addEventListener('click', ()=>{
+// Backup text is gzip-compressed then base64-encoded to keep it much shorter and
+// easier to paste/store. Falls back to plain JSON if the browser can't compress
+// (older WebViews), and import transparently handles both formats.
+const BACKUP_PREFIX = 'DICGZ1:';
+
+function arrayBufferToBase64(buffer){
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for(let i=0; i<bytes.length; i+=chunkSize){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunkSize));
+  }
+  return btoa(binary);
+}
+
+function base64ToUint8Array(base64){
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for(let i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function compressToBase64(str){
+  const stream = new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
+  const buffer = await new Response(stream).arrayBuffer();
+  return arrayBufferToBase64(buffer);
+}
+
+async function decompressFromBase64(base64){
+  const bytes = base64ToUint8Array(base64);
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const buffer = await new Response(stream).arrayBuffer();
+  return new TextDecoder().decode(buffer);
+}
+
+document.getElementById('exportBtn').addEventListener('click', async ()=>{
   const data = collectAllData();
-  document.getElementById('exportText').value = JSON.stringify(data);
+  const jsonStr = JSON.stringify(data);
+  let output = jsonStr;
+
+  if(typeof CompressionStream !== 'undefined'){
+    try{
+      const compressed = BACKUP_PREFIX + await compressToBase64(jsonStr);
+      // Only use the compressed version if it actually comes out shorter
+      if(compressed.length < jsonStr.length){
+        output = compressed;
+      }
+    }catch(e){
+      console.error('Compression failed, using plain JSON instead', e);
+    }
+  }
+
+  document.getElementById('exportText').value = output;
   document.getElementById('exportOverlay').classList.add('show');
 });
 
@@ -1824,9 +1962,24 @@ document.getElementById('importConfirmBtn').addEventListener('click', async ()=>
   const raw = document.getElementById('importText').value.trim();
   if(!raw){ showToast('Paste your backup text first'); return; }
 
+  let jsonStr = raw;
+  if(raw.indexOf(BACKUP_PREFIX) === 0){
+    if(typeof DecompressionStream === 'undefined'){
+      showToast("This backup is compressed but your app can't decompress it");
+      return;
+    }
+    try{
+      jsonStr = await decompressFromBase64(raw.slice(BACKUP_PREFIX.length));
+    }catch(e){
+      console.error('Decompression failed', e);
+      showToast('Could not read this backup text');
+      return;
+    }
+  }
+
   let parsed;
   try{
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(jsonStr);
   }catch(e){
     showToast("That doesn't look like valid backup text");
     return;
@@ -2297,20 +2450,20 @@ function renderMultiPhotoList(){
             <input type="text" inputmode="decimal" class="mp-protein-input" data-id="${item.id}" value="${roundNum(item.proteinPer100)}">
           </div>
           <div>
-            <label>Carb/100g</label>
-            <input type="text" inputmode="decimal" class="mp-carbs-input" data-id="${item.id}" value="${roundNum(item.carbsPer100)}">
-          </div>
-          <div>
-            <label>Fat/100g</label>
-            <input type="text" inputmode="decimal" class="mp-fat-input" data-id="${item.id}" value="${roundNum(item.fatPer100)}">
-          </div>
-          <div>
             <label>Fiber/100g</label>
             <input type="text" inputmode="decimal" class="mp-fiber-input" data-id="${item.id}" value="${roundNum(item.fiberPer100)}">
           </div>
           <div>
+            <label>Carb/100g</label>
+            <input type="text" inputmode="decimal" class="mp-carbs-input" data-id="${item.id}" value="${roundNum(item.carbsPer100)}">
+          </div>
+          <div>
             <label>Salt/100g</label>
             <input type="text" inputmode="decimal" class="mp-salt-input" data-id="${item.id}" value="${roundNum(item.saltPer100)}">
+          </div>
+          <div>
+            <label>Fat/100g</label>
+            <input type="text" inputmode="decimal" class="mp-fat-input" data-id="${item.id}" value="${roundNum(item.fatPer100)}">
           </div>
         </div>
         <div class="multi-photo-grams-row">
@@ -2419,7 +2572,7 @@ function updateMultiPhotoTotalDisplay(){
     return;
   }
   const totals = computeMultiPhotoTotals();
-  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span> (${totals.grams}g total)`;
+  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · Fiber ${totals.fiber}g · C ${totals.carbs}g · Salt ${totals.salt}g · F ${totals.fat}g</span> (${totals.grams}g total)`;
 }
 
 document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
@@ -2487,10 +2640,10 @@ function showPhotoResult(result, presetGrams){
     <div class="photo-result-macros">
       <div>Cal<span>${roundNum(result.calPer100)}</span></div>
       <div>Prot<span>${roundNum(result.proteinPer100)}g</span></div>
-      <div>Carbs<span>${roundNum(result.carbsPer100)}g</span></div>
-      <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
       <div>Fiber<span>${roundNum(result.fiberPer100)}g</span></div>
+      <div>Carbs<span>${roundNum(result.carbsPer100)}g</span></div>
       <div>Salt<span>${roundNum(result.saltPer100)}g</span></div>
+      <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
     </div>
     ${hasTypicalWeight ? `<div class="photo-typical-weight">Typical weight: ~${Math.round(result.typicalWeightG)}g — filled in below, adjust if needed</div>` : ''}
     <div class="photo-grams-field">
