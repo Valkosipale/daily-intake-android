@@ -1007,20 +1007,20 @@ body{
           <input type="text" inputmode="decimal" id="fProtein" placeholder="0">
         </div>
         <div class="field">
-          <label for="fFiber" id="fFiberLabel">Fiber per 100g (g)</label>
-          <input type="text" inputmode="decimal" id="fFiber" placeholder="0">
-        </div>
-        <div class="field">
           <label for="fCarbs" id="fCarbsLabel">Carbs per 100g (g)</label>
           <input type="text" inputmode="decimal" id="fCarbs" placeholder="0">
         </div>
         <div class="field">
-          <label for="fSalt" id="fSaltLabel">Salt per 100g (g)</label>
-          <input type="text" inputmode="decimal" id="fSalt" placeholder="0">
-        </div>
-        <div class="field">
           <label for="fFat" id="fFatLabel">Fat per 100g (g)</label>
           <input type="text" inputmode="decimal" id="fFat" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="fFiber" id="fFiberLabel">Fiber per 100g (g)</label>
+          <input type="text" inputmode="decimal" id="fFiber" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="fSalt" id="fSaltLabel">Salt per 100g (g)</label>
+          <input type="text" inputmode="decimal" id="fSalt" placeholder="0">
         </div>
       </div>
       <div class="serving-preview" id="servingPreview">Enter serving size and per-100g values to see the total</div>
@@ -1310,10 +1310,10 @@ function render(){
       row.className = 'entry';
       const macroBits = [];
       if(item.protein) macroBits.push('P '+item.protein+'g');
-      if(item.fiber) macroBits.push('Fiber '+item.fiber+'g');
       if(item.carbs) macroBits.push('C '+item.carbs+'g');
-      if(item.salt) macroBits.push('Salt '+item.salt+'g');
       if(item.fat) macroBits.push('F '+item.fat+'g');
+      if(item.fiber) macroBits.push('Fiber '+item.fiber+'g');
+      if(item.salt) macroBits.push('Salt '+item.salt+'g');
       row.innerHTML = `
         <div>
           <div class="name">${escapeHtml(item.name)}${item.grams ? ` <span class="grams-badge">${item.servingUnit === 'item' ? item.grams + (item.grams === 1 ? ' item' : ' items') : item.grams + 'g'}</span>` : ''}</div>
@@ -1715,13 +1715,13 @@ function updateServingPreview(){
     const fb = roundNum(parseLocaleNumber(fiber));
     const s = roundNum(parseLocaleNumber(salt));
     const label = entryUnit === 'item' ? 'No quantity' : 'No serving size';
-    preview.innerHTML = `${label} — will save as entered: <span class="total-cal">${c} cal</span> · <span class="total-macros">P ${p}g · Fiber ${fb}g · C ${cb}g · Salt ${s}g · F ${f}g</span>`;
+    preview.innerHTML = `${label} — will save as entered: <span class="total-cal">${c} cal</span> · <span class="total-macros">P ${p}g · C ${cb}g · F ${f}g · Fiber ${fb}g · Salt ${s}g</span>`;
     return;
   }
 
   const totals = computeScaledTotals(amount, cal, protein, carbs, fat, fiber, salt, entryUnit);
   const amountLabel = entryUnit === 'item' ? (amount + (amount === 1 ? ' item' : ' items')) : (amount + 'g');
-  preview.innerHTML = `Total for ${amountLabel}: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · Fiber ${totals.fiber}g · C ${totals.carbs}g · Salt ${totals.salt}g · F ${totals.fat}g</span>`;
+  preview.innerHTML = `Total for ${amountLabel}: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span>`;
 }
 
 ['fGrams','fCal','fProtein','fCarbs','fFat','fFiber','fSalt'].forEach(id=>{
@@ -2450,20 +2450,20 @@ function renderMultiPhotoList(){
             <input type="text" inputmode="decimal" class="mp-protein-input" data-id="${item.id}" value="${roundNum(item.proteinPer100)}">
           </div>
           <div>
-            <label>Fiber/100g</label>
-            <input type="text" inputmode="decimal" class="mp-fiber-input" data-id="${item.id}" value="${roundNum(item.fiberPer100)}">
-          </div>
-          <div>
             <label>Carb/100g</label>
             <input type="text" inputmode="decimal" class="mp-carbs-input" data-id="${item.id}" value="${roundNum(item.carbsPer100)}">
           </div>
           <div>
-            <label>Salt/100g</label>
-            <input type="text" inputmode="decimal" class="mp-salt-input" data-id="${item.id}" value="${roundNum(item.saltPer100)}">
-          </div>
-          <div>
             <label>Fat/100g</label>
             <input type="text" inputmode="decimal" class="mp-fat-input" data-id="${item.id}" value="${roundNum(item.fatPer100)}">
+          </div>
+          <div>
+            <label>Fiber/100g</label>
+            <input type="text" inputmode="decimal" class="mp-fiber-input" data-id="${item.id}" value="${roundNum(item.fiberPer100)}">
+          </div>
+          <div>
+            <label>Salt/100g</label>
+            <input type="text" inputmode="decimal" class="mp-salt-input" data-id="${item.id}" value="${roundNum(item.saltPer100)}">
           </div>
         </div>
         <div class="multi-photo-grams-row">
@@ -2572,7 +2572,7 @@ function updateMultiPhotoTotalDisplay(){
     return;
   }
   const totals = computeMultiPhotoTotals();
-  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · Fiber ${totals.fiber}g · C ${totals.carbs}g · Salt ${totals.salt}g · F ${totals.fat}g</span> (${totals.grams}g total)`;
+  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span> (${totals.grams}g total)`;
 }
 
 document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
@@ -2640,10 +2640,10 @@ function showPhotoResult(result, presetGrams){
     <div class="photo-result-macros">
       <div>Cal<span>${roundNum(result.calPer100)}</span></div>
       <div>Prot<span>${roundNum(result.proteinPer100)}g</span></div>
-      <div>Fiber<span>${roundNum(result.fiberPer100)}g</span></div>
       <div>Carbs<span>${roundNum(result.carbsPer100)}g</span></div>
-      <div>Salt<span>${roundNum(result.saltPer100)}g</span></div>
       <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
+      <div>Fiber<span>${roundNum(result.fiberPer100)}g</span></div>
+      <div>Salt<span>${roundNum(result.saltPer100)}g</span></div>
     </div>
     ${hasTypicalWeight ? `<div class="photo-typical-weight">Typical weight: ~${Math.round(result.typicalWeightG)}g — filled in below, adjust if needed</div>` : ''}
     <div class="photo-grams-field">
