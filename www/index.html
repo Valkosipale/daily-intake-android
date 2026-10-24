@@ -307,6 +307,19 @@ body{
 }
 .weekly-summary .avg-macros{color:var(--ink);display:block;}
 
+.api-key-long-btn{
+  width:100%;
+  margin-top:10px;
+}
+.multi-add-row{margin-bottom:10px;}
+.multi-barcode-form{margin-bottom:12px;}
+.multi-photo-thumb-barcode{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+}
+
 .previous-items-box{ max-width:440px; max-height:86vh; }
 #previousItemsList{
   max-height:60vh;
@@ -1277,6 +1290,7 @@ body{
     <p class="backup-desc">Scan a packaged food's barcode to look up its nutrition (Open Food Facts database).</p>
     <div class="backup-actions">
       <button type="button" id="scanBarcodeBtn" class="backup-btn">📷 Scan barcode</button>
+      <button type="button" id="multiBarcodeBtn" class="backup-btn">📷📷 Multiple barcodes</button>
     </div>
     <form class="ask-gemini-row" id="barcodeForm" style="margin-top:10px;">
       <input type="text" inputmode="numeric" id="barcodeInput" placeholder="or type the barcode number">
@@ -1291,6 +1305,7 @@ body{
       <input type="text" id="askGeminiInput" placeholder="e.g. Snickers bar, or 'how many grams is a Snickers bar?'">
       <button type="button" id="askGeminiBtn" class="backup-btn">Ask</button>
     </div>
+    <button type="button" id="apiKeyBtn" class="backup-btn api-key-long-btn">API key</button>
     <div class="photo-ask-answer" id="askGeminiAnswer" style="display:none;"></div>
   </div>
 
@@ -1329,23 +1344,23 @@ body{
     </div>
   </div>
 
-  <div class="backup-section">
-    <span class="eyebrow">Settings</span>
-    <p class="backup-desc">Your Gemini API key, used by Photo macros and Ask Gemini above.</p>
-    <div class="backup-actions">
-      <button type="button" id="apiKeyBtn" class="backup-btn">API key</button>
-    </div>
-  </div>
 
 </div>
 
 <div class="data-overlay" id="multiPhotoOverlay">
   <div class="data-box multi-photo-box">
-    <div class="data-title">Multiple photos macro</div>
-    <p class="data-desc">Photograph each item, enter how many grams of each you're having, and the totals combine automatically.</p>
+    <div class="data-title">Multiple items</div>
+    <p class="data-desc">Add each item by photo or barcode (mix them if you like), enter how many grams of each you're having, and the totals combine automatically.</p>
     <div id="multiPhotoList"></div>
-    <button type="button" id="multiPhotoAddBtn" class="backup-btn multi-photo-add-btn">📷 Add photo</button>
-    <div class="multi-photo-total" id="multiPhotoTotal">Add at least one photo to see the combined total</div>
+    <div class="backup-actions multi-add-row">
+      <button type="button" id="multiPhotoAddBtn" class="backup-btn">📷 Add photo</button>
+      <button type="button" id="multiBarcodeAddBtn" class="backup-btn">🏷️ Add barcode</button>
+    </div>
+    <form class="ask-gemini-row multi-barcode-form" id="multiBarcodeForm">
+      <input type="text" inputmode="numeric" id="multiBarcodeInput" placeholder="or type a barcode number">
+      <button type="submit" class="backup-btn">Add</button>
+    </form>
+    <div class="multi-photo-total" id="multiPhotoTotal">Add at least one item to see the combined total</div>
     <div class="data-actions">
       <button type="button" id="multiPhotoCancelBtn" class="secondary">Cancel</button>
       <button type="button" id="multiPhotoUseBtn" class="primary">Add combined to log</button>
@@ -2799,11 +2814,13 @@ async function fetchOffProduct(code){
   return data.product;
 }
 
-async function lookupBarcode(rawCode){
+// Validates a barcode, looks it up, and returns the mapped result - or null after telling
+// the person why (bad number, not in the database, or a lookup error).
+async function fetchBarcodeResult(rawCode){
   const code = String(rawCode || '').replace(/\D/g, '');
   if(code.length < 8 || code.length > 14){
     showToast('Barcodes have 8–14 digits');
-    return;
+    return null;
   }
 
   showLoadingOverlay('Looking up product…');
@@ -2814,16 +2831,20 @@ async function lookupBarcode(rawCode){
     console.error('Barcode lookup failed', e);
     hideLoadingOverlay();
     showErrorModal((e && e.message) ? e.message : 'Unknown error', 'Barcode lookup failed');
-    return;
+    return null;
   }
   hideLoadingOverlay();
 
   if(!product){
     showToast('Not found in Open Food Facts — add it manually or try Ask Gemini');
-    return;
+    return null;
   }
+  return mapOffProduct(product, code);
+}
 
-  const result = mapOffProduct(product, code);
+async function lookupBarcode(rawCode){
+  const result = await fetchBarcodeResult(rawCode);
+  if(!result) return;
   // There's no photo to send to Gemini, but keeping the name means Re-analyze / Ask
   // a question still work from this result if the database values look wrong.
   lastPhotoBase64 = null;
@@ -2848,12 +2869,15 @@ async function waitForScannerModule(Scanner, timeoutMs){
   return false;
 }
 
-async function scanBarcode(){
+// Opens the scanner and returns the numeric barcode, or null if nothing usable was scanned
+// (cancelled, empty, not a food barcode, or the scanner couldn't start - already explained).
+async function scanBarcodeCode(fallbackInputId){
   const Scanner = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BarcodeScanner;
   if(!Scanner){
-    showToast("Scanner isn't available in this build — type the barcode number below");
-    document.getElementById('barcodeInput').focus();
-    return;
+    showToast("Scanner isn't available in this build — type the barcode number instead");
+    const input = document.getElementById(fallbackInputId);
+    if(input) input.focus();
+    return null;
   }
 
   try{
@@ -2876,7 +2900,7 @@ async function scanBarcode(){
       hideLoadingOverlay();
       if(!available){
         showErrorModal("Couldn't prepare the scanner. The first time, it needs Google Play services and an internet connection. You can still type the barcode number instead.", 'Scanner unavailable');
-        return;
+        return null;
       }
     }
 
@@ -2887,16 +2911,22 @@ async function scanBarcode(){
       .find(c => c.length >= 8);
     if(!code){
       if(barcodes.length) showToast("That doesn't look like a food barcode");
-      return;
+      return null;
     }
-    await lookupBarcode(code);
+    return code;
   }catch(e){
     hideLoadingOverlay();
     const msg = (e && e.message) ? e.message : String(e);
-    if(/cancel/i.test(msg)) return; // person backed out of the scanner
+    if(/cancel/i.test(msg)) return null; // person backed out of the scanner
     console.error('Barcode scan failed', e);
     showErrorModal(msg, 'Barcode scan failed');
+    return null;
   }
+}
+
+async function scanBarcode(){
+  const code = await scanBarcodeCode('barcodeInput');
+  if(code) await lookupBarcode(code);
 }
 
 document.getElementById('scanBarcodeBtn').addEventListener('click', scanBarcode);
@@ -3409,17 +3439,45 @@ async function askGeminiFreeform(question){
 
 let multiPhotoItems = [];
 
-document.getElementById('multiPhotoBtn').addEventListener('click', ()=>{
-  const key = getGeminiKey();
-  if(!key){
-    showToast('Set your Gemini API key first');
-    document.getElementById('apiKeyInput').value = '';
-    document.getElementById('apiKeyOverlay').classList.add('show');
-    return;
-  }
+function openMultiModal(){
   multiPhotoItems = [];
   renderMultiPhotoList();
   document.getElementById('multiPhotoOverlay').classList.add('show');
+}
+
+// Opening the box doesn't need a Gemini key any more (barcodes don't use Gemini);
+// the key is only asked for when you add a photo.
+document.getElementById('multiPhotoBtn').addEventListener('click', openMultiModal);
+document.getElementById('multiBarcodeBtn').addEventListener('click', openMultiModal);
+
+async function addBarcodeToMulti(rawCode){
+  const result = await fetchBarcodeResult(rawCode);
+  if(!result) return false;
+  multiPhotoItems.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+    name: result.name,
+    calPer100: result.calPer100,
+    proteinPer100: result.proteinPer100,
+    carbsPer100: result.carbsPer100,
+    fatPer100: result.fatPer100,
+    fiberPer100: result.fiberPer100,
+    saltPer100: result.saltPer100,
+    grams: result.typicalWeightG > 0 ? String(Math.round(result.typicalWeightG)) : '',
+    thumbnail: null
+  });
+  renderMultiPhotoList();
+  return true;
+}
+
+document.getElementById('multiBarcodeAddBtn').addEventListener('click', async ()=>{
+  const code = await scanBarcodeCode('multiBarcodeInput');
+  if(code) await addBarcodeToMulti(code);
+});
+
+document.getElementById('multiBarcodeForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const input = document.getElementById('multiBarcodeInput');
+  if(await addBarcodeToMulti(input.value)) input.value = '';
 });
 
 document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
@@ -3428,6 +3486,12 @@ document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>{
+  if(!getGeminiKey()){
+    showToast('Set your Gemini API key first');
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiKeyOverlay').classList.add('show');
+    return;
+  }
   const CapCamera = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
   if(!CapCamera){
     showToast('Camera is only available in the installed app');
@@ -3525,7 +3589,7 @@ function renderMultiPhotoList(){
     const row = document.createElement('div');
     row.className = 'multi-photo-item';
     row.innerHTML = `
-      <img class="multi-photo-thumb" src="${item.thumbnail}" alt="">
+      ${item.thumbnail ? `<img class="multi-photo-thumb" src="${item.thumbnail}" alt="">` : '<div class="multi-photo-thumb multi-photo-thumb-barcode">🏷️</div>'}
       <div class="multi-photo-info">
         <div class="multi-photo-name">${escapeHtml(item.name)}</div>
         <div class="multi-photo-macro-grid">
@@ -3656,7 +3720,7 @@ function renderMultiPhotoList(){
 function updateMultiPhotoTotalDisplay(){
   const totalBox = document.getElementById('multiPhotoTotal');
   if(multiPhotoItems.length === 0){
-    totalBox.textContent = 'Add at least one photo to see the combined total';
+    totalBox.textContent = 'Add at least one item to see the combined total';
     return;
   }
   const totals = computeMultiPhotoTotals();
@@ -3665,7 +3729,7 @@ function updateMultiPhotoTotalDisplay(){
 
 document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
   if(multiPhotoItems.length === 0){
-    showToast('Add at least one photo first');
+    showToast('Add at least one item first');
     return;
   }
   const totals = computeMultiPhotoTotals();
