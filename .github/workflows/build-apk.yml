@@ -29,6 +29,53 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Configure Android project for barcode scanning
+        run: |
+          python3 - << 'PY'
+          import re, sys
+          from xml.dom import minidom
+
+          manifest_path = 'android/app/src/main/AndroidManifest.xml'
+          gradle_path = 'android/app/build.gradle'
+
+          with open(manifest_path) as f:
+              manifest = f.read()
+
+          # 1) Camera + flashlight permissions (before <application>)
+          perms = ''
+          for p in ('android.permission.CAMERA', 'android.permission.FLASHLIGHT'):
+              if p not in manifest:
+                  perms += '    <uses-permission android:name="%s" />\n' % p
+          if perms:
+              manifest, n = re.subn(r'([ \t]*)<application', lambda m: perms + m.group(0), manifest, count=1)
+              if n != 1:
+                  sys.exit('ERROR: could not find <application> in AndroidManifest.xml')
+
+          # 2) Google ML Kit module dependency (inside <application>)
+          if 'com.google.mlkit.vision.DEPENDENCIES' not in manifest:
+              meta = '<meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />'
+              manifest, n = re.subn(r'(<application[^>]*>)', lambda m: m.group(1) + '\n        ' + meta, manifest, count=1)
+              if n != 1:
+                  sys.exit('ERROR: could not add meta-data to <application>')
+
+          minidom.parseString(manifest)  # fail the build early if the XML is malformed
+          with open(manifest_path, 'w') as f:
+              f.write(manifest)
+
+          # 3) Data binding, required by the barcode scanner plugin
+          with open(gradle_path) as f:
+              gradle = f.read()
+          if 'dataBinding' not in gradle:
+              block = '\n    buildFeatures {\n        dataBinding true\n    }\n    dataBinding {\n        enabled = true\n    }'
+              gradle, n = re.subn(r'(\nandroid\s*\{)', lambda m: m.group(1) + block, gradle, count=1)
+              if n != 1:
+                  sys.exit('ERROR: could not find android { } block in app/build.gradle')
+              with open(gradle_path, 'w') as f:
+                  f.write(gradle)
+
+          print('Android project configured for barcode scanning')
+          PY
+
       - name: Generate app icons and splash screen
         run: npx capacitor-assets generate --android
 
