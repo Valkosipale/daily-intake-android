@@ -144,7 +144,7 @@ body{
 .data-overlay.show{display:flex;}
 .data-box{
   background:var(--panel);
-  border:2px solid var(--accent);
+  border:1px solid var(--accent);
   padding:18px;
   max-width:420px;
   width:100%;
@@ -165,6 +165,222 @@ body{
 }
 
 .multi-photo-box{ max-width:440px; }
+
+.weight-unit{
+  align-self:center;
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  color:var(--ink-soft);
+}
+.weight-box{ max-width:440px; max-height:90vh; overflow-y:auto; }
+.weight-chart svg{
+  width:100%;
+  height:auto;
+  display:block;
+  border:1px solid var(--hair);
+  background:#0D0D0D;
+}
+.weight-chart polyline{
+  fill:none;
+  stroke:var(--accent);
+  stroke-width:2;
+  stroke-linejoin:round;
+  stroke-linecap:round;
+}
+.weight-chart circle{fill:var(--accent);}
+.weight-empty{
+  border:1px solid var(--hair);
+  padding:16px 12px;
+  font-size:12px;
+  color:var(--ink-soft);
+  text-align:center;
+  line-height:1.4;
+}
+.weight-stats{
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  text-align:center;
+  line-height:1.6;
+  margin:8px 0 10px;
+}
+.weight-row{
+  display:grid;
+  grid-template-columns:1fr auto auto auto;
+  gap:10px;
+  align-items:center;
+  padding:8px 2px;
+  border-bottom:1px solid var(--hair);
+}
+.weight-row-date{
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  color:var(--ink-soft);
+}
+.weight-row-kg{
+  font-family:'Archivo Black',sans-serif;
+  font-size:14px;
+  color:var(--accent);
+}
+.weight-row-delta{
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  min-width:46px;
+  text-align:right;
+}
+.weight-row-del{
+  background:none;
+  border:1px solid var(--hair);
+  color:var(--ink-soft);
+  width:24px;
+  height:24px;
+  cursor:pointer;
+  font-size:13px;
+  line-height:1;
+}
+.weight-row-del:hover{border-color:var(--over);color:var(--over);}
+
+.weekly-box{ max-width:440px; max-height:90vh; overflow-y:auto; }
+.weekly-row{
+  display:grid;
+  grid-template-columns:70px 1fr auto;
+  gap:4px 10px;
+  align-items:center;
+  width:100%;
+  padding:9px 2px;
+  background:none;
+  border:none;
+  border-bottom:1px solid var(--hair);
+  text-align:left;
+  cursor:pointer;
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+}
+.weekly-row:hover{background:var(--hair);}
+.weekly-day{
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  line-height:1.3;
+}
+.weekly-day.is-today{color:var(--accent);}
+.weekly-bar-track{
+  height:8px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  overflow:hidden;
+}
+.weekly-bar-fill{height:100%;background:var(--accent);}
+.weekly-bar-fill.over{background:var(--over);}
+.weekly-cal{
+  font-family:'Archivo Black',sans-serif;
+  font-size:14px;
+  color:var(--accent);
+  min-width:56px;
+  text-align:right;
+}
+.weekly-row.empty .weekly-cal{color:var(--ink-soft);font-family:'Space Mono',monospace;font-size:12px;}
+.weekly-macros{
+  grid-column:1 / -1;
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+}
+.weekly-summary{
+  border:1px solid var(--accent);
+  padding:10px 12px;
+  margin-top:12px;
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  text-align:center;
+  line-height:1.5;
+}
+.weekly-summary .avg-cal{
+  font-family:'Archivo Black',sans-serif;
+  font-size:22px;
+  color:var(--accent);
+  display:block;
+  margin:2px 0;
+}
+.weekly-summary .avg-macros{color:var(--ink);display:block;}
+
+.previous-items-box{ max-width:440px; max-height:86vh; }
+#previousItemsList{
+  max-height:60vh;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
+  margin-bottom:12px;
+}
+.previous-item-row-wrap{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  border-bottom:1px solid var(--hair);
+}
+.previous-item-row-wrap:last-child{border-bottom:none;}
+.previous-item-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:11px 2px;
+  cursor:pointer;
+  background:none;
+  border:none;
+  flex:1;
+  min-width:0;
+  text-align:left;
+  font-family:'Inter',sans-serif;
+}
+.previous-item-row:hover{background:var(--hair);}
+.previous-item-delete{
+  flex-shrink:0;
+  background:none;
+  border:1px solid var(--hair);
+  color:var(--ink-soft);
+  width:26px;
+  height:26px;
+  cursor:pointer;
+  font-size:14px;
+  line-height:1;
+}
+.previous-item-delete:hover{border-color:var(--over);color:var(--over);}
+.previous-item-info{min-width:0; flex:1;}
+.previous-item-name{
+  font-size:14px;
+  font-weight:600;
+  color:var(--ink);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.previous-item-meta{
+  font-family:'Space Mono',monospace;
+  font-size:10.5px;
+  color:var(--ink-soft);
+  margin-top:2px;
+}
+.previous-item-count{
+  flex-shrink:0;
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--accent);
+  border:1px solid var(--accent);
+  padding:2px 7px;
+  white-space:nowrap;
+}
+.previous-items-empty{
+  padding:20px 2px;
+  font-size:13px;
+  color:var(--ink-soft);
+  font-style:italic;
+  text-align:center;
+}
 #multiPhotoList{
   max-height:280px;
   overflow-y:auto;
@@ -250,11 +466,6 @@ body{
   height:24px;
   cursor:pointer;
   font-size:13px;
-}
-.multi-photo-remove:hover{border-color:var(--over);color:var(--over);}
-.multi-photo-add-btn{
-  width:100%;
-  margin-bottom:12px;
 }
 .multi-photo-total{
   border:1px solid var(--hair);
@@ -488,7 +699,6 @@ body{
   font-size:13px;
   padding:9px;
 }
-.ask-gemini-row input:focus{outline:none;border-color:var(--accent);}
 .ask-gemini-row .backup-btn{
   flex-shrink:0;
   width:auto;
@@ -639,7 +849,7 @@ body{
   padding:2px 0;
   text-align:right;
 }
-.facts-goal-edit input:focus{outline:none;border-bottom:1px solid var(--accent);}
+.facts-goal-edit input:focus{outline:none;border-color:var(--accent);}
 
 .bar-track{
   height:10px;
@@ -812,6 +1022,22 @@ body{
   cursor:pointer;
   padding:0;
 }
+.form-head-actions{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.previous-items-link{
+  background:none;
+  border:none;
+  color:var(--accent);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  cursor:pointer;
+  padding:0;
+}
 .add-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -819,7 +1045,9 @@ body{
   margin-bottom:10px;
 }
 .field{display:flex;flex-direction:column;gap:4px;min-width:0;}
-.field.full{grid-column:1/-1;}
+.field full{
+  grid-column:1/-1;
+}
 .field label{
   font-family:'Space Mono',monospace;
   font-size:10px;
@@ -876,1946 +1104,1063 @@ body{
   color:var(--accent);
 }
 .serving-preview .total-macros{
-  color:var(--ink);
-}
-
-.submit-btn{
-  width:100%;
-  padding:12px;
-  background:var(--accent);
-  color:#141210;
-  border:none;
-  font-family:'Archivo Black',sans-serif;
-  font-size:14px;
-  letter-spacing:0.5px;
-  cursor:pointer;
-}
-.submit-btn:hover{background:#F2C463;}
-.submit-btn:disabled{background:var(--hair);cursor:not-allowed;}
-
-.hint{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:8px 8px;
   font-family:'Space Mono',monospace;
   font-size:10px;
   color:var(--ink-soft);
+  text-transform:uppercase;
   text-align:center;
-  margin-top:22px;
+  border:1px solid var(--hair);
+  padding:10px 4px;
+  margin-bottom:14px;
+}
+.serving-preview .total-macros div{
+  min-width:0;
+}
+.serving-preview .total-macros div span{
+  display:block;
+  font-family:'Inter',sans-serif;
+  color:var(--accent);
+  font-size:14px;
+  font-weight:700;
+  text-transform:none;
+  margin-top:2px;
+  word-break:break-word;
+}
+.photo-refine-field{
+  border-top:1px solid var(--hair);
+  margin-top:14px;
+  padding-top:12px;
+}
+.photo-refine-row{
+  display:flex;
+  gap:8px;
+}
+.photo-refine-row input{
+  flex:1;
+  min-width:0;
+  background:#0D0D0D;
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  padding:9px;
+}
+.photo-refine-row input:focus{outline:none;border-color:var(--accent);}
+.photo-refine-actions{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+}
+.photo-refine-actions button{
+  flex:1;
+  background:none;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  padding:9px 6px;
+  cursor:pointer;
+}
+.photo-refine-actions button:hover{background:var(--accent);color:#141210;}
+.photo-refine-actions button:disabled{
+  border-color:var(--hair);
+  color:var(--ink-soft);
+  cursor:not-allowed;
+  background:none;
+}
+.photo-ask-answer{
+  margin-top:10px;
+  padding:10px;
+  border:1px solid var(--hair);
+  background:#0D0D0D;
+  font-size:13px;
+  color:var(--ink);
+  line-height:1.4;
 }
 
+.ask-gemini-row{
+  display:flex;
+  gap:8px;
+}
+.ask-gemini-row input{
+  flex:1;
+  min-width:0;
+  background:var(--panel);
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  padding:9px;
+}
+.ask-gemini-row .backup-btn{
+  flex-shrink:0;
+  width:auto;
+  padding:0 16px;
+}
+
+/* ---- Header ---- */
+.masthead{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  border-bottom:6px solid var(--accent);
+  padding-bottom:10px;
+  margin-bottom:18px;
+}
+.masthead h1{
+  font-family:'Archivo Black',sans-serif;
+  font-size:20px;
+  line-height:1.15;
+  letter-spacing:0.3px;
+  margin:0;
+}
 @media (max-width:400px){
-  .facts-row .value.big{font-size:28px;}
-  .add-grid{grid-template-columns:1fr;}
-  .multi-photo-macro-grid{grid-template-columns:repeat(2, 1fr);}
-  .multi-photo-thumb{width:40px;height:40px;}
+  .masthead h1{font-size:17px;}
 }
-</style>
-</head>
-<body>
-<div class="wrap">
-<div class="toast" id="toast"></div>
-<div class="confirm-overlay" id="confirmOverlay">
-  <div class="confirm-box">
-    <div class="confirm-msg" id="confirmMsg">Delete this item?</div>
-    <div class="confirm-actions">
-      <button type="button" class="confirm-cancel" id="confirmCancelBtn">Cancel</button>
-      <button type="button" class="confirm-delete" id="confirmDeleteBtn">Delete</button>
-    </div>
-  </div>
-</div>
-
-  <div class="masthead">
-    <h1>Daily Intake Calculator</h1>
-  </div>
-
-  <div class="datebar">
-    <button type="button" id="prevDay" aria-label="Previous day">‹</button>
-    <input type="date" id="dateInput">
-    <button type="button" class="date-display" id="dateDisplay">—</button>
-    <button type="button" class="today-btn" id="todayBtn">today</button>
-    <button type="button" id="nextDay" aria-label="Next day">›</button>
-  </div>
-
-  <div class="facts">
-    <div class="facts-top">
-      <div class="eyebrow" id="factsDate">—</div>
-      <h2>Daily Intake</h2>
-    </div>
-
-    <div class="facts-row thick">
-      <div class="label">Calories logged</div>
-      <div class="value big" id="totalCal">0</div>
-    </div>
-
-    <div class="facts-row">
-      <div class="label">Daily goal</div>
-      <div class="facts-goal-edit">
-        <input type="text" inputmode="decimal" id="goalInput">
-        <span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--ink-soft);">cal</span>
-      </div>
-    </div>
-
-    <div class="facts-row remaining" id="remainingRow">
-      <div class="label" id="remainingLabel">Remaining</div>
-      <div class="value" id="remainingVal">0</div>
-    </div>
-
-    <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
-
-    <div class="macro-row-main">
-      <div>Protein<span id="totalProtein">0g</span></div>
-      <div>Carbs<span id="totalCarbs">0g</span></div>
-      <div>Fat<span id="totalFat">0g</span></div>
-    </div>
-    <div class="macro-row-sub">
-      <div class="span-left">Fiber<span id="totalFiber">0g</span></div>
-      <div class="span-right">Salt<span id="totalSalt">0g</span></div>
-    </div>
-  </div>
-
-  <div class="log-head">
-    <span>Today's log</span>
-    <button type="button" class="copy-day-btn" id="copyDayBtn">Copy day</button>
-  </div>
-  <div class="entries" id="entriesContainer"></div>
-
-  <div class="add-form">
-    <div class="form-head">
-      <span class="eyebrow" id="formEyebrow">Log food</span>
-      <button type="button" id="cancelEditBtn" class="cancel-edit" style="display:none;">Cancel edit</button>
-    </div>
-    <form id="addFoodForm">
-      <div class="add-grid">
-        <div class="field full">
-          <label for="fName">Food</label>
-          <input type="text" id="fName" placeholder="e.g. Grilled chicken breast">
-        </div>
-        <div class="field full">
-          <div class="unit-toggle">
-            <button type="button" class="unit-btn active" id="unitGramsBtn">Per 100g</button>
-            <button type="button" class="unit-btn" id="unitItemBtn">Per item</button>
-          </div>
-        </div>
-        <div class="field full">
-          <label for="fGrams" id="fGramsLabel">Serving size (g)</label>
-          <input type="text" inputmode="decimal" id="fGrams" placeholder="0">
-        </div>
-        <div class="field">
-          <label for="fCal" id="fCalLabel">Calories per 100g</label>
-          <input type="text" inputmode="decimal" id="fCal" placeholder="0">
-        </div>
-        <div class="field">
-          <label for="fProtein" id="fProteinLabel">Protein per 100g (g)</label>
-          <input type="text" inputmode="decimal" id="fProtein" placeholder="0">
-        </div>
-        <div class="field">
-          <label for="fCarbs" id="fCarbsLabel">Carbs per 100g (g)</label>
-          <input type="text" inputmode="decimal" id="fCarbs" placeholder="0">
-        </div>
-        <div class="field">
-          <label for="fFat" id="fFatLabel">Fat per 100g (g)</label>
-          <input type="text" inputmode="decimal" id="fFat" placeholder="0">
-        </div>
-        <div class="field">
-          <label for="fFiber" id="fFiberLabel">Fiber per 100g (g)</label>
-          <input type="text" inputmode="decimal" id="fFiber" placeholder="0">
-        </div>
-        <div class="field">
-          <label for="fSalt" id="fSaltLabel">Salt per 100g (g)</label>
-          <input type="text" inputmode="decimal" id="fSalt" placeholder="0">
-        </div>
-      </div>
-      <div class="serving-preview" id="servingPreview">Enter serving size and per-100g values to see the total</div>
-      <button type="submit" class="submit-btn" id="addBtn">Add to log</button>
-    </form>
-  </div>
-
-  <div class="backup-section">
-    <span class="eyebrow">Photo macros</span>
-    <p class="backup-desc">Take a photo of your food to get an estimated macro breakdown (via Google Gemini, free tier).</p>
-    <div class="backup-actions">
-      <button type="button" id="photoBtn" class="backup-btn">📷 Take photo</button>
-      <button type="button" id="multiPhotoBtn" class="backup-btn">📷📷 Multiple photos</button>
-    </div>
-  </div>
-
-  <div class="backup-section">
-    <span class="eyebrow">Ask Gemini</span>
-    <p class="backup-desc">Describe a food for a macro estimate, or ask a direct question (e.g. "how many grams is a Snickers bar?").</p>
-    <div class="ask-gemini-row">
-      <input type="text" id="askGeminiInput" placeholder="e.g. Snickers bar, or 'how many grams is a Snickers bar?'">
-      <button type="button" id="askGeminiBtn" class="backup-btn">Ask</button>
-    </div>
-    <div class="photo-ask-answer" id="askGeminiAnswer" style="display:none;"></div>
-  </div>
-
-  <div class="backup-section">
-    <span class="eyebrow">Backup</span>
-    <p class="backup-desc">Export your data before updating the app, then import it back afterward.</p>
-    <div class="backup-actions">
-      <button type="button" id="exportBtn" class="backup-btn">Export data</button>
-      <button type="button" id="importBtn" class="backup-btn">Import data</button>
-    </div>
-  </div>
-
-  <div class="backup-section">
-    <span class="eyebrow">Settings</span>
-    <p class="backup-desc">Your Gemini API key, used by Photo macros and Ask Gemini above.</p>
-    <div class="backup-actions">
-      <button type="button" id="apiKeyBtn" class="backup-btn">API key</button>
-    </div>
-  </div>
-
-</div>
-
-<div class="data-overlay" id="multiPhotoOverlay">
-  <div class="data-box multi-photo-box">
-    <div class="data-title">Multiple photos macro</div>
-    <p class="data-desc">Photograph each item, enter how many grams of each you're having, and the totals combine automatically.</p>
-    <div id="multiPhotoList"></div>
-    <button type="button" id="multiPhotoAddBtn" class="backup-btn multi-photo-add-btn">📷 Add photo</button>
-    <div class="multi-photo-total" id="multiPhotoTotal">Add at least one photo to see the combined total</div>
-    <div class="data-actions">
-      <button type="button" id="multiPhotoCancelBtn" class="secondary">Cancel</button>
-      <button type="button" id="multiPhotoUseBtn" class="primary">Add combined to log</button>
-    </div>
-  </div>
-</div>
-
-<div class="data-overlay" id="apiKeyOverlay">
-  <div class="data-box">
-    <div class="data-title">Gemini API key</div>
-    <p class="data-desc">Paste your free API key from Google AI Studio (aistudio.google.com → Get API key). It's stored only on this device and never leaves it except to call Gemini directly.</p>
-    <input type="password" id="apiKeyInput" placeholder="Paste your API key here" class="api-key-input">
-    <div class="data-actions">
-      <button type="button" id="apiKeyCloseBtn" class="secondary">Cancel</button>
-      <button type="button" id="apiKeySaveBtn" class="primary">Save</button>
-    </div>
-  </div>
-</div>
-
-<div class="data-overlay" id="photoLoadingOverlay">
-  <div class="data-box photo-loading-box">
-    <div class="spinner"></div>
-    <div class="data-title" id="photoLoadingTitle" style="margin-top:14px;">Analyzing photo…</div>
-    <p class="data-desc">This can take a few seconds.</p>
-  </div>
-</div>
-
-<div class="data-overlay" id="photoResultOverlay">
-  <div class="data-box">
-    <div class="data-title" id="photoResultTitle">Photo analysis</div>
-    <div id="photoResultBody"></div>
-    <div class="photo-refine-field">
-      <label for="photoRefineInput">Correction, or a question (e.g. "it's salmon" or "how many grams is this?")</label>
-      <div class="photo-refine-row">
-        <input type="text" id="photoRefineInput" placeholder="Type here">
-      </div>
-      <div class="photo-refine-actions">
-        <button type="button" id="photoRefineBtn">Re-analyze macros</button>
-        <button type="button" id="photoAskBtn">Ask a question</button>
-      </div>
-      <div class="photo-ask-answer" id="photoAskAnswer" style="display:none;"></div>
-    </div>
-    <div class="data-actions">
-      <button type="button" id="photoResultCancelBtn" class="secondary">Cancel</button>
-      <button type="button" id="photoResultUseBtn" class="primary">Use this</button>
-    </div>
-  </div>
-</div>
-
-<div class="data-overlay" id="errorOverlay">
-  <div class="data-box">
-    <div class="data-title">Photo analysis failed</div>
-    <p class="data-desc">Here's the exact error — screenshot this if you need help figuring it out.</p>
-    <textarea id="errorText" readonly></textarea>
-    <div class="data-actions">
-      <button type="button" id="errorCloseBtn" class="secondary">Close</button>
-      <button type="button" id="errorCopyBtn" class="primary">Copy</button>
-    </div>
-  </div>
-</div>
-
-<div class="data-overlay" id="copyToDayOverlay">
-  <div class="data-box">
-    <div class="data-title">Copy to which day?</div>
-    <p class="data-desc" id="copyToDayFoodName">Choose a date to copy this item to.</p>
-    <input type="date" id="copyToDayInput" class="copy-to-day-input">
-    <div class="data-actions">
-      <button type="button" id="copyToDayCancelBtn" class="secondary">Cancel</button>
-      <button type="button" id="copyToDayConfirmBtn" class="primary">Copy</button>
-    </div>
-  </div>
-</div>
-
-<div class="data-overlay" id="exportOverlay">
-  <div class="data-box">
-    <div class="data-title">Export data</div>
-    <p class="data-desc">Copy this text and save it somewhere safe (notes app, email to yourself, etc). Paste it back in via Import after updating the app.</p>
-    <textarea id="exportText" readonly></textarea>
-    <div class="data-actions">
-      <button type="button" id="exportCloseBtn" class="secondary">Close</button>
-      <button type="button" id="exportCopyBtn" class="primary">Copy</button>
-    </div>
-  </div>
-</div>
-
-<div class="data-overlay" id="importOverlay">
-  <div class="data-box">
-    <div class="data-title">Import data</div>
-    <p class="data-desc">Paste your previously exported backup text below. This replaces your current log data.</p>
-    <textarea id="importText" placeholder="Paste backup text here..."></textarea>
-    <div class="data-actions">
-      <button type="button" id="importCloseBtn" class="secondary">Cancel</button>
-      <button type="button" id="importConfirmBtn" class="primary">Import</button>
-    </div>
-  </div>
-</div>
-
-<script>
-const DEFAULT_GOAL = 1600;
-
-let currentDate = todayStr();
-let currentGoal = DEFAULT_GOAL;
-let currentEntries = [];
-let editingId = null;
-
-function todayStr(){
-  const d = new Date();
-  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+.masthead .sub{
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  letter-spacing:1px;
+  text-transform:uppercase;
 }
 
-function roundNum(n){
-  return Math.round((Number(n)||0) * 10) / 10;
+/* ---- Date nav ---- */
+.datebar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  margin-bottom:18px;
+  font-family:'Space Mono',monospace;
+  font-size:13px;
+}
+.datebar button{
+  background:none;
+  border:1px solid var(--line);
+  color:var(--ink);
+  width:30px;height:30px;
+  cursor:pointer;
+  font-family:'Space Mono',monospace;
+  font-size:14px;
+  border-radius:0;
+}
+.datebar button:hover{background:var(--accent);color:var(--paper);}
+.datebar input[type="date"]{
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
+.date-display{
+  background:none;
+  border:1px solid var(--hair);
+  padding:6px 10px;
+  font-family:'Space Mono',monospace;
+  font-size:13px;
+  color:var(--ink);
+  cursor:pointer;
+  min-width:106px;
+  text-align:center;
+}
+.date-display:hover{border-color:var(--accent);}
+.datebar .today-btn{
+  border:none;
+  width:auto;
+  padding:0 10px;
+  text-decoration:underline;
+  text-underline-offset:3px;
 }
 
-// Accepts numbers typed with a comma decimal separator (common on non-US keyboards),
-// since the fields are text+inputmode="decimal" rather than type="number" to avoid
-// the browser's native number validation rejecting commas entirely.
-function parseLocaleNumber(str){
-  if(str === null || str === undefined) return 0;
-  const cleaned = String(str).trim().replace(',', '.');
-  const n = parseFloat(cleaned);
-  return isNaN(n) ? 0 : n;
+/* ---- Nutrition Facts style summary panel ---- */
+.facts{
+  border:2px solid var(--accent);
+  padding:0;
+  margin-bottom:24px;
+  background:var(--panel);
+}
+.facts-top{
+  border-bottom:9px solid var(--accent);
+  padding:10px 14px 8px;
+  text-align:center;
+}
+.facts-top .eyebrow{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+}
+.facts-top h2{
+  font-family:'Archivo Black',sans-serif;
+  font-size:22px;
+  margin:2px 0 0;
+}
+.facts-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  padding:8px 14px;
+  border-bottom:1px solid var(--line);
+}
+.facts-row.thick{border-bottom:4px solid var(--accent);}
+.facts-row .label{
+  font-size:14px;
+  font-weight:600;
+}
+.facts-row .value{
+  font-family:'Archivo Black',sans-serif;
+  font-size:20px;
+  color:var(--accent);
+}
+.facts-row .value.big{font-size:34px;}
+.facts-row.remaining .value{
+  color:var(--good);
+}
+.facts-row.remaining.over .value{
+  color:var(--over);
+}
+.facts-goal-edit{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.facts-goal-edit input{
+  width:64px;
+  font-family:'Space Mono',monospace;
+  border:none;
+  border-bottom:1px solid var(--hair);
+  background:transparent;
+  color:var(--ink);
+  font-size:14px;
+  padding:2px 0;
+  text-align:right;
+}
+.facts-goal-edit input:focus{outline:none;border-color:var(--accent);}
+
+.bar-track{
+  height:10px;
+  margin:0 14px 12px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  position:relative;
+  overflow:hidden;
+}
+.bar-fill{
+  height:100%;
+  background:var(--accent);
+  transition:width .3s ease, background .3s ease;
+}
+.bar-fill.over{background:var(--over);}
+
+.macro-row-main{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px 10px;
+  padding:10px 14px 8px;
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  text-align:center;
+}
+.macro-row-sub{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px 10px;
+  padding:0 14px 14px;
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  text-align:center;
+}
+.macro-row-sub .span-left{grid-column:1 / 3; grid-row:1;}
+.macro-row-sub .span-right{grid-column:2 / 4; grid-row:1;}
+.macro-row-main div, .macro-row-sub div{min-width:0;}
+.macro-row-main div span, .macro-row-sub div span{
+  display:block;
+  font-family:'Inter',sans-serif;
+  color:var(--accent);
+  font-size:15px;
+  font-weight:700;
+  text-transform:none;
+  letter-spacing:0;
+  margin-top:2px;
+  word-break:break-word;
 }
 
-function formatDateShort(dateStr){
-  const [y,m,d] = dateStr.split("-").map(Number);
-  return String(d).padStart(2,"0") + "/" + String(m).padStart(2,"0") + "/" + y;
+/* ---- Log entries ---- */
+.log-head{
+  background:var(--accent);
+  color:#141210;
+  padding:6px 12px;
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  margin-bottom:0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.copy-day-btn{
+  background:none;
+  border:1px solid #141210;
+  color:#141210;
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.5px;
+  text-transform:uppercase;
+  padding:4px 8px;
+  cursor:pointer;
+}
+.copy-day-btn:hover{background:#141210;color:var(--accent);}
+.entries{
+  border-left:1px solid var(--hair);
+  border-right:1px solid var(--hair);
+  border-bottom:1px solid var(--hair);
+  margin-bottom:20px;
+}
+.entry{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 12px;
+  border-bottom:1px solid var(--hair);
+  gap:10px;
+}
+.entry:last-child{border-bottom:none;}
+.entry .name{
+  font-weight:600;
+  font-size:14px;
+}
+.grams-badge{
+  font-weight:600;
+  font-size:14px;
+  color:var(--ink);
+}
+.entry .macros{
+  font-family:'Space Mono',monospace;
+  font-size:10.5px;
+  color:var(--ink-soft);
+  margin-top:2px;
+}
+.entry .right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+}
+.entry .cal{
+  font-family:'Archivo Black',sans-serif;
+  font-size:15px;
+  color:var(--accent);
+}
+.entry .edit, .entry .copy-next, .entry .del{
+  background:none;
+  border:1px solid var(--hair);
+  color:var(--ink-soft);
+  width:24px;height:24px;
+  cursor:pointer;
+  font-size:13px;
+  line-height:1;
+}
+.entry .edit:hover{border-color:var(--accent);color:var(--accent);}
+.entry .copy-next:hover{border-color:var(--good);color:var(--good);}
+.entry .del:hover{border-color:var(--over);color:var(--over);}
+.empty-row{
+  padding:14px 12px;
+  font-size:13px;
+  color:var(--ink-soft);
+  font-style:italic;
 }
 
-function formatDateLabel(dateStr){
-  const [y,m,d] = dateStr.split("-").map(Number);
-  const dt = new Date(y, m-1, d);
-  const isToday = dateStr === todayStr();
-  const label = dt.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric'});
-  return isToday ? "Today · " + label : label;
+/* ---- Add form ---- */
+.add-form{
+  border:1px solid var(--line);
+  padding:14px;
+  margin-top:26px;
+}
+.add-form .eyebrow{
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+  display:block;
+}
+.form-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+.cancel-edit{
+  background:none;
+  border:none;
+  color:var(--over);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  cursor:pointer;
+  padding:0;
+}
+.form-head-actions{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.previous-items-link{
+  background:none;
+  border:none;
+  color:var(--accent);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  cursor:pointer;
+  padding:0;
+}
+.add-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-bottom:10px;
+}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.field full{
+  grid-column:1/-1;
+}
+.field label{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+.unit-toggle{
+  display:flex;
+  gap:8px;
+  margin-bottom:2px;
+}
+.unit-btn{
+  flex:1;
+  padding:9px;
+  background:none;
+  border:1px solid var(--hair);
+  color:var(--ink-soft);
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  cursor:pointer;
+}
+.unit-btn.active{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#141210;
+  font-weight:700;
+}
+.field input, .field select{
+  width:100%;
+  border:1px solid var(--hair);
+  padding:8px;
+  font-family:'Inter',sans-serif;
+  font-size:14px;
+  background:var(--panel);
+  color:var(--ink);
+}
+.field input:focus, .field select:focus{outline:none;border-color:var(--accent);}
+
+.serving-preview{
+  border:1px solid var(--hair);
+  padding:10px 12px;
+  margin-bottom:12px;
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  color:var(--ink-soft);
+  text-align:center;
+}
+.serving-preview .total-cal{
+  font-family:'Archivo Black',sans-serif;
+  font-size:16px;
+  color:var(--accent);
+}
+.serving-preview .total-macros{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:8px 8px;
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  text-align:center;
+  border:1px solid var(--hair);
+  padding:10px 4px;
+  margin-bottom:14px;
+}
+.serving-preview .total-macros div{
+  min-width:0;
+}
+.serving-preview .total-macros div span{
+  display:block;
+  font-family:'Inter',sans-serif;
+  color:var(--accent);
+  font-size:14px;
+  font-weight:700;
+  text-transform:none;
+  margin-top:2px;
+  word-break:break-word;
+}
+.photo-refine-field{
+  border-top:1px solid var(--hair);
+  margin-top:14px;
+  padding-top:12px;
+}
+.photo-refine-row{
+  display:flex;
+  gap:8px;
+}
+.photo-refine-row input{
+  flex:1;
+  min-width:0;
+  background:#0D0D0D;
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  padding:9px;
+}
+.photo-refine-row input:focus{outline:none;border-color:var(--accent);}
+.photo-refine-actions{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+}
+.photo-refine-actions button{
+  flex:1;
+  background:none;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  padding:9px 6px;
+  cursor:pointer;
+}
+.photo-refine-actions button:hover{background:var(--accent);color:#141210;}
+.photo-refine-actions button:disabled{
+  border-color:var(--hair);
+  color:var(--ink-soft);
+  cursor:not-allowed;
+  background:none;
+}
+.photo-ask-answer{
+  margin-top:10px;
+  padding:10px;
+  border:1px solid var(--hair);
+  background:#0D0D0D;
+  font-size:13px;
+  color:var(--ink);
+  line-height:1.4;
 }
 
-function hasStorage(){
-  try{
-    return typeof window.localStorage !== 'undefined' && window.localStorage !== null;
-  }catch(e){ return false; }
+.ask-gemini-row{
+  display:flex;
+  gap:8px;
+}
+.ask-gemini-row input{
+  flex:1;
+  min-width:0;
+  background:var(--panel);
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  padding:9px;
+}
+.ask-gemini-row .backup-btn{
+  flex-shrink:0;
+  width:auto;
+  padding:0 16px;
 }
 
-async function loadSettings(){
-  if(!hasStorage()) return;
-  try{
-    const raw = window.localStorage.getItem('dic:settings');
-    if(raw){
-      const s = JSON.parse(raw);
-      currentGoal = s.goal || DEFAULT_GOAL;
-    }
-  }catch(e){ currentGoal = DEFAULT_GOAL; }
+/* ---- Header ---- */
+.masthead{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  border-bottom:6px solid var(--accent);
+  padding-bottom:10px;
+  margin-bottom:18px;
+}
+.masthead h1{
+  font-family:'Archivo Black',sans-serif;
+  font-size:20px;
+  line-height:1.15;
+  letter-spacing:0.3px;
+  margin:0;
+}
+@media (max-width:400px){
+  .masthead h1{font-size:17px;}
+}
+.masthead .sub{
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  letter-spacing:1px;
+  text-transform:uppercase;
 }
 
-async function saveSettings(){
-  if(!hasStorage()) return;
-  try{
-    window.localStorage.setItem('dic:settings', JSON.stringify({goal: currentGoal}));
-  }catch(e){ console.error('Failed to save settings', e); }
+/* ---- Date nav ---- */
+.datebar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  margin-bottom:18px;
+  font-family:'Space Mono',monospace;
+  font-size:13px;
+}
+.datebar button{
+  background:none;
+  border:1px solid var(--line);
+  color:var(--ink);
+  width:30px;height:30px;
+  cursor:pointer;
+  font-family:'Space Mono',monospace;
+  font-size:14px;
+  border-radius:0;
+}
+.datebar button:hover{background:var(--accent);color:var(--paper);}
+.datebar input[type="date"]{
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
+.date-display{
+  background:none;
+  border:1px solid var(--hair);
+  padding:6px 10px;
+  font-family:'Space Mono',monospace;
+  font-size:13px;
+  color:var(--ink);
+  cursor:pointer;
+  min-width:106px;
+  text-align:center;
+}
+.date-display:hover{border-color:var(--accent);}
+.datebar .today-btn{
+  border:none;
+  width:auto;
+  padding:0 10px;
+  text-decoration:underline;
+  text-underline-offset:3px;
 }
 
-async function loadEntries(dateStr){
-  currentEntries = [];
-  if(!hasStorage()) return;
-  try{
-    const raw = window.localStorage.getItem('dic:log:'+dateStr);
-    if(raw){
-      currentEntries = JSON.parse(raw);
-    }
-  }catch(e){
-    currentEntries = [];
-  }
+/* ---- Nutrition Facts style summary panel ---- */
+.facts{
+  border:2px solid var(--accent);
+  padding:0;
+  margin-bottom:24px;
+  background:var(--panel);
+}
+.facts-top{
+  border-bottom:9px solid var(--accent);
+  padding:10px 14px 8px;
+  text-align:center;
+}
+.facts-top .eyebrow{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+}
+.facts-top h2{
+  font-family:'Archivo Black',sans-serif;
+  font-size:22px;
+  margin:2px 0 0;
+}
+.facts-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  padding:8px 14px;
+  border-bottom:1px solid var(--line);
+}
+.facts-row.thick{border-bottom:4px solid var(--accent);}
+.facts-row .label{
+  font-size:14px;
+  font-weight:600;
+}
+.facts-row .value{
+  font-family:'Archivo Black',sans-serif;
+  font-size:20px;
+  color:var(--accent);
+}
+.facts-row .value.big{font-size:34px;}
+.facts-row.remaining .value{
+  color:var(--good);
+}
+.facts-row.remaining.over .value{
+  color:var(--over);
+}
+.facts-goal-edit{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.facts-goal-edit input{
+  width:64px;
+  font-family:'Space Mono',monospace;
+  border:none;
+  border-bottom:1px solid var(--hair);
+  background:transparent;
+  color:var(--ink);
+  font-size:14px;
+  padding:2px 0;
+  text-align:right;
+}
+.facts-goal-edit input:focus{outline:none;border-color:var(--accent);}
+
+.bar-track{
+  height:10px;
+  margin:0 14px 12px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  position:relative;
+  overflow:hidden;
+}
+.bar-fill{
+  height:100%;
+  background:var(--accent);
+  transition:width .3s ease, background .3s ease;
+}
+.bar-fill.over{background:var(--over);}
+
+.macro-row-main{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px 10px;
+  padding:10px 14px 8px;
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  text-align:center;
+}
+.macro-row-sub{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px 10px;
+  padding:0 14px 14px;
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  text-align:center;
+}
+.macro-row-sub .span-left{grid-column:1 / 3; grid-row:1;}
+.macro-row-sub .span-right{grid-column:2 / 4; grid-row:1;}
+.macro-row-main div, .macro-row-sub div{min-width:0;}
+.macro-row-main div span, .macro-row-sub div span{
+  display:block;
+  font-family:'Inter',sans-serif;
+  color:var(--accent);
+  font-size:15px;
+  font-weight:700;
+  text-transform:none;
+  letter-spacing:0;
+  margin-top:2px;
+  word-break:break-word;
 }
 
-async function saveEntries(){
-  if(!hasStorage()) return;
-  try{
-    window.localStorage.setItem('dic:log:'+currentDate, JSON.stringify(currentEntries));
-  }catch(e){ console.error('Failed to save entries', e); }
+/* ---- Log entries ---- */
+.log-head{
+  background:var(--accent);
+  color:#141210;
+  padding:6px 12px;
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  margin-bottom:0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.copy-day-btn{
+  background:none;
+  border:1px solid #141210;
+  color:#141210;
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.5px;
+  text-transform:uppercase;
+  padding:4px 8px;
+  cursor:pointer;
+}
+.copy-day-btn:hover{background:#141210;color:var(--accent);}
+.entries{
+  border-left:1px solid var(--hair);
+  border-right:1px solid var(--hair);
+  border-bottom:1px solid var(--hair);
+  margin-bottom:20px;
+}
+.entry{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 12px;
+  border-bottom:1px solid var(--hair);
+  gap:10px;
+}
+.entry:last-child{border-bottom:none;}
+.entry .name{
+  font-weight:600;
+  font-size:14px;
+}
+.grams-badge{
+  font-weight:600;
+  font-size:14px;
+  color:var(--ink);
+}
+.entry .macros{
+  font-family:'Space Mono',monospace;
+  font-size:10.5px;
+  color:var(--ink-soft);
+  margin-top:2px;
+}
+.entry .right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+}
+.entry .cal{
+  font-family:'Archivo Black',sans-serif;
+  font-size:15px;
+  color:var(--accent);
+}
+.entry .edit, .entry .copy-next, .entry .del{
+  background:none;
+  border:1px solid var(--hair);
+  color:var(--ink-soft);
+  width:24px;height:24px;
+  cursor:pointer;
+  font-size:13px;
+  line-height:1;
+}
+.entry .edit:hover{border-color:var(--accent);color:var(--accent);}
+.entry .copy-next:hover{border-color:var(--good);color:var(--good);}
+.entry .del:hover{border-color:var(--over);color:var(--over);}
+.empty-row{
+  padding:14px 12px;
+  font-size:13px;
+  color:var(--ink-soft);
+  font-style:italic;
 }
 
-function render(){
-  document.getElementById('dateInput').value = currentDate;
-  document.getElementById('dateDisplay').textContent = formatDateShort(currentDate);
-  document.getElementById('factsDate').textContent = formatDateLabel(currentDate);
-  document.getElementById('goalInput').value = currentGoal;
+/* ---- Add form ---- */
+.add-form{
+  border:1px solid var(--line);
+  padding:14px;
+  margin-top:26px;
+}
+.add-form .eyebrow{
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+  display:block;
+}
+.form-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+.cancel-edit{
+  background:none;
+  border:none;
+  color:var(--over);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  cursor:pointer;
+  padding:0;
+}
+.form-head-actions{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.previous-items-link{
+  background:none;
+  border:none;
+  color:var(--accent);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  cursor:pointer;
+  padding:0;
+}
+.add-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-bottom:10px;
+}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.field full{
+  grid-column:1/-1;
+}
+.field label{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+.unit-toggle{
+  display:flex;
+  gap:8px;
+  margin-bottom:2px;
+}
+.unit-btn{
+  flex:1;
+  padding:9px;
+  background:none;
+  border:1px solid var(--hair);
+  color:var(--ink-soft);
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  cursor:pointer;
+}
+.unit-btn.active{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#141210;
+  font-weight:700;
+}
+.field input, .field select{
+  width:100%;
+  border:1px solid var(--hair);
+  padding:8px;
+  font-family:'Inter',sans-serif;
+  font-size:14px;
+  background:var(--panel);
+  color:var(--ink);
+}
+.field input:focus, .field select:focus{outline:none;border-color:var(--accent);}
 
-  const totals = currentEntries.reduce((acc,e)=>{
-    acc.cal += Number(e.calories)||0;
-    acc.protein += Number(e.protein)||0;
-    acc.carbs += Number(e.carbs)||0;
-    acc.fat += Number(e.fat)||0;
-    acc.fiber += Number(e.fiber)||0;
-    acc.salt += Number(e.salt)||0;
-    return acc;
-  }, {cal:0, protein:0, carbs:0, fat:0, fiber:0, salt:0});
-
-  document.getElementById('totalCal').textContent = totals.cal.toLocaleString();
-  document.getElementById('totalProtein').textContent = roundNum(totals.protein) + 'g';
-  document.getElementById('totalCarbs').textContent = roundNum(totals.carbs) + 'g';
-  document.getElementById('totalFat').textContent = roundNum(totals.fat) + 'g';
-  document.getElementById('totalFiber').textContent = roundNum(totals.fiber) + 'g';
-  document.getElementById('totalSalt').textContent = roundNum(totals.salt) + 'g';
-
-  const remaining = currentGoal - totals.cal;
-  const remainingRow = document.getElementById('remainingRow');
-  const remainingLabel = document.getElementById('remainingLabel');
-  const remainingVal = document.getElementById('remainingVal');
-  if(remaining < 0){
-    remainingRow.classList.add('over');
-    remainingLabel.textContent = 'Over goal';
-    remainingVal.textContent = Math.abs(remaining).toLocaleString();
-  } else {
-    remainingRow.classList.remove('over');
-    remainingLabel.textContent = 'Remaining';
-    remainingVal.textContent = remaining.toLocaleString();
-  }
-
-  const pct = currentGoal > 0 ? Math.min(100, (totals.cal/currentGoal)*100) : 0;
-  const barFill = document.getElementById('barFill');
-  barFill.style.width = pct + '%';
-  barFill.classList.toggle('over', totals.cal > currentGoal);
-
-  const container = document.getElementById('entriesContainer');
-  container.innerHTML = '';
-
-  if(currentEntries.length === 0){
-    const empty = document.createElement('div');
-    empty.className = 'empty-row';
-    empty.textContent = 'Nothing logged yet. Add your first food below.';
-    container.appendChild(empty);
-  } else {
-    currentEntries.forEach(item=>{
-      const row = document.createElement('div');
-      row.className = 'entry';
-      const macroBits = [];
-      if(item.protein) macroBits.push('P '+item.protein+'g');
-      if(item.carbs) macroBits.push('C '+item.carbs+'g');
-      if(item.fat) macroBits.push('F '+item.fat+'g');
-      if(item.fiber) macroBits.push('Fiber '+item.fiber+'g');
-      if(item.salt) macroBits.push('Salt '+item.salt+'g');
-      row.innerHTML = `
-        <div>
-          <div class="name">${escapeHtml(item.name)}${item.grams ? ` <span class="grams-badge">${item.servingUnit === 'item' ? item.grams + (item.grams === 1 ? ' item' : ' items') : item.grams + 'g'}</span>` : ''}</div>
-          ${macroBits.length ? `<div class="macros">${macroBits.join(' · ')}</div>` : ''}
-        </div>
-        <div class="right">
-          <div class="cal">${(Number(item.calories)||0).toLocaleString()}</div>
-          <button class="edit" data-id="${item.id}" aria-label="Edit entry">✎</button>
-          <button class="copy-next" data-id="${item.id}" aria-label="Copy to a day">→</button>
-          <button class="del" data-id="${item.id}" aria-label="Delete entry">×</button>
-        </div>
-      `;
-      container.appendChild(row);
-    });
-  }
-
-  container.querySelectorAll('.del').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id = btn.getAttribute('data-id');
-      const item = currentEntries.find(e=>e.id === id);
-      const label = item ? item.name : 'this item';
-      const confirmed = await showConfirmModal(`Delete "${label}" from the log?`);
-      if(!confirmed) return;
-      if(editingId === id) exitEditMode();
-      currentEntries = currentEntries.filter(e=>e.id !== id);
-      await saveEntries();
-      render();
-    });
-  });
-
-  container.querySelectorAll('.edit').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const id = btn.getAttribute('data-id');
-      const item = currentEntries.find(e=>e.id === id);
-      if(!item) return;
-      enterEditMode(item);
-    });
-  });
-
-  container.querySelectorAll('.copy-next').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const id = btn.getAttribute('data-id');
-      const item = currentEntries.find(e=>e.id === id);
-      if(!item) return;
-      openCopyToDayModal(item);
-    });
-  });
+.serving-preview{
+  border:1px solid var(--hair);
+  padding:10px 12px;
+  margin-bottom:12px;
+  font-family:'Space Mono',monospace;
+  font-size:12px;
+  color:var(--ink-soft);
+  text-align:center;
+}
+.serving-preview .total-cal{
+  font-family:'Archivo Black',sans-serif;
+  font-size:16px;
+  color:var(--accent);
+}
+.serving-preview .total-macros{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:8px 8px;
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  text-align:center;
+  border:1px solid var(--hair);
+  padding:10px 4px;
+  margin-bottom:14px;
+}
+.serving-preview .total-macros div{
+  min-width:0;
+}
+.serving-preview .total-macros div span{
+  display:block;
+  font-family:'Inter',sans-serif;
+  color:var(--accent);
+  font-size:14px;
+  font-weight:700;
+  text-transform:none;
+  margin-top:2px;
+  word-break:break-word;
+}
+.photo-refine-field{
+  border-top:1px solid var(--hair);
+  margin-top:14px;
+  padding-top:12px;
+}
+.photo-refine-row{
+  display:flex;
+  gap:8px;
+}
+.photo-refine-row input{
+  flex:1;
+  min-width:0;
+  background:#0D0D0D;
+  color:var(--ink);
+  border:1px solid var(--hair);
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  padding:9px;
+}
+.photo-refine-row input:focus{outline:none;border-color:var(--accent);}
+.photo-refine-actions{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+}
+.photo-refine-actions button{
+  flex:1;
+  background:none;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  padding:9px 6px;
+  cursor:pointer;
+}
+.photo-refine-actions button:hover{background:var(--accent);color:#141210;}
+.photo-refine-actions button:disabled{
+  border-color:var(--hair);
+  color:var(--ink-soft);
+  cursor:not-allowed;
+  background:none;
 }
 
-let pendingCopyItem = null;
-let pendingCopyMode = 'item'; // 'item' or 'day'
-
-function openCopyToDayModal(item){
-  pendingCopyItem = item;
-  pendingCopyMode = 'item';
-  document.getElementById('copyToDayFoodName').textContent = `Choose a date to copy "${item.name}" to.`;
-  document.getElementById('copyToDayInput').value = todayStr();
-  document.getElementById('copyToDayOverlay').classList.add('show');
-}
-
-function openCopyDayModal(){
-  if(currentEntries.length === 0){
-    showToast('Nothing logged on this day yet');
-    return;
-  }
-  pendingCopyMode = 'day';
-  const label = formatDateLabel(currentDate).replace('Today · ', '');
-  document.getElementById('copyToDayFoodName').textContent = `Choose a date to copy all ${currentEntries.length} item${currentEntries.length === 1 ? '' : 's'} from ${label} to.`;
-  const suggested = new Date(currentDate);
-  suggested.setDate(suggested.getDate() + 1);
-  document.getElementById('copyToDayInput').value = suggested.getFullYear()+"-"+String(suggested.getMonth()+1).padStart(2,"0")+"-"+String(suggested.getDate()).padStart(2,"0");
-  document.getElementById('copyToDayOverlay').classList.add('show');
-}
-
-document.getElementById('copyDayBtn').addEventListener('click', openCopyDayModal);
-
-document.getElementById('copyToDayCancelBtn').addEventListener('click', ()=>{
-  document.getElementById('copyToDayOverlay').classList.remove('show');
-  pendingCopyItem = null;
-});
-
-document.getElementById('copyToDayOverlay').addEventListener('click', (e)=>{
-  if(e.target.id === 'copyToDayOverlay'){
-    document.getElementById('copyToDayOverlay').classList.remove('show');
-    pendingCopyItem = null;
-  }
-});
-
-document.getElementById('copyToDayConfirmBtn').addEventListener('click', async ()=>{
-  const targetDateStr = document.getElementById('copyToDayInput').value;
-  if(!targetDateStr){
-    showToast('Pick a date first');
-    return;
-  }
-
-  if(pendingCopyMode === 'day'){
-    if(targetDateStr === currentDate){
-      document.getElementById('copyToDayOverlay').classList.remove('show');
-      showToast('Pick a different day to copy to');
-      return;
-    }
-    const count = await copyDayToDate(currentEntries, targetDateStr);
-    document.getElementById('copyToDayOverlay').classList.remove('show');
-    if(count > 0){
-      showToast(`Copied ${count} item${count === 1 ? '' : 's'} to ${formatDateShort(targetDateStr)}`);
-    } else {
-      showToast('Could not copy');
-    }
-    return;
-  }
-
-  if(!pendingCopyItem) return;
-  const ok = await copyEntryToDate(pendingCopyItem, targetDateStr);
-  document.getElementById('copyToDayOverlay').classList.remove('show');
-  pendingCopyItem = null;
-  if(ok){
-    showToast(targetDateStr === currentDate ? 'Copied' : 'Copied to ' + formatDateShort(targetDateStr));
-  } else {
-    showToast('Could not copy');
-  }
-});
-
-async function copyEntryToDate(item, targetDateStr){
-  if(!hasStorage()) return false;
-  try{
-    const raw = window.localStorage.getItem('dic:log:'+targetDateStr);
-    const arr = raw ? JSON.parse(raw) : [];
-    const copy = {
-      ...item,
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2,7)
-    };
-    arr.push(copy);
-    window.localStorage.setItem('dic:log:'+targetDateStr, JSON.stringify(arr));
-    if(targetDateStr === currentDate){
-      currentEntries = arr;
-      render();
-    }
-    return true;
-  }catch(e){
-    console.error('Failed to copy entry to ' + targetDateStr, e);
-    return false;
-  }
-}
-
-async function copyDayToDate(entries, targetDateStr){
-  if(!hasStorage()) return 0;
-  try{
-    const raw = window.localStorage.getItem('dic:log:'+targetDateStr);
-    const arr = raw ? JSON.parse(raw) : [];
-    entries.forEach((item, i)=>{
-      arr.push({
-        ...item,
-        id: Date.now().toString(36) + i.toString(36) + Math.random().toString(36).slice(2,5)
-      });
-    });
-    window.localStorage.setItem('dic:log:'+targetDateStr, JSON.stringify(arr));
-    return entries.length;
-  }catch(e){
-    console.error('Failed to copy day to ' + targetDateStr, e);
-    return 0;
-  }
-}
-
-let toastTimer = null;
-function showToast(message){
-  const toast = document.getElementById('toast');
-  toast.textContent = message;
-  toast.classList.add('show');
-  if(toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>{
-    toast.classList.remove('show');
-  }, 2200);
-}
-
-function showErrorModal(message){
-  document.getElementById('errorText').value = message;
-  document.getElementById('errorOverlay').classList.add('show');
-}
-
-document.getElementById('errorCloseBtn').addEventListener('click', ()=>{
-  document.getElementById('errorOverlay').classList.remove('show');
-});
-
-document.getElementById('errorCopyBtn').addEventListener('click', async ()=>{
-  const textarea = document.getElementById('errorText');
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      await navigator.clipboard.writeText(textarea.value);
-    } else {
-      textarea.select();
-      document.execCommand('copy');
-    }
-    showToast('Copied to clipboard');
-  }catch(e){
-    textarea.select();
-    showToast('Select and copy manually');
-  }
-});
-
-function showConfirmModal(message, confirmLabel){
-  return new Promise((resolve)=>{
-    const overlay = document.getElementById('confirmOverlay');
-    const msgEl = document.getElementById('confirmMsg');
-    const cancelBtn = document.getElementById('confirmCancelBtn');
-    const deleteBtn = document.getElementById('confirmDeleteBtn');
-
-    msgEl.textContent = message;
-    deleteBtn.textContent = confirmLabel || 'Delete';
-    overlay.classList.add('show');
-
-    function cleanup(result){
-      overlay.classList.remove('show');
-      cancelBtn.removeEventListener('click', onCancel);
-      deleteBtn.removeEventListener('click', onDelete);
-      overlay.removeEventListener('click', onOverlayClick);
-      resolve(result);
-    }
-    function onCancel(){ cleanup(false); }
-    function onDelete(){ cleanup(true); }
-    function onOverlayClick(e){ if(e.target === overlay) cleanup(false); }
-
-    cancelBtn.addEventListener('click', onCancel);
-    deleteBtn.addEventListener('click', onDelete);
-    overlay.addEventListener('click', onOverlayClick);
-  });
-}
-
-function enterEditMode(item){
-  editingId = item.id;
-  const grams = item.grams || 0;
-  const unit = item.servingUnit || 'g';
-  const divisor = unit === 'item' ? grams : (grams/100);
-  // Prefer stored per-100g/per-item values; fall back to reverse-calculating from the total for entries saved before this feature existed
-  const calPer100 = (item.calPer100 !== undefined) ? item.calPer100 : (grams > 0 ? roundNum((item.calories||0) / divisor) : (item.calories||0));
-  const proteinPer100 = (item.proteinPer100 !== undefined) ? item.proteinPer100 : (grams > 0 ? roundNum((item.protein||0) / divisor) : (item.protein||0));
-  const carbsPer100 = (item.carbsPer100 !== undefined) ? item.carbsPer100 : (grams > 0 ? roundNum((item.carbs||0) / divisor) : (item.carbs||0));
-  const fatPer100 = (item.fatPer100 !== undefined) ? item.fatPer100 : (grams > 0 ? roundNum((item.fat||0) / divisor) : (item.fat||0));
-  const fiberPer100 = (item.fiberPer100 !== undefined) ? item.fiberPer100 : (grams > 0 ? roundNum((item.fiber||0) / divisor) : (item.fiber||0));
-  const saltPer100 = (item.saltPer100 !== undefined) ? item.saltPer100 : (grams > 0 ? roundNum((item.salt||0) / divisor) : (item.salt||0));
-
-  setEntryUnit(unit);
-
-  document.getElementById('fName').value = item.name;
-  document.getElementById('fGrams').value = grams || '';
-  document.getElementById('fCal').value = calPer100 || '';
-  document.getElementById('fProtein').value = proteinPer100 || '';
-  document.getElementById('fCarbs').value = carbsPer100 || '';
-  document.getElementById('fFat').value = fatPer100 || '';
-  document.getElementById('fFiber').value = fiberPer100 || '';
-  document.getElementById('fSalt').value = saltPer100 || '';
-  document.getElementById('formEyebrow').textContent = 'Edit food';
-  document.getElementById('addBtn').textContent = 'Save changes';
-  document.getElementById('cancelEditBtn').style.display = 'inline';
-  updateServingPreview();
-  const nameField = document.getElementById('fName');
-  if(typeof nameField.scrollIntoView === 'function'){
-    nameField.scrollIntoView({behavior:'smooth', block:'center'});
-  }
-  nameField.focus();
-}
-
-function exitEditMode(){
-  editingId = null;
-  document.getElementById('formEyebrow').textContent = 'Log food';
-  document.getElementById('addBtn').textContent = 'Add to log';
-  document.getElementById('cancelEditBtn').style.display = 'none';
-  document.getElementById('fName').value = '';
-  document.getElementById('fGrams').value = '';
-  document.getElementById('fCal').value = '';
-  document.getElementById('fProtein').value = '';
-  document.getElementById('fCarbs').value = '';
-  document.getElementById('fFat').value = '';
-  document.getElementById('fFiber').value = '';
-  document.getElementById('fSalt').value = '';
-  setEntryUnit('g');
-}
-
-function escapeHtml(str){
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-async function switchDate(newDate){
-  exitEditMode();
-  currentDate = newDate;
-  await loadEntries(currentDate);
-  render();
-}
-
-document.getElementById('dateInput').addEventListener('change', (e)=>{
-  if(e.target.value) switchDate(e.target.value);
-});
-
-document.getElementById('dateDisplay').addEventListener('click', ()=>{
-  const input = document.getElementById('dateInput');
-  if(typeof input.showPicker === 'function'){
-    try{ input.showPicker(); }catch(e){ input.click(); }
-  } else {
-    input.click();
-  }
-});
-
-document.getElementById('prevDay').addEventListener('click', ()=>{
-  const d = new Date(currentDate);
-  d.setDate(d.getDate()-1);
-  switchDate(d.toISOString().slice(0,10));
-});
-
-document.getElementById('nextDay').addEventListener('click', ()=>{
-  const d = new Date(currentDate);
-  d.setDate(d.getDate()+1);
-  switchDate(d.toISOString().slice(0,10));
-});
-
-document.getElementById('todayBtn').addEventListener('click', ()=>{
-  switchDate(todayStr());
-});
-
-document.getElementById('goalInput').addEventListener('change', async (e)=>{
-  const v = Math.round(parseLocaleNumber(e.target.value));
-  currentGoal = (!v || v < 0) ? DEFAULT_GOAL : v;
-  await saveSettings();
-  render();
-});
-
-let entryUnit = 'g';
-
-function computeScale(amount, unit){
-  const a = parseLocaleNumber(amount);
-  if(unit === 'item') return a;
-  return a > 0 ? a / 100 : 0;
-}
-
-function computeScaledTotals(amount, calPerUnit, proteinPerUnit, carbsPerUnit, fatPerUnit, fiberPerUnit, saltPerUnit, unit){
-  const scale = computeScale(amount, unit || entryUnit);
-  return {
-    calories: Math.round(parseLocaleNumber(calPerUnit) * scale),
-    protein: roundNum(parseLocaleNumber(proteinPerUnit) * scale),
-    carbs: roundNum(parseLocaleNumber(carbsPerUnit) * scale),
-    fat: roundNum(parseLocaleNumber(fatPerUnit) * scale),
-    fiber: roundNum(parseLocaleNumber(fiberPerUnit) * scale),
-    salt: roundNum(parseLocaleNumber(saltPerUnit) * scale)
-  };
-}
-
-function setEntryUnit(unit){
-  entryUnit = unit;
-  document.getElementById('unitGramsBtn').classList.toggle('active', unit === 'g');
-  document.getElementById('unitItemBtn').classList.toggle('active', unit === 'item');
-
-  if(unit === 'item'){
-    document.getElementById('fGramsLabel').textContent = 'Quantity (items)';
-    document.getElementById('fGrams').placeholder = 'e.g. 1';
-    document.getElementById('fCalLabel').textContent = 'Calories per item';
-    document.getElementById('fProteinLabel').textContent = 'Protein per item (g)';
-    document.getElementById('fCarbsLabel').textContent = 'Carbs per item (g)';
-    document.getElementById('fFatLabel').textContent = 'Fat per item (g)';
-    document.getElementById('fFiberLabel').textContent = 'Fiber per item (g)';
-    document.getElementById('fSaltLabel').textContent = 'Salt per item (g)';
-  } else {
-    document.getElementById('fGramsLabel').textContent = 'Serving size (g)';
-    document.getElementById('fGrams').placeholder = '0';
-    document.getElementById('fCalLabel').textContent = 'Calories per 100g';
-    document.getElementById('fProteinLabel').textContent = 'Protein per 100g (g)';
-    document.getElementById('fCarbsLabel').textContent = 'Carbs per 100g (g)';
-    document.getElementById('fFatLabel').textContent = 'Fat per 100g (g)';
-    document.getElementById('fFiberLabel').textContent = 'Fiber per 100g (g)';
-    document.getElementById('fSaltLabel').textContent = 'Salt per 100g (g)';
-  }
-  updateServingPreview();
-}
-
-document.getElementById('unitGramsBtn').addEventListener('click', ()=>setEntryUnit('g'));
-document.getElementById('unitItemBtn').addEventListener('click', ()=>setEntryUnit('item'));
-
-function updateServingPreview(){
-  const preview = document.getElementById('servingPreview');
-  const amount = parseLocaleNumber(document.getElementById('fGrams').value);
-  const cal = document.getElementById('fCal').value;
-  const protein = document.getElementById('fProtein').value;
-  const carbs = document.getElementById('fCarbs').value;
-  const fat = document.getElementById('fFat').value;
-  const fiber = document.getElementById('fFiber').value;
-  const salt = document.getElementById('fSalt').value;
-
-  if(cal === ''){
-    preview.textContent = entryUnit === 'item'
-      ? 'Enter quantity and per-item values to see the total'
-      : 'Enter serving size and per-100g values to see the total';
-    return;
-  }
-
-  if(amount <= 0){
-    const c = Math.round(parseLocaleNumber(cal));
-    const p = roundNum(parseLocaleNumber(protein));
-    const cb = roundNum(parseLocaleNumber(carbs));
-    const f = roundNum(parseLocaleNumber(fat));
-    const fb = roundNum(parseLocaleNumber(fiber));
-    const s = roundNum(parseLocaleNumber(salt));
-    const label = entryUnit === 'item' ? 'No quantity' : 'No serving size';
-    preview.innerHTML = `${label} — will save as entered: <span class="total-cal">${c} cal</span> · <span class="total-macros">P ${p}g · C ${cb}g · F ${f}g · Fiber ${fb}g · Salt ${s}g</span>`;
-    return;
-  }
-
-  const totals = computeScaledTotals(amount, cal, protein, carbs, fat, fiber, salt, entryUnit);
-  const amountLabel = entryUnit === 'item' ? (amount + (amount === 1 ? ' item' : ' items')) : (amount + 'g');
-  preview.innerHTML = `Total for ${amountLabel}: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span>`;
-}
-
-['fGrams','fCal','fProtein','fCarbs','fFat','fFiber','fSalt'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', updateServingPreview);
-});
-
-document.getElementById('addFoodForm').addEventListener('submit', function(e){
-  e.preventDefault();
-  try{
-    const name = document.getElementById('fName').value.trim();
-    const amount = parseLocaleNumber(document.getElementById('fGrams').value);
-    const cal = document.getElementById('fCal').value;
-    const protein = document.getElementById('fProtein').value;
-    const carbs = document.getElementById('fCarbs').value;
-    const fat = document.getElementById('fFat').value;
-    const fiber = document.getElementById('fFiber').value;
-    const salt = document.getElementById('fSalt').value;
-    const unit = entryUnit;
-
-    if(!name || cal === ''){
-      document.getElementById(!name ? 'fName' : 'fCal').focus();
-      return;
-    }
-
-    // With a quantity/serving size, the entered values are treated as per-unit and scaled.
-    // Without one, whatever was typed is saved directly as the total — no scaling.
-    const totals = amount > 0
-      ? computeScaledTotals(amount, cal, protein, carbs, fat, fiber, salt, unit)
-      : {
-          calories: Math.round(parseLocaleNumber(cal)),
-          protein: roundNum(parseLocaleNumber(protein)),
-          carbs: roundNum(parseLocaleNumber(carbs)),
-          fat: roundNum(parseLocaleNumber(fat)),
-          fiber: roundNum(parseLocaleNumber(fiber)),
-          salt: roundNum(parseLocaleNumber(salt))
-        };
-
-    const per100g = amount > 0
-      ? {
-          calPer100: parseLocaleNumber(cal),
-          proteinPer100: parseLocaleNumber(protein),
-          carbsPer100: parseLocaleNumber(carbs),
-          fatPer100: parseLocaleNumber(fat),
-          fiberPer100: parseLocaleNumber(fiber),
-          saltPer100: parseLocaleNumber(salt),
-          servingUnit: unit
-        }
-      : {
-          calPer100: undefined,
-          proteinPer100: undefined,
-          carbsPer100: undefined,
-          fatPer100: undefined,
-          fiberPer100: undefined,
-          saltPer100: undefined,
-          servingUnit: unit
-        };
-
-    if(editingId){
-      const idx = currentEntries.findIndex(e=>e.id === editingId);
-      if(idx !== -1){
-        currentEntries[idx] = {
-          ...currentEntries[idx],
-          name,
-          grams: amount,
-          ...per100g,
-          calories: totals.calories,
-          protein: totals.protein,
-          carbs: totals.carbs,
-          fat: totals.fat,
-          fiber: totals.fiber,
-          salt: totals.salt
-        };
-      }
-      exitEditMode();
-      render();
-      saveEntries();
-      return;
-    }
-
-    const entry = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
-      name,
-      grams: amount,
-      ...per100g,
-      calories: totals.calories,
-      protein: totals.protein,
-      carbs: totals.carbs,
-      fat: totals.fat,
-      fiber: totals.fiber,
-      salt: totals.salt
-    };
-
-    currentEntries.push(entry);
-    render();
-    saveEntries();
-
-    document.getElementById('fName').value = '';
-    document.getElementById('fGrams').value = '';
-    document.getElementById('fCal').value = '';
-    document.getElementById('fProtein').value = '';
-    document.getElementById('fCarbs').value = '';
-    document.getElementById('fFat').value = '';
-    document.getElementById('fFiber').value = '';
-    document.getElementById('fSalt').value = '';
-    document.getElementById('fName').focus();
-    updateServingPreview();
-  }catch(err){
-    console.error('Add to log failed', err);
-  }
-});
-
-document.getElementById('cancelEditBtn').addEventListener('click', ()=>{
-  exitEditMode();
-});
-
-function collectAllData(){
-  const data = {app:'daily-intake-calculator', exportedAt:new Date().toISOString(), version:1, settings:null, logs:{}};
-  if(!hasStorage()) return data;
-  try{
-    const settingsRaw = window.localStorage.getItem('dic:settings');
-    data.settings = settingsRaw ? JSON.parse(settingsRaw) : null;
-    for(let i=0;i<window.localStorage.length;i++){
-      const key = window.localStorage.key(i);
-      if(key && key.indexOf('dic:log:') === 0){
-        const dateStr = key.slice('dic:log:'.length);
-        try{ data.logs[dateStr] = JSON.parse(window.localStorage.getItem(key)); }catch(e){}
-      }
-    }
-  }catch(e){ console.error('Failed to collect data', e); }
-  return data;
-}
-
-function restoreAllData(data){
-  if(!hasStorage()) return false;
-  if(!data || typeof data !== 'object') return false;
-  try{
-    if(data.settings){
-      window.localStorage.setItem('dic:settings', JSON.stringify(data.settings));
-    }
-    if(data.logs && typeof data.logs === 'object'){
-      Object.keys(data.logs).forEach(dateStr=>{
-        window.localStorage.setItem('dic:log:'+dateStr, JSON.stringify(data.logs[dateStr]));
-      });
-    }
-    return true;
-  }catch(e){
-    console.error('Failed to restore data', e);
-    return false;
-  }
-}
-
-// Backup text is gzip-compressed then base64-encoded to keep it much shorter and
-// easier to paste/store. Falls back to plain JSON if the browser can't compress
-// (older WebViews), and import transparently handles both formats.
-const BACKUP_PREFIX = 'DICGZ1:';
-
-function arrayBufferToBase64(buffer){
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  for(let i=0; i<bytes.length; i+=chunkSize){
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunkSize));
-  }
-  return btoa(binary);
-}
-
-function base64ToUint8Array(base64){
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for(let i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
-async function compressToBase64(str){
-  const stream = new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
-  const buffer = await new Response(stream).arrayBuffer();
-  return arrayBufferToBase64(buffer);
-}
-
-async function decompressFromBase64(base64){
-  const bytes = base64ToUint8Array(base64);
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-  const buffer = await new Response(stream).arrayBuffer();
-  return new TextDecoder().decode(buffer);
-}
-
-document.getElementById('exportBtn').addEventListener('click', async ()=>{
-  const data = collectAllData();
-  const jsonStr = JSON.stringify(data);
-  let output = jsonStr;
-
-  if(typeof CompressionStream !== 'undefined'){
-    try{
-      const compressed = BACKUP_PREFIX + await compressToBase64(jsonStr);
-      // Only use the compressed version if it actually comes out shorter
-      if(compressed.length < jsonStr.length){
-        output = compressed;
-      }
-    }catch(e){
-      console.error('Compression failed, using plain JSON instead', e);
-    }
-  }
-
-  document.getElementById('exportText').value = output;
-  document.getElementById('exportOverlay').classList.add('show');
-});
-
-document.getElementById('exportCloseBtn').addEventListener('click', ()=>{
-  document.getElementById('exportOverlay').classList.remove('show');
-});
-
-document.getElementById('exportCopyBtn').addEventListener('click', async ()=>{
-  const textarea = document.getElementById('exportText');
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      await navigator.clipboard.writeText(textarea.value);
-    } else {
-      textarea.select();
-      document.execCommand('copy');
-    }
-    showToast('Copied to clipboard');
-  }catch(e){
-    textarea.select();
-    showToast('Select and copy manually');
-  }
-});
-
-document.getElementById('importBtn').addEventListener('click', ()=>{
-  document.getElementById('importText').value = '';
-  document.getElementById('importOverlay').classList.add('show');
-});
-
-document.getElementById('importCloseBtn').addEventListener('click', ()=>{
-  document.getElementById('importOverlay').classList.remove('show');
-});
-
-document.getElementById('importConfirmBtn').addEventListener('click', async ()=>{
-  const raw = document.getElementById('importText').value.trim();
-  if(!raw){ showToast('Paste your backup text first'); return; }
-
-  let jsonStr = raw;
-  if(raw.indexOf(BACKUP_PREFIX) === 0){
-    if(typeof DecompressionStream === 'undefined'){
-      showToast("This backup is compressed but your app can't decompress it");
-      return;
-    }
-    try{
-      jsonStr = await decompressFromBase64(raw.slice(BACKUP_PREFIX.length));
-    }catch(e){
-      console.error('Decompression failed', e);
-      showToast('Could not read this backup text');
-      return;
-    }
-  }
-
-  let parsed;
-  try{
-    parsed = JSON.parse(jsonStr);
-  }catch(e){
-    showToast("That doesn't look like valid backup text");
-    return;
-  }
-
-  const confirmed = await showConfirmModal('This replaces your current log data with the imported backup. Continue?', 'Import');
-  if(!confirmed) return;
-
-  const ok = restoreAllData(parsed);
-  if(ok){
-    document.getElementById('importOverlay').classList.remove('show');
-    await loadSettings();
-    await loadEntries(currentDate);
-    render();
-    showToast('Data imported');
-  } else {
-    showToast('Import failed');
-  }
-});
-
-const GEMINI_MODEL = 'gemini-3.5-flash';
-
-function getGeminiKey(){
-  if(!hasStorage()) return '';
-  try{
-    return window.localStorage.getItem('dic:geminiKey') || '';
-  }catch(e){ return ''; }
-}
-
-function setGeminiKey(key){
-  if(!hasStorage()) return;
-  try{
-    window.localStorage.setItem('dic:geminiKey', key);
-  }catch(e){ console.error('Failed to save API key', e); }
-}
-
-document.getElementById('apiKeyBtn').addEventListener('click', ()=>{
-  document.getElementById('apiKeyInput').value = getGeminiKey();
-  document.getElementById('apiKeyOverlay').classList.add('show');
-});
-
-document.getElementById('apiKeyCloseBtn').addEventListener('click', ()=>{
-  document.getElementById('apiKeyOverlay').classList.remove('show');
-});
-
-document.getElementById('apiKeySaveBtn').addEventListener('click', ()=>{
-  const key = document.getElementById('apiKeyInput').value.trim();
-  setGeminiKey(key);
-  document.getElementById('apiKeyOverlay').classList.remove('show');
-  showToast(key ? 'API key saved' : 'API key cleared');
-});
-
-document.getElementById('photoBtn').addEventListener('click', async ()=>{
-  const key = getGeminiKey();
-  if(!key){
-    showToast('Set your Gemini API key first');
-    document.getElementById('apiKeyInput').value = '';
-    document.getElementById('apiKeyOverlay').classList.add('show');
-    return;
-  }
-  await takePhotoAndAnalyze();
-});
-
-function showLoadingOverlay(text){
-  document.getElementById('photoLoadingTitle').textContent = text || 'Analyzing…';
-  document.getElementById('photoLoadingOverlay').classList.add('show');
-}
-
-function hideLoadingOverlay(){
-  document.getElementById('photoLoadingOverlay').classList.remove('show');
-}
-
-function mentionsWeight(text){
-  return /\b(gram|grams|weigh|weighs|weight|how many grams|how much does)\b/i.test(text);
-}
-
-function extractGramsFromText(text){
-  const match = text.match(/(\d+(?:\.\d+)?)\s*(?:g\b|grams?\b)/i);
-  if(match) return Math.round(parseFloat(match[1]));
-  return null;
-}
-
-document.getElementById('askGeminiBtn').addEventListener('click', async ()=>{
-  const key = getGeminiKey();
-  if(!key){
-    showToast('Set your Gemini API key first');
-    document.getElementById('apiKeyInput').value = '';
-    document.getElementById('apiKeyOverlay').classList.add('show');
-    return;
-  }
-  const input = document.getElementById('askGeminiInput').value.trim();
-  if(!input){
-    showToast('Type a food, e.g. "Snickers bar" or "Snickers bar macros and weight"');
-    return;
-  }
-  await askGeminiTextQuery(input);
-});
-
-
-async function takePhotoAndAnalyze(){
-  const CapCamera = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
-  if(!CapCamera){
-    showToast('Camera is only available in the installed app');
-    return;
-  }
-
-  let photo;
-  try{
-    photo = await CapCamera.getPhoto({
-      quality: 70,
-      resultType: 'base64',
-      source: 'PROMPT',
-      correctOrientation: true
-    });
-  }catch(e){
-    // User cancelled the camera/picker — not an error worth showing
-    return;
-  }
-
-  if(!photo || !photo.base64String){
-    showToast('Could not read that photo');
-    return;
-  }
-
-  lastPhotoBase64 = photo.base64String;
-  lastPhotoMimeType = 'image/' + (photo.format || 'jpeg');
-  lastTextQuery = null;
-  refinementNotes = [];
-  document.getElementById('photoAskAnswer').style.display = 'none';
-  document.getElementById('photoResultTitle').textContent = 'Photo analysis';
-
-  showLoadingOverlay('Analyzing photo…');
-
-  let result;
-  try{
-    result = await requestMacroEstimate('Look at this food photo and identify the food.', '');
-  }catch(e){
-    console.error('Gemini analysis failed', e);
-    hideLoadingOverlay();
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-
-  hideLoadingOverlay();
-
-  if(!result){
-    showToast('Could not analyze that photo');
-    return;
-  }
-
-  showPhotoResult(result);
-}
-
-async function askGeminiTextQuery(description){
-  lastPhotoBase64 = null;
-  lastPhotoMimeType = null;
-  lastTextQuery = description;
-  refinementNotes = [];
-  document.getElementById('photoAskAnswer').style.display = 'none';
-  document.getElementById('askGeminiAnswer').style.display = 'none';
-  document.getElementById('photoResultTitle').textContent = 'Estimate';
-
-  showLoadingOverlay('Getting estimate…');
-
-  let result;
-  try{
-    result = await requestMacroEstimate('The user describes this food: "' + description + '". Identify it and estimate its nutrition.', '');
-  }catch(e){
-    console.error('Gemini query failed', e);
-    hideLoadingOverlay();
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-
-  hideLoadingOverlay();
-
-  if(!result){
-    showToast('Could not get an estimate for that');
-    return;
-  }
-
-  document.getElementById('askGeminiInput').value = '';
-  showPhotoResult(result);
-}
-
-// Low-level call to Gemini's generateContent endpoint. Returns the raw text response.
-// jsonMode=true requests structured JSON output; jsonMode=false leaves it as free-form text.
-async function callGeminiRaw(parts, jsonMode){
-  const apiKey = getGeminiKey();
-  if(!apiKey) throw new Error('No Gemini API key set');
-
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
-
-  const body = { contents: [{ parts }] };
-  body.generationConfig = { maxOutputTokens: 1024 };
-  if(jsonMode){
-    body.generationConfig.responseMimeType = 'application/json';
-  }
-
-  let res;
-  try{
-    res = await fetch(url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
-    });
-  }catch(networkErr){
-    throw new Error('Network request to Gemini failed: ' + (networkErr && networkErr.message ? networkErr.message : networkErr));
-  }
-
-  if(!res.ok){
-    const errText = await res.text().catch(()=> '');
-    throw new Error('Gemini API HTTP ' + res.status + ' (model: ' + GEMINI_MODEL + '): ' + errText);
-  }
-
-  const data = await res.json();
-
-  const blockReason = data && data.promptFeedback && data.promptFeedback.blockReason;
-  if(blockReason){
-    throw new Error('Gemini blocked this request: ' + blockReason);
-  }
-
-  const candidate = data && data.candidates && data.candidates[0];
-  const finishReason = candidate && candidate.finishReason;
-  const text = candidate && candidate.content && candidate.content.parts &&
-    candidate.content.parts[0] && candidate.content.parts[0].text;
-
-  if(!text){
-    throw new Error('No response text from Gemini. finishReason: ' + (finishReason || 'unknown') + '. Raw: ' + JSON.stringify(data).slice(0, 300));
-  }
-
-  return {text, finishReason};
-}
-
-function parseMacroJSON(text, finishReason){
-  let cleanText = text.trim();
-  if(cleanText.indexOf('```') === 0){
-    cleanText = cleanText.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
-  }
-
-  let parsed;
-  try{
-    parsed = JSON.parse(cleanText);
-  }catch(parseErr){
-    const firstBrace = cleanText.indexOf('{');
-    const lastBrace = cleanText.lastIndexOf('}');
-    if(firstBrace !== -1 && lastBrace > firstBrace){
-      try{
-        parsed = JSON.parse(cleanText.slice(firstBrace, lastBrace + 1));
-      }catch(secondErr){
-        throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total, finishReason: ' + (finishReason || 'unknown') + '). Raw text: ' + cleanText.slice(0, 1500));
-      }
-    } else {
-      throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total, finishReason: ' + (finishReason || 'unknown') + '). Raw text: ' + cleanText.slice(0, 1500));
-    }
-  }
-
-  return {
-    name: String(parsed.food_name || 'Food'),
-    calPer100: Number(parsed.calories_per_100g) || 0,
-    proteinPer100: Number(parsed.protein_per_100g) || 0,
-    carbsPer100: Number(parsed.carbs_per_100g) || 0,
-    fatPer100: Number(parsed.fat_per_100g) || 0,
-    fiberPer100: Number(parsed.fiber_per_100g) || 0,
-    saltPer100: Number(parsed.salt_per_100g) || 0,
-    typicalWeightG: Number(parsed.typical_weight_g) || 0
-  };
-}
-
-// Builds the prompt parts array, attaching the stored photo if this session started from one.
-function buildPromptParts(promptText){
-  const parts = [{text: promptText}];
-  if(lastPhotoBase64){
-    parts.push({inline_data: {mime_type: lastPhotoMimeType, data: lastPhotoBase64}});
-  }
-  return parts;
-}
-
-// Retries a flaky async call once after a brief pause. Gemini occasionally returns
-// a truncated/malformed response; a silent retry resolves this most of the time
-// without the user ever needing to notice or intervene.
-async function withRetry(fn, retries){
-  if(retries === undefined) retries = 1;
-  let lastErr;
-  for(let attempt = 0; attempt <= retries; attempt++){
-    try{
-      return await fn();
-    }catch(e){
-      lastErr = e;
-      if(attempt < retries){
-        await new Promise(resolve=>setTimeout(resolve, 400));
-      }
-    }
-  }
-  throw lastErr;
-}
-
-async function requestMacroEstimate(baseContext, extraContext){
-  const wantsWeight = mentionsWeight(baseContext) || mentionsWeight(extraContext || '');
-
-  let schema = '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number, "fiber_per_100g": number, "salt_per_100g": number';
-  if(wantsWeight){
-    schema += ', "typical_weight_g": number';
-  }
-  schema += '}';
-
-  let prompt = 'You are a nutrition estimation assistant. ' + baseContext + ' ' +
-    'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' + schema + '. ' +
-    'salt_per_100g is the salt content in grams per 100g (not sodium in mg) — typical foods range roughly 0 to 2g salt per 100g. ' +
-    'Give your best realistic estimate even if you are not fully certain.';
-
-  if(wantsWeight){
-    prompt += ' Include typical_weight_g as your best estimate of a typical single serving/item weight in grams for this specific food (e.g. one bar, one portion) — this is separate from the per-100g values.';
-  }
-
-  if(extraContext){
-    prompt += ' The user has provided corrections or additional context to improve accuracy — treat this as more reliable than your own guess: "' + extraContext + '". Update your estimate accordingly.';
-  }
-
-  const parts = buildPromptParts(prompt);
-  return await withRetry(async ()=>{
-    const result = await callGeminiRaw(parts, true);
-    return parseMacroJSON(result.text, result.finishReason);
-  }, 1);
-}
-
-async function askGeminiFreeform(question){
-  let context = '';
-  if(lastPhotoBase64){
-    context = 'Look at the attached food photo. ';
-  } else if(lastTextQuery){
-    context = 'The user previously described this food: "' + lastTextQuery + '". ';
-  }
-  const prompt = context + 'Answer the user\'s question directly, concisely, and in plain text (not JSON, not markdown). Question: "' + question + '"';
-  const parts = buildPromptParts(prompt);
-  const result = await withRetry(()=>callGeminiRaw(parts, false), 1);
-  return result.text.trim();
-}
-
-let multiPhotoItems = [];
-
-document.getElementById('multiPhotoBtn').addEventListener('click', ()=>{
-  const key = getGeminiKey();
-  if(!key){
-    showToast('Set your Gemini API key first');
-    document.getElementById('apiKeyInput').value = '';
-    document.getElementById('apiKeyOverlay').classList.add('show');
-    return;
-  }
-  multiPhotoItems = [];
-  renderMultiPhotoList();
-  document.getElementById('multiPhotoOverlay').classList.add('show');
-});
-
-document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
-  document.getElementById('multiPhotoOverlay').classList.remove('show');
-  multiPhotoItems = [];
-});
-
-document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>{
-  const CapCamera = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
-  if(!CapCamera){
-    showToast('Camera is only available in the installed app');
-    return;
-  }
-
-  let photo;
-  try{
-    photo = await CapCamera.getPhoto({
-      quality: 70,
-      resultType: 'base64',
-      source: 'PROMPT',
-      correctOrientation: true
-    });
-  }catch(e){
-    return; // user cancelled
-  }
-
-  if(!photo || !photo.base64String){
-    showToast('Could not read that photo');
-    return;
-  }
-
-  const mimeType = 'image/' + (photo.format || 'jpeg');
-  showLoadingOverlay('Analyzing photo…');
-
-  let result;
-  try{
-    const prompt = 'You are a nutrition estimation assistant. Look at this food photo and identify the food. ' +
-      'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' +
-      '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number, "fiber_per_100g": number, "salt_per_100g": number}. ' +
-      'salt_per_100g is the salt content in grams per 100g (not sodium in mg). ' +
-      'Give your best realistic estimate even if you are not fully certain.';
-    const parts = [{text: prompt}, {inline_data: {mime_type: mimeType, data: photo.base64String}}];
-    result = await withRetry(async ()=>{
-      const raw = await callGeminiRaw(parts, true);
-      return parseMacroJSON(raw.text, raw.finishReason);
-    }, 1);
-  }catch(e){
-    console.error('Gemini analysis failed', e);
-    hideLoadingOverlay();
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-
-  hideLoadingOverlay();
-
-  multiPhotoItems.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
-    name: result.name,
-    calPer100: result.calPer100,
-    proteinPer100: result.proteinPer100,
-    carbsPer100: result.carbsPer100,
-    fatPer100: result.fatPer100,
-    fiberPer100: result.fiberPer100,
-    saltPer100: result.saltPer100,
-    grams: '',
-    thumbnail: 'data:' + mimeType + ';base64,' + photo.base64String
-  });
-
-  renderMultiPhotoList();
-});
-
-function computeMultiPhotoTotals(){
-  let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFiber = 0, totalSalt = 0, totalGrams = 0;
-  multiPhotoItems.forEach(item=>{
-    const g = parseLocaleNumber(item.grams);
-    const scale = g / 100;
-    totalGrams += g;
-    totalCal += item.calPer100 * scale;
-    totalProtein += item.proteinPer100 * scale;
-    totalCarbs += item.carbsPer100 * scale;
-    totalFat += item.fatPer100 * scale;
-    totalFiber += (item.fiberPer100 || 0) * scale;
-    totalSalt += (item.saltPer100 || 0) * scale;
-  });
-  return {
-    calories: Math.round(totalCal),
-    protein: roundNum(totalProtein),
-    carbs: roundNum(totalCarbs),
-    fat: roundNum(totalFat),
-    fiber: roundNum(totalFiber),
-    salt: roundNum(totalSalt),
-    grams: totalGrams
-  };
-}
-
-function renderMultiPhotoList(){
-  const list = document.getElementById('multiPhotoList');
-  list.innerHTML = '';
-
-  multiPhotoItems.forEach(item=>{
-    const g = parseLocaleNumber(item.grams);
-    const subtotalCal = Math.round(item.calPer100 * (g/100));
-    const row = document.createElement('div');
-    row.className = 'multi-photo-item';
-    row.innerHTML = `
-      <img class="multi-photo-thumb" src="${item.thumbnail}" alt="">
-      <div class="multi-photo-info">
-        <div class="multi-photo-name">${escapeHtml(item.name)}</div>
-        <div class="multi-photo-macro-grid">
-          <div>
-            <label>Cal/100g</label>
-            <input type="text" inputmode="decimal" class="mp-cal-input" data-id="${item.id}" value="${roundNum(item.calPer100)}">
-          </div>
-          <div>
-            <label>Prot/100g</label>
-            <input type="text" inputmode="decimal" class="mp-protein-input" data-id="${item.id}" value="${roundNum(item.proteinPer100)}">
-          </div>
-          <div>
-            <label>Carb/100g</label>
-            <input type="text" inputmode="decimal" class="mp-carbs-input" data-id="${item.id}" value="${roundNum(item.carbsPer100)}">
-          </div>
-          <div>
-            <label>Fat/100g</label>
-            <input type="text" inputmode="decimal" class="mp-fat-input" data-id="${item.id}" value="${roundNum(item.fatPer100)}">
-          </div>
-          <div>
-            <label>Fiber/100g</label>
-            <input type="text" inputmode="decimal" class="mp-fiber-input" data-id="${item.id}" value="${roundNum(item.fiberPer100)}">
-          </div>
-          <div>
-            <label>Salt/100g</label>
-            <input type="text" inputmode="decimal" class="mp-salt-input" data-id="${item.id}" value="${roundNum(item.saltPer100)}">
-          </div>
-        </div>
-        <div class="multi-photo-grams-row">
-          <input type="text" inputmode="decimal" class="multi-photo-grams-input" data-id="${item.id}" placeholder="grams" value="${item.grams || ''}">
-          <span class="multi-photo-subtotal">${g > 0 ? subtotalCal + ' cal' : ''}</span>
-        </div>
-      </div>
-      <button type="button" class="multi-photo-remove" data-id="${item.id}" aria-label="Remove">×</button>
-    `;
-    list.appendChild(row);
-  });
-
-  function refreshRowSubtotal(id){
-    const item = multiPhotoItems.find(i=>i.id === id);
-    if(!item) return;
-    const g = parseLocaleNumber(item.grams);
-    const subtotalCal = Math.round(item.calPer100 * (g/100));
-    const row = list.querySelector(`.multi-photo-item .multi-photo-grams-input[data-id="${id}"]`).closest('.multi-photo-item');
-    row.querySelector('.multi-photo-subtotal').textContent = g > 0 ? subtotalCal + ' cal' : '';
-  }
-
-  list.querySelectorAll('.multi-photo-grams-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item){
-        item.grams = input.value;
-        refreshRowSubtotal(id);
-      }
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-cal-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item){
-        item.calPer100 = parseLocaleNumber(input.value);
-        refreshRowSubtotal(id);
-      }
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-protein-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.proteinPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-carbs-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.carbsPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-fat-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.fatPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-fiber-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.fiberPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-salt-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.saltPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.multi-photo-remove').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const id = btn.getAttribute('data-id');
-      multiPhotoItems = multiPhotoItems.filter(i=>i.id !== id);
-      renderMultiPhotoList();
-    });
-  });
-
-  updateMultiPhotoTotalDisplay();
-}
-
-function updateMultiPhotoTotalDisplay(){
-  const totalBox = document.getElementById('multiPhotoTotal');
-  if(multiPhotoItems.length === 0){
-    totalBox.textContent = 'Add at least one photo to see the combined total';
-    return;
-  }
-  const totals = computeMultiPhotoTotals();
-  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span> (${totals.grams}g total)`;
-}
-
-document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
-  if(multiPhotoItems.length === 0){
-    showToast('Add at least one photo first');
-    return;
-  }
-  const totals = computeMultiPhotoTotals();
-  if(totals.grams <= 0){
-    showToast('Enter grams for at least one item');
-    return;
-  }
-
-  const scale = totals.grams / 100;
-  const blendedCalPer100 = Math.round(totals.calories / scale);
-  const blendedProteinPer100 = roundNum(totals.protein / scale);
-  const blendedCarbsPer100 = roundNum(totals.carbs / scale);
-  const blendedFatPer100 = roundNum(totals.fat / scale);
-  const blendedFiberPer100 = roundNum(totals.fiber / scale);
-  const blendedSaltPer100 = roundNum(totals.salt / scale);
-
-  const names = multiPhotoItems.map(i=>i.name);
-  const combinedName = names.length > 3
-    ? names.slice(0,3).join(', ') + ' + ' + (names.length - 3) + ' more'
-    : names.join(', ');
-
-  // The blended values are per-100g, so force the form back to that mode
-  setEntryUnit('g');
-
-  document.getElementById('fName').value = combinedName;
-  document.getElementById('fGrams').value = totals.grams;
-  document.getElementById('fCal').value = blendedCalPer100;
-  document.getElementById('fProtein').value = blendedProteinPer100;
-  document.getElementById('fCarbs').value = blendedCarbsPer100;
-  document.getElementById('fFat').value = blendedFatPer100;
-  document.getElementById('fFiber').value = blendedFiberPer100;
-  document.getElementById('fSalt').value = blendedSaltPer100;
-  updateServingPreview();
-
-  document.getElementById('multiPhotoOverlay').classList.remove('show');
-  multiPhotoItems = [];
-
-  showToast('Combined total filled in — review and tap Add to log');
-  const nameField = document.getElementById('fName');
-  if(typeof nameField.scrollIntoView === 'function'){
-    nameField.scrollIntoView({behavior:'smooth', block:'center'});
-  }
-});
-
-let lastPhotoResult = null;
-let lastPhotoBase64 = null;
-let lastPhotoMimeType = null;
-let lastTextQuery = null;
-let refinementNotes = [];
-
-function showPhotoResult(result, presetGrams){
-  lastPhotoResult = result;
-  const body = document.getElementById('photoResultBody');
-  const hasTypicalWeight = result.typicalWeightG && result.typicalWeightG > 0;
-  const autoGrams = presetGrams || (hasTypicalWeight ? Math.round(result.typicalWeightG) : '');
-
-  body.innerHTML = `
-    <div class="photo-result-name">${escapeHtml(result.name)}</div>
-    <div class="photo-result-note">Estimated values, per 100g. Enter your actual serving size below to fill in the log.</div>
-    <div class="photo-result-macros">
-      <div>Cal<span>${roundNum(result.calPer100)}</span></div>
-      <div>Prot<span>${roundNum(result.proteinPer100)}g</span></div>
-      <div>Carbs<span>${roundNum(result.carbsPer100)}g</span></div>
-      <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
-      <div>Fiber<span>${roundNum(result.fiberPer100)}g</span></div>
-      <div>Salt<span>${roundNum(result.saltPer100)}g</span></div>
-    </div>
-    ${hasTypicalWeight ? `<div class="photo-typical-weight">Typical weight: ~${Math.round(result.typicalWeightG)}g — filled in below, adjust if needed</div>` : ''}
-    <div class="photo-grams-field">
-      <label for="photoGramsInput">Serving size (g) — ask "how many grams is this" below to estimate</label>
-      <input type="text" inputmode="decimal" id="photoGramsInput" placeholder="e.g. 150" value="${autoGrams ? escapeHtml(String(autoGrams)) : ''}">
-    </div>
-  `;
-  document.getElementById('photoRefineInput').value = '';
-  document.getElementById('photoAskAnswer').style.display = 'none';
-  document.getElementById('photoAskAnswer').textContent = '';
-  document.getElementById('photoResultOverlay').classList.add('show');
-  setTimeout(()=>{
-    const gramsInput = document.getElementById('photoGramsInput');
-    if(gramsInput && !autoGrams) gramsInput.focus();
-  }, 50);
-}
-
-function resetPhotoState(){
-  lastPhotoResult = null;
-  lastPhotoBase64 = null;
-  lastPhotoMimeType = null;
-  lastTextQuery = null;
-  refinementNotes = [];
-}
-
-document.getElementById('photoResultCancelBtn').addEventListener('click', ()=>{
-  document.getElementById('photoResultOverlay').classList.remove('show');
-  resetPhotoState();
-});
-
-document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
-  if(!lastPhotoResult) return;
-  const gramsInput = document.getElementById('photoGramsInput');
-  const grams = parseLocaleNumber(gramsInput && gramsInput.value);
-
-  // Gemini always estimates per-100g, so force the form back to that mode
-  // regardless of whatever the toggle was last left on.
-  setEntryUnit('g');
-
-  document.getElementById('fName').value = lastPhotoResult.name;
-  document.getElementById('fGrams').value = grams || '';
-  document.getElementById('fCal').value = roundNum(lastPhotoResult.calPer100);
-  document.getElementById('fProtein').value = roundNum(lastPhotoResult.proteinPer100);
-  document.getElementById('fCarbs').value = roundNum(lastPhotoResult.carbsPer100);
-  document.getElementById('fFat').value = roundNum(lastPhotoResult.fatPer100);
-  document.getElementById('fFiber').value = roundNum(lastPhotoResult.fiberPer100);
-  document.getElementById('fSalt').value = roundNum(lastPhotoResult.saltPer100);
-  updateServingPreview();
-
-  document.getElementById('photoResultOverlay').classList.remove('show');
-  resetPhotoState();
-
-  showToast(grams > 0 ? 'Filled in — review and tap Add to log' : 'Filled in — enter your serving size, then tap Add to log');
-  const nameField = document.getElementById('fName');
-  if(typeof nameField.scrollIntoView === 'function'){
-    nameField.scrollIntoView({behavior:'smooth', block:'center'});
-  }
-});
-
-document.getElementById('photoRefineBtn').addEventListener('click', async ()=>{
-  const note = document.getElementById('photoRefineInput').value.trim();
-  if(!note){
-    showToast('Type a note first');
-    return;
-  }
-  if(!lastPhotoBase64 && !lastTextQuery){
-    showToast('Nothing to re-analyze — take a photo or ask about a food first');
-    return;
-  }
-
-  const gramsInput = document.getElementById('photoGramsInput');
-  const preservedGrams = gramsInput ? gramsInput.value : '';
-
-  refinementNotes.push(note);
-  const combinedNote = refinementNotes.join('; ');
-
-  const refineBtn = document.getElementById('photoRefineBtn');
-  const askBtn = document.getElementById('photoAskBtn');
-  refineBtn.disabled = true;
-  askBtn.disabled = true;
-  refineBtn.textContent = '…';
-
-  document.getElementById('photoResultOverlay').classList.remove('show');
-  showLoadingOverlay('Re-analyzing…');
-
-  const baseContext = lastPhotoBase64
-    ? 'Look at this food photo and identify the food.'
-    : 'The user describes this food: "' + lastTextQuery + '". Identify it and estimate its nutrition.';
-
-  let result;
-  try{
-    result = await requestMacroEstimate(baseContext, combinedNote);
-  }catch(e){
-    console.error('Gemini re-analysis failed', e);
-    hideLoadingOverlay();
-    refineBtn.disabled = false;
-    askBtn.disabled = false;
-    refineBtn.textContent = 'Re-analyze macros';
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-
-  hideLoadingOverlay();
-  refineBtn.disabled = false;
-  askBtn.disabled = false;
-  refineBtn.textContent = 'Re-analyze macros';
-
-  if(!result){
-    showToast('Could not re-analyze that');
-    document.getElementById('photoResultOverlay').classList.add('show');
-    return;
-  }
-
-  showPhotoResult(result, preservedGrams);
-  showToast('Updated based on your note');
-});
-
-document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
-  const question = document.getElementById('photoRefineInput').value.trim();
-  if(!question){
-    showToast('Type a question first');
-    return;
-  }
-  if(!lastPhotoBase64 && !lastTextQuery){
-    showToast('Nothing to ask about yet');
-    return;
-  }
-
-  const refineBtn = document.getElementById('photoRefineBtn');
-  const askBtn = document.getElementById('photoAskBtn');
-  const originalLabel = askBtn.textContent;
-  refineBtn.disabled = true;
-  askBtn.disabled = true;
-  askBtn.textContent = '…';
-
-  let answer;
-  try{
-    answer = await askGeminiFreeform(question);
-  }catch(e){
-    console.error('Gemini question failed', e);
-    refineBtn.disabled = false;
-    askBtn.disabled = false;
-    askBtn.textContent = originalLabel;
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-
-  refineBtn.disabled = false;
-  askBtn.disabled = false;
-  askBtn.textContent = originalLabel;
-
-  const answerBox = document.getElementById('photoAskAnswer');
-  answerBox.textContent = answer;
-  answerBox.style.display = 'block';
-
-  if(mentionsWeight(question)){
-    const grams = extractGramsFromText(answer);
-    if(grams){
-      const gramsInput = document.getElementById('photoGramsInput');
-      if(gramsInput){
-        gramsInput.value = grams;
-        showToast('Serving size filled in: ' + grams + 'g');
-      }
-    }
-  }
-});
-
-(async function init(){
-  await loadSettings();
-  await loadEntries(currentDate);
-  render();
-})();
-</script>
-</body>
-</html>
