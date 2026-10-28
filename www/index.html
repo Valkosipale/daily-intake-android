@@ -1572,6 +1572,7 @@ body{
       <input type="text" inputmode="numeric" id="bodySteps" placeholder="e.g. 6800">
     </div>
     <div class="steps-status" id="stepsStatus"></div>
+    <button type="button" id="connectStepsBtn" class="body-weight-trend-btn" style="margin-top:8px;min-height:38px;">Connect phone steps</button>
 
     <div class="body-tdee" id="bodyTdeePreview"></div>
     <p class="body-note">How it's calculated (deliberately on the low side): Mifflin–St Jeor resting calories × 1.2, the lowest standard activity factor. Only steps beyond 5,000 a day are added, each at the net energy cost of walking (0.5 kcal per kg per km, from the ACSM walking equation) using a step length of 0.413 × your height. Gym workouts and other exercise aren't counted.</p>
@@ -3311,7 +3312,10 @@ function updateTdeeDisplay(){
 
 // ---- Phone steps through Health Connect (capacitor-health plugin, registered as "HealthPlugin") ----
 function getHealthPlugin(){
-  return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.HealthPlugin;
+  const plugins = window.Capacitor && window.Capacitor.Plugins;
+  if(!plugins) return null;
+  // Different capacitor-health releases expose the native bridge under either name.
+  return plugins.HealthPlugin || plugins.Health || null;
 }
 
 // The plugin's TypeScript types say permissions come back as an array of {NAME: bool}, but its
@@ -3577,6 +3581,7 @@ document.getElementById('sexFemaleBtn').addEventListener('click', ()=>setBodySex
 });
 document.getElementById('bodyCancelBtn').addEventListener('click', closeBodyDialog);
 document.getElementById('bodySaveBtn').addEventListener('click', saveBodyDialog);
+document.getElementById('connectStepsBtn').addEventListener('click', connectPhoneSteps);
 document.getElementById('bodyWeightTrendBtn').addEventListener('click', ()=>{
   renderWeightHistory();
   document.getElementById('weightOverlay').classList.add('show');
