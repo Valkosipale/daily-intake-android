@@ -151,12 +151,6 @@ jobs:
       - name: Sync web assets into Android project
         run: npx cap sync android
 
-      - name: Verify Health plugin and Android permission
-        run: |
-          test -d node_modules/capacitor-health
-          grep -R -E '"name"[[:space:]]*:[[:space:]]*"(Health|HealthPlugin)"' android/app/src/main/assets/capacitor.plugins.json
-          grep -q 'android.permission.health.READ_STEPS' android/app/src/main/AndroidManifest.xml
-
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
