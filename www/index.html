@@ -1571,8 +1571,7 @@ body{
       <label for="bodySteps" id="bodyStepsLabel">Steps</label>
       <input type="text" inputmode="numeric" id="bodySteps" placeholder="e.g. 6800">
     </div>
-    <div class="steps-status" id="stepsStatus"></div>
-    <button type="button" id="connectStepsBtn" class="body-weight-trend-btn" style="margin-top:8px;min-height:38px;">Connect phone steps</button>
+    <p class="body-note">Enter your steps manually for the selected day.</p>
 
     <div class="body-tdee" id="bodyTdeePreview"></div>
     <p class="body-note">How it's calculated (deliberately on the low side): Mifflin–St Jeor resting calories × 1.2, the lowest standard activity factor. Only steps beyond 5,000 a day are added, each at the net energy cost of walking (0.5 kcal per kg per km, from the ACSM walking equation) using a step length of 0.413 × your height. Gym workouts and other exercise aren't counted.</p>
@@ -2101,7 +2100,7 @@ async function switchDate(newDate){
   currentDate = newDate;
   await loadEntries(currentDate);
   render();
-  refreshPhoneSteps(currentDate);
+
 }
 
 document.getElementById('dateInput').addEventListener('change', (e)=>{
@@ -2836,7 +2835,7 @@ function monthDates(dateStr){
 }
 async function refreshMonthlySteps(){
   const dates = monthDates(monthlyAnchor).filter(ds => getDayTotalsFromStorage(ds).count > 0);
-  await Promise.all(dates.map(ds => refreshPhoneSteps(ds).catch(() => null)));
+
 }
 function renderMonthly(){
   const dates = monthDates(monthlyAnchor);
@@ -3527,8 +3526,6 @@ function openBodyDialog(){
   setBodySex(p ? p.sex : null);
   document.getElementById('bodyOverlay').classList.add('show');
   // Opening TDEE is the explicit user action that starts Health Connect setup.
-  // On first use this requests READ_STEPS; afterwards it refreshes automatically.
-  connectPhoneSteps();
 }
 
 function closeBodyDialog(){
@@ -3581,7 +3578,6 @@ document.getElementById('sexFemaleBtn').addEventListener('click', ()=>setBodySex
 });
 document.getElementById('bodyCancelBtn').addEventListener('click', closeBodyDialog);
 document.getElementById('bodySaveBtn').addEventListener('click', saveBodyDialog);
-document.getElementById('connectStepsBtn').addEventListener('click', connectPhoneSteps);
 document.getElementById('bodyWeightTrendBtn').addEventListener('click', ()=>{
   renderWeightHistory();
   document.getElementById('weightOverlay').classList.add('show');
@@ -3590,10 +3586,6 @@ document.getElementById('bodyOverlay').addEventListener('click', (e)=>{
   if(e.target.id === 'bodyOverlay') closeBodyDialog();
 });
 
-// Coming back to the app is when new steps have usually piled up
-document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible') refreshPhoneSteps(currentDate, {force: true});
-});
 
 function collectAllData(){
   const data = {app:'daily-intake-calculator', exportedAt:new Date().toISOString(), version:1, settings:null, logs:{}};
@@ -4662,7 +4654,6 @@ document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
   await loadSettings();
   await loadEntries(currentDate);
   render();
-  refreshPhoneSteps(currentDate);
 })();
 </script>
 </body>
