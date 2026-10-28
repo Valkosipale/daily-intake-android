@@ -2518,7 +2518,8 @@ function updateWeightSummary(){
   updateTdeeDisplay();
 }
 
-document.getElementById('weightForm').addEventListener('submit', function(e){
+const weightForm = document.getElementById('weightForm');
+if(weightForm) weightForm.addEventListener('submit', function(e){
   e.preventDefault();
   const input = document.getElementById('weightInput');
   const value = parseLocaleNumber(input.value);
