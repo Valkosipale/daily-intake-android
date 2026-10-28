@@ -320,6 +320,111 @@ body{
   font-size:22px;
 }
 
+.tdee-row{cursor:pointer;align-items:center;}
+.tdee-row:hover{background:var(--hair);}
+.tdee-row .label .tdee-hint{
+  display:block;
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  font-weight:400;
+  color:var(--ink-soft);
+  margin-top:1px;
+}
+.tdee-right{text-align:right;min-width:0;max-width:64%;}
+.tdee-sub{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  margin-top:2px;
+  overflow-wrap:anywhere;
+}
+.body-box{ max-width:440px; max-height:90vh; overflow-y:auto; }
+.body-note{
+  font-size:11px;
+  color:var(--ink-soft);
+  line-height:1.45;
+  margin:6px 0 0;
+}
+.steps-status{
+  font-family:'Space Mono',monospace;
+  font-size:10.5px;
+  color:var(--ink-soft);
+  line-height:1.45;
+  margin:6px 0 8px;
+}
+.body-tdee{
+  border:1px solid var(--accent);
+  padding:10px 12px;
+  margin:14px 0 8px;
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  text-align:center;
+  line-height:1.5;
+}
+.body-tdee .big{
+  font-family:'Archivo Black',sans-serif;
+  font-size:22px;
+  color:var(--accent);
+  display:block;
+  margin:2px 0;
+}
+
+.multi-photo-hint{
+  font-size:10px;
+  color:var(--ink-soft);
+  line-height:1.4;
+  margin:-1px 0 6px;
+}
+.multi-photo-side{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  flex-shrink:0;
+}
+.multi-photo-edit{
+  background:none;
+  border:1px solid var(--hair);
+  color:var(--ink-soft);
+  width:24px;
+  height:24px;
+  cursor:pointer;
+  font-size:13px;
+  line-height:1;
+}
+.multi-photo-edit:hover{border-color:var(--accent);color:var(--accent);}
+.weekly-balance{
+  margin-top:12px;
+  padding-top:8px;
+  border-top:1px solid var(--hair);
+  text-align:left;
+}
+.wb-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:10px;
+  margin-top:8px;
+}
+.wb-label{color:var(--ink);font-size:11px;}
+.wb-val{
+  font-family:'Archivo Black',sans-serif;
+  font-size:16px;
+  color:var(--accent);
+  white-space:nowrap;
+}
+.wb-val small{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+}
+.wb-sub{
+  color:var(--ink-soft);
+  font-size:10px;
+  line-height:1.4;
+  margin-top:1px;
+}
+
 .previous-items-box{ max-width:440px; max-height:86vh; }
 #previousItemsList{
   max-height:60vh;
@@ -1198,6 +1303,14 @@ body{
       </div>
     </div>
 
+    <div class="facts-row tdee-row" id="tdeeRow" role="button" tabindex="0" aria-label="TDEE, tap to edit body stats">
+      <div class="label">TDEE<span class="tdee-hint">estimated daily burn</span></div>
+      <div class="tdee-right">
+        <div class="value" id="tdeeValue">—</div>
+        <div class="tdee-sub" id="tdeeSub">tap to add your body stats</div>
+      </div>
+    </div>
+
     <div class="facts-row remaining" id="remainingRow">
       <div class="label" id="remainingLabel">Remaining</div>
       <div class="value" id="remainingVal">0</div>
@@ -1277,60 +1390,21 @@ body{
   </div>
 
   <div class="backup-section">
-    <span class="eyebrow">Photo macros</span>
-    <p class="backup-desc">Take a photo of your food to get an estimated macro breakdown (via Google Gemini, free tier).</p>
+    <span class="eyebrow">Scan</span>
+    <p class="backup-desc">Add food by photo, barcode or a short description (Gemini). Add one item or several, mix them, and log the combined total.</p>
     <div class="backup-actions">
-      <button type="button" id="photoBtn" class="backup-btn">📷 Take photo</button>
-      <button type="button" id="multiPhotoBtn" class="backup-btn">📷📷 Multiple photos</button>
-    </div>
-  </div>
-
-  <div class="backup-section">
-    <span class="eyebrow">Barcode</span>
-    <p class="backup-desc">Scan a packaged food's barcode to look up its nutrition (Open Food Facts database).</p>
-    <div class="backup-actions">
-      <button type="button" id="scanBarcodeBtn" class="backup-btn">📷 Scan barcode</button>
-      <button type="button" id="multiBarcodeBtn" class="backup-btn">📷📷 Multiple barcodes</button>
-    </div>
-    <form class="ask-gemini-row" id="barcodeForm" style="margin-top:10px;">
-      <input type="text" inputmode="numeric" id="barcodeInput" placeholder="or type the barcode number">
-      <button type="submit" class="backup-btn">Look up</button>
-    </form>
-  </div>
-
-  <div class="backup-section">
-    <span class="eyebrow">Ask Gemini</span>
-    <p class="backup-desc">Describe a food for a macro estimate, or ask a direct question (e.g. "how many grams is a Snickers bar?").</p>
-    <div class="ask-gemini-row">
-      <input type="text" id="askGeminiInput" placeholder="e.g. Snickers bar, or 'how many grams is a Snickers bar?'">
-      <button type="button" id="askGeminiBtn" class="backup-btn">Ask</button>
+      <button type="button" id="scanBtn" class="backup-btn">📷 Scan</button>
     </div>
     <button type="button" id="apiKeyBtn" class="backup-btn api-key-long-btn">API key</button>
-    <div class="photo-ask-answer" id="askGeminiAnswer" style="display:none;"></div>
   </div>
 
   <div class="backup-section">
-    <span class="eyebrow">Weekly view</span>
-    <p class="backup-desc">See 7 days at a glance with daily totals and your average. Tap a day to jump to it.</p>
+    <span class="eyebrow">Monthly view</span>
+    <p class="backup-desc">See each logged day's macros, calories, steps and calorie balance. The monthly summary shows only the total surplus or deficit.</p>
     <div class="backup-actions">
-      <button type="button" id="weeklyBtn" class="backup-btn">View week</button>
+      <button type="button" id="monthlyBtn" class="backup-btn">View month</button>
     </div>
   </div>
-
-  <div class="backup-section">
-    <span class="eyebrow">Weight</span>
-    <p class="backup-desc" id="weightLatest">No weigh-ins yet.</p>
-    <form class="ask-gemini-row" id="weightForm">
-      <input type="text" inputmode="decimal" id="weightInput" placeholder="e.g. 82,4">
-      <span class="weight-unit">kg</span>
-      <button type="submit" class="backup-btn">Log</button>
-    </form>
-    <p class="backup-desc" id="weightForDate" style="margin-top:8px;"></p>
-    <div class="backup-actions">
-      <button type="button" id="weightHistoryBtn" class="backup-btn">History &amp; trend</button>
-    </div>
-  </div>
-
   <div class="backup-section">
     <span class="eyebrow">Backup</span>
     <p class="backup-desc">Export your data before updating the app, then import it back afterward.</p>
@@ -1345,25 +1419,26 @@ body{
   </div>
 
 
+
 </div>
 
 <div class="data-overlay" id="multiPhotoOverlay">
   <div class="data-box multi-photo-box">
-    <div class="data-title">Multiple items</div>
-    <p class="data-desc">Add each item by photo or barcode (mix them if you like), enter how many grams of each you're having, and the totals combine automatically.</p>
+    <div class="data-title">Scan food</div>
+    <p class="data-desc">Add each item by photo, barcode or a short description. One item or several, mixed freely. Enter grams for each and the totals combine. Tap ✎ on an item to correct it or ask Gemini a question.</p>
     <div id="multiPhotoList"></div>
     <div class="backup-actions multi-add-row">
-      <button type="button" id="multiPhotoAddBtn" class="backup-btn">📷 Add photo</button>
-      <button type="button" id="multiBarcodeAddBtn" class="backup-btn">🏷️ Add barcode</button>
+      <button type="button" id="multiPhotoAddBtn" class="backup-btn">📷 Photo</button>
+      <button type="button" id="multiBarcodeAddBtn" class="backup-btn">🏷️ Barcode</button>
     </div>
-    <form class="ask-gemini-row multi-barcode-form" id="multiBarcodeForm">
-      <input type="text" inputmode="numeric" id="multiBarcodeInput" placeholder="or type a barcode number">
+    <form class="ask-gemini-row multi-barcode-form" id="scanTextForm">
+      <input type="text" id="scanTextInput" placeholder="Barcode number, or describe a food">
       <button type="submit" class="backup-btn">Add</button>
     </form>
     <div class="multi-photo-total" id="multiPhotoTotal">Add at least one item to see the combined total</div>
     <div class="data-actions">
       <button type="button" id="multiPhotoCancelBtn" class="secondary">Cancel</button>
-      <button type="button" id="multiPhotoUseBtn" class="primary">Add combined to log</button>
+      <button type="button" id="multiPhotoUseBtn" class="primary">Add to log</button>
     </div>
   </div>
 </div>
@@ -1390,7 +1465,7 @@ body{
 
 <div class="data-overlay" id="photoResultOverlay">
   <div class="data-box">
-    <div class="data-title" id="photoResultTitle">Photo analysis</div>
+    <div class="data-title" id="photoResultTitle">Fix or ask about this item</div>
     <div id="photoResultBody"></div>
     <div class="photo-refine-field">
       <label for="photoRefineInput">Correction, or a question (e.g. "it's salmon" or "how many grams is this?")</label>
@@ -1405,7 +1480,7 @@ body{
     </div>
     <div class="data-actions">
       <button type="button" id="photoResultCancelBtn" class="secondary">Cancel</button>
-      <button type="button" id="photoResultUseBtn" class="primary">Use this</button>
+      <button type="button" id="photoResultUseBtn" class="primary">Update item</button>
     </div>
   </div>
 </div>
@@ -1445,6 +1520,52 @@ body{
   </div>
 </div>
 
+<div class="data-overlay" id="bodyOverlay">
+  <div class="data-box body-box">
+    <div class="data-title">Body stats &amp; steps</div>
+    <p class="data-desc">Used to estimate how many calories you burn per day (TDEE). Stored only on this phone.</p>
+
+    <div class="field full">
+      <label>Sex</label>
+      <div class="unit-toggle">
+        <button type="button" class="unit-btn" id="sexMaleBtn">Male</button>
+        <button type="button" class="unit-btn" id="sexFemaleBtn">Female</button>
+      </div>
+    </div>
+
+    <div class="add-grid" style="margin-top:10px;">
+      <div class="field">
+        <label for="bodyAge">Age (years)</label>
+        <input type="text" inputmode="numeric" id="bodyAge" placeholder="e.g. 30">
+      </div>
+      <div class="field">
+        <label for="bodyHeight">Height (cm)</label>
+        <input type="text" inputmode="decimal" id="bodyHeight" placeholder="e.g. 180">
+      </div>
+      <div class="field full">
+        <label for="bodyWeight">Weight (kg)</label>
+        <input type="text" inputmode="decimal" id="bodyWeight" placeholder="e.g. 82,4">
+      </div>
+    </div>
+    <p class="body-note" id="bodyWeightNote"></p>
+
+    <div class="field full" style="margin-top:12px;">
+      <label for="bodySteps" id="bodyStepsLabel">Steps</label>
+      <input type="text" inputmode="numeric" id="bodySteps" placeholder="e.g. 6800">
+    </div>
+    <div class="steps-status" id="stepsStatus"></div>
+    <button type="button" class="backup-btn api-key-long-btn" id="readStepsBtn" style="margin-top:0;">Read steps from phone</button>
+
+    <div class="body-tdee" id="bodyTdeePreview"></div>
+    <p class="body-note">How it's calculated (deliberately on the low side): Mifflin–St Jeor resting calories × 1.2, the lowest standard activity factor. Only steps beyond 5,000 a day are added, each at the net energy cost of walking (0.5 kcal per kg per km, from the ACSM walking equation) using a step length of 0.413 × your height. Gym workouts and other exercise aren't counted.</p>
+
+    <div class="data-actions">
+      <button type="button" id="bodyCancelBtn" class="secondary">Cancel</button>
+      <button type="button" id="bodySaveBtn" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="data-overlay" id="weightOverlay">
   <div class="data-box weight-box">
     <div class="data-title">Weight history</div>
@@ -1473,6 +1594,21 @@ body{
   </div>
 </div>
 
+<div class="data-overlay" id="monthlyOverlay">
+  <div class="data-box weekly-box">
+    <div class="data-title">Monthly view</div>
+    <p class="data-desc" id="monthlyRange"></p>
+    <div id="monthlyList"></div>
+    <div class="weekly-summary" id="monthlySummary"></div>
+    <div class="data-actions">
+      <button type="button" id="monthlyPrevBtn" class="secondary">‹ Earlier</button>
+      <button type="button" id="monthlyNextBtn" class="secondary">Later ›</button>
+    </div>
+    <div class="data-actions">
+      <button type="button" id="monthlyCloseBtn" class="primary">Close</button>
+    </div>
+  </div>
+</div>
 <div class="data-overlay" id="csvOverlay">
   <div class="data-box">
     <div class="data-title">Export CSV</div>
@@ -1947,6 +2083,7 @@ async function switchDate(newDate){
   currentDate = newDate;
   await loadEntries(currentDate);
   render();
+  refreshPhoneSteps(currentDate);
 }
 
 document.getElementById('dateInput').addEventListener('change', (e)=>{
@@ -2378,6 +2515,7 @@ function updateWeightSummary(){
   forDateEl.textContent = existing
     ? `Saved for ${formatDateShort(currentDate)}: ${existing.kg} kg — logging again replaces it.`
     : `Will be saved for ${formatDateShort(currentDate)} (the day you're viewing).`;
+  updateTdeeDisplay();
 }
 
 document.getElementById('weightForm').addEventListener('submit', function(e){
@@ -2481,7 +2619,8 @@ function renderWeightHistory(){
   });
 }
 
-document.getElementById('weightHistoryBtn').addEventListener('click', ()=>{
+const weightHistoryBtn = document.getElementById('weightHistoryBtn');
+if(weightHistoryBtn) weightHistoryBtn.addEventListener('click', ()=>{
   renderWeightHistory();
   document.getElementById('weightOverlay').classList.add('show');
 });
@@ -2602,15 +2741,40 @@ function renderWeekly(){
     ? `${diff > 0 ? '+' : ''}${diff.toLocaleString()} cal vs your ${currentGoal.toLocaleString()} goal`
     : '';
 
+  // Week balance: what was eaten against the goal and against the estimated burn (TDEE),
+  // counted over the logged days only (an unlogged day isn't a zero-calorie day).
+  const eatenTotal = Math.round(sum.cal);
+  const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toLocaleString();
+  const word = v => (v > 0 ? 'over' : v < 0 ? 'under' : 'on target');
+  const todayNote = logged.some(d => d.date === today) ? ' · includes today so far' : '';
+  let balanceHtml = '<div class="weekly-balance">';
+  if(currentGoal > 0){
+    const goalTotal = currentGoal * n;
+    const vsGoal = eatenTotal - goalTotal;
+    balanceHtml += `<div class="wb-row"><span class="wb-label">Week vs your goal</span><span class="wb-val">${signed(vsGoal)} cal <small>${word(vsGoal)}</small></span></div>` +
+      `<div class="wb-sub">${eatenTotal.toLocaleString()} eaten − ${goalTotal.toLocaleString()} goal (${n} logged day${n === 1 ? '' : 's'} × ${currentGoal.toLocaleString()})${todayNote}</div>`;
+  }
+  const tdeeByDay = logged.map(d => tdeeForDate(d.date));
+  if(tdeeByDay.every(v => v !== null)){
+    const tdeeTotal = tdeeByDay.reduce((a, b) => a + b, 0);
+    const vsTdee = eatenTotal - tdeeTotal;
+    balanceHtml += `<div class="wb-row"><span class="wb-label">Week vs your TDEE</span><span class="wb-val">${signed(vsTdee)} cal <small>${word(vsTdee)}</small></span></div>` +
+      `<div class="wb-sub">${eatenTotal.toLocaleString()} eaten − ${tdeeTotal.toLocaleString()} estimated burn${todayNote}</div>`;
+  } else {
+    balanceHtml += '<div class="wb-sub" style="margin-top:8px;">Tap the TDEE row to add your body stats and compare against your TDEE too.</div>';
+  }
+  balanceHtml += '</div>';
+
   summary.innerHTML = `
     Average over ${n} logged day${n === 1 ? '' : 's'}
     <span class="avg-cal">${avgCal.toLocaleString()} cal</span>
     <span class="avg-macros">P ${roundNum(sum.protein / n)}g · C ${roundNum(sum.carbs / n)}g · F ${roundNum(sum.fat / n)}g · Fiber ${roundNum(sum.fiber / n)}g · Salt ${roundNum(sum.salt / n)}g</span>
     ${diffText}<br>
-    Week total: ${Math.round(sum.cal).toLocaleString()} cal`;
+    Week total: ${Math.round(sum.cal).toLocaleString()} cal${balanceHtml}`;
 }
 
-document.getElementById('weeklyBtn').addEventListener('click', ()=>{
+const weeklyBtn = document.getElementById('weeklyBtn');
+if(weeklyBtn) weeklyBtn.addEventListener('click', ()=>{
   weeklyAnchor = currentDate;
   renderWeekly();
   document.getElementById('weeklyOverlay').classList.add('show');
@@ -2634,6 +2798,98 @@ document.getElementById('weeklyOverlay').addEventListener('click', (e)=>{
   if(e.target.id === 'weeklyOverlay'){
     document.getElementById('weeklyOverlay').classList.remove('show');
   }
+});
+
+// ---- Monthly view ----
+let monthlyAnchor = null;
+function monthKeyFromDate(dateStr){ return dateStr.slice(0, 7); }
+function shiftMonth(dateStr, deltaMonths){
+  const [y, m] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1 + deltaMonths, 1);
+  return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-01';
+}
+function monthDates(dateStr){
+  const [y, m] = dateStr.split('-').map(Number);
+  const count = new Date(y, m, 0).getDate();
+  const out = [];
+  for(let d = 1; d <= count; d++) out.push(y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0'));
+  return out;
+}
+async function refreshMonthlySteps(){
+  const dates = monthDates(monthlyAnchor).filter(ds => getDayTotalsFromStorage(ds).count > 0);
+  await Promise.all(dates.map(ds => refreshPhoneSteps(ds).catch(() => null)));
+}
+function renderMonthly(){
+  const dates = monthDates(monthlyAnchor);
+  const today = todayStr();
+  const logged = dates.map(date => ({date, totals:getDayTotalsFromStorage(date)})).filter(d => d.totals.count > 0);
+  const [y, m] = monthlyAnchor.split('-').map(Number);
+  document.getElementById('monthlyRange').textContent = new Date(y, m - 1, 1).toLocaleDateString(undefined, {month:'long', year:'numeric'}) + ' · tap a day to open it';
+  const list = document.getElementById('monthlyList');
+  if(logged.length === 0){
+    list.innerHTML = '<div class="weight-empty">Nothing logged in this month yet.</div>';
+    document.getElementById('monthlySummary').textContent = 'No calorie surplus or deficit to show.';
+    return;
+  }
+  list.innerHTML = logged.map(day => {
+    const t = day.totals;
+    const stepsData = effectiveSteps(day.date);
+    const steps = stepsData ? stepsData.steps : 0;
+    const tdee = tdeeForDate(day.date);
+    const balance = tdee === null ? null : Math.round(t.cal - tdee);
+    const balanceText = balance === null ? 'TDEE not set' : (balance > 0 ? '+' : balance < 0 ? '−' : '±') + Math.abs(balance).toLocaleString() + ' cal';
+    const balanceWord = balance === null ? '' : (balance > 0 ? ' over' : balance < 0 ? ' under' : ' on target');
+    const [yy, mm, dd] = day.date.split('-').map(Number);
+    const dt = new Date(yy, mm - 1, dd);
+    const weekday = dt.toLocaleDateString(undefined, {weekday:'short'});
+    return `
+      <button type="button" class="weekly-row" data-date="${day.date}">
+        <div class="weekly-day ${day.date === today ? 'is-today' : ''}">${escapeHtml(weekday)}<br>${String(dd).padStart(2,'0')}/${String(mm).padStart(2,'0')}</div>
+        <div class="weekly-macros" style="grid-column:2 / -1; font-size:11px; color:var(--ink);">${Math.round(t.cal).toLocaleString()} cal · ${steps.toLocaleString()} steps · ${balanceText}${balanceWord}</div>
+        <div class="weekly-macros">P ${roundNum(t.protein)}g · C ${roundNum(t.carbs)}g · F ${roundNum(t.fat)}g · Fiber ${roundNum(t.fiber)}g · Salt ${roundNum(t.salt)}g</div>
+      </button>`;
+  }).join('');
+  list.querySelectorAll('.weekly-row').forEach(btn => btn.addEventListener('click', async () => {
+    document.getElementById('monthlyOverlay').classList.remove('show');
+    await switchDate(btn.getAttribute('data-date'));
+    try{ window.scrollTo(0, 0); }catch(e){}
+  }));
+  const balances = logged.map(d => {
+    const tdee = tdeeForDate(d.date);
+    return tdee === null ? null : Math.round(d.totals.cal - tdee);
+  });
+  const summary = document.getElementById('monthlySummary');
+  if(balances.some(v => v === null)){
+    summary.textContent = 'Add your body stats in Settings to calculate the monthly calorie surplus or deficit.';
+  }else{
+    const total = balances.reduce((a,b) => a+b, 0);
+    const sign = total > 0 ? '+' : total < 0 ? '−' : '±';
+    const word = total > 0 ? 'surplus' : total < 0 ? 'deficit' : 'on target';
+    summary.innerHTML = `Month calorie balance<span class="avg-cal">${sign}${Math.abs(total).toLocaleString()} cal</span>${word}`;
+  }
+}
+document.getElementById('monthlyBtn').addEventListener('click', async () => {
+  monthlyAnchor = currentDate.slice(0, 7) + '-01';
+  document.getElementById('monthlyOverlay').classList.add('show');
+  renderMonthly();
+  await refreshMonthlySteps();
+  renderMonthly();
+});
+document.getElementById('monthlyPrevBtn').addEventListener('click', async () => {
+  monthlyAnchor = shiftMonth(monthlyAnchor, -1);
+  renderMonthly();
+  await refreshMonthlySteps();
+  renderMonthly();
+});
+document.getElementById('monthlyNextBtn').addEventListener('click', async () => {
+  monthlyAnchor = shiftMonth(monthlyAnchor, 1);
+  renderMonthly();
+  await refreshMonthlySteps();
+  renderMonthly();
+});
+document.getElementById('monthlyCloseBtn').addEventListener('click', () => document.getElementById('monthlyOverlay').classList.remove('show'));
+document.getElementById('monthlyOverlay').addEventListener('click', e => {
+  if(e.target.id === 'monthlyOverlay') document.getElementById('monthlyOverlay').classList.remove('show');
 });
 
 // ---- CSV export ----
@@ -2768,6 +3024,7 @@ function mapOffProduct(product, code){
     saltPer100: salt || 0,
     typicalWeightG: servingOk ? serving : 0,
     weightLabel: 'Label serving size',
+    missing,
     note
   };
 }
@@ -2842,21 +3099,6 @@ async function fetchBarcodeResult(rawCode){
   return mapOffProduct(product, code);
 }
 
-async function lookupBarcode(rawCode){
-  const result = await fetchBarcodeResult(rawCode);
-  if(!result) return;
-  // There's no photo to send to Gemini, but keeping the name means Re-analyze / Ask
-  // a question still work from this result if the database values look wrong.
-  lastPhotoBase64 = null;
-  lastPhotoMimeType = null;
-  lastTextQuery = result.name;
-  refinementNotes = [];
-  document.getElementById('photoAskAnswer').style.display = 'none';
-  document.getElementById('photoResultTitle').textContent = 'Barcode result';
-  document.getElementById('barcodeInput').value = '';
-  showPhotoResult(result);
-}
-
 async function waitForScannerModule(Scanner, timeoutMs){
   const start = Date.now();
   while(Date.now() - start < timeoutMs){
@@ -2924,16 +3166,390 @@ async function scanBarcodeCode(fallbackInputId){
   }
 }
 
-async function scanBarcode(){
-  const code = await scanBarcodeCode('barcodeInput');
-  if(code) await lookupBarcode(code);
+// ---- Body stats, TDEE and steps ----
+// Deliberately conservative ("harsh"): every choice below is the low end of what is standard.
+//  - Resting energy: Mifflin-St Jeor (the most validated equation; lower than older Harris-Benedict).
+//  - Activity factor 1.2: the lowest standard factor (sedentary).
+//  - Only steps beyond 5,000/day are added: under ~5,000 is the usual "sedentary" range that
+//    the 1.2 factor already assumes.
+//  - Each extra step costs only the NET energy of walking from the ACSM walking equation
+//    (0.5 kcal per kg per km, above resting), with step length = 0.413 x height.
+const TDEE_ACTIVITY_FACTOR = 1.2;
+const TDEE_STEP_BASELINE = 5000;
+const WALK_NET_KCAL_PER_KG_KM = 0.5;
+const STEP_LENGTH_PER_HEIGHT = 0.413;
+
+function computeBmr(sex, age, heightCm, weightKg){
+  return 10 * weightKg + 6.25 * heightCm - 5 * age + (sex === 'male' ? 5 : -161);
 }
 
-document.getElementById('scanBarcodeBtn').addEventListener('click', scanBarcode);
+function kcalPerStep(heightCm, weightKg){
+  const stepLengthM = STEP_LENGTH_PER_HEIGHT * heightCm / 100;
+  return WALK_NET_KCAL_PER_KG_KM * weightKg * stepLengthM / 1000;
+}
 
-document.getElementById('barcodeForm').addEventListener('submit', function(e){
-  e.preventDefault();
-  lookupBarcode(document.getElementById('barcodeInput').value);
+function computeTdee(profile, weightKg, steps){
+  const bmr = computeBmr(profile.sex, profile.age, profile.heightCm, weightKg);
+  const base = Math.round(bmr * TDEE_ACTIVITY_FACTOR);
+  const perStep = kcalPerStep(profile.heightCm, weightKg);
+  const creditedSteps = Math.max(0, (steps || 0) - TDEE_STEP_BASELINE);
+  const stepKcal = Math.round(creditedSteps * perStep);
+  // total is the sum of the two rounded parts so what's shown always adds up
+  return { bmr: Math.round(bmr), base, perStep, creditedSteps, stepKcal, total: base + stepKcal };
+}
+
+// ---- Profile (sex / age / height / weight) ----
+function getProfile(){
+  if(!hasStorage()) return null;
+  try{
+    const raw = window.localStorage.getItem('dic:profile');
+    const p = raw ? JSON.parse(raw) : null;
+    if(!p || (p.sex !== 'male' && p.sex !== 'female')) return null;
+    if(!(p.age > 0) || !(p.heightCm > 0) || !(p.weightKg > 0)) return null;
+    return {sex: p.sex, age: Number(p.age), heightCm: Number(p.heightCm), weightKg: Number(p.weightKg)};
+  }catch(e){ return null; }
+}
+
+function saveProfile(p){
+  if(!hasStorage()) return;
+  try{ window.localStorage.setItem('dic:profile', JSON.stringify(p)); }
+  catch(e){ console.error('Failed to save profile', e); }
+}
+
+// Latest weigh-in on or before the date (weights are kept sorted oldest -> newest)
+function weighInOnOrBefore(dateStr){
+  let best = null;
+  getWeightLog().forEach(w => { if(w.date <= dateStr) best = w; });
+  return best;
+}
+
+// ---- Steps per day: {manual?: n, phone?: n}; the higher of the two is used ----
+function getStepsMap(){
+  if(!hasStorage()) return {};
+  try{
+    const raw = window.localStorage.getItem('dic:steps');
+    const o = raw ? JSON.parse(raw) : {};
+    return (o && typeof o === 'object' && !Array.isArray(o)) ? o : {};
+  }catch(e){ return {}; }
+}
+
+function saveStepsMap(m){
+  if(!hasStorage()) return;
+  try{ window.localStorage.setItem('dic:steps', JSON.stringify(m)); }
+  catch(e){ console.error('Failed to save steps', e); }
+}
+
+function setStepsField(dateStr, field, value){
+  const m = getStepsMap();
+  const entry = m[dateStr] || {};
+  if(value === null || value === undefined) delete entry[field];
+  else entry[field] = value;
+  if(Object.keys(entry).length) m[dateStr] = entry; else delete m[dateStr];
+  saveStepsMap(m);
+}
+
+function effectiveSteps(dateStr){
+  const e = getStepsMap()[dateStr];
+  if(!e || (e.manual === undefined && e.phone === undefined)) return null;
+  const manual = Number(e.manual) || 0;
+  const phone = Number(e.phone) || 0;
+  return {steps: Math.max(manual, phone), manual: e.manual, phone: e.phone};
+}
+
+// Digits only, so "6 842" or "6,842" or "6.842" all mean 6842
+function parseSteps(raw){
+  const digits = String(raw || '').replace(/[^\d]/g, '');
+  return digits === '' ? NaN : parseInt(digits, 10);
+}
+
+// ---- Summary card TDEE row ----
+function updateTdeeDisplay(){
+  const valueEl = document.getElementById('tdeeValue');
+  const subEl = document.getElementById('tdeeSub');
+  if(!valueEl || !subEl) return;
+
+  const profile = getProfile();
+  if(!profile){
+    valueEl.textContent = '—';
+    subEl.textContent = 'tap to add your body stats';
+    return;
+  }
+
+  const wi = weighInOnOrBefore(currentDate);
+  const kg = wi ? wi.kg : profile.weightKg;
+  const st = effectiveSteps(currentDate);
+  const steps = st ? st.steps : 0;
+  const t = computeTdee(profile, kg, steps);
+
+  valueEl.textContent = t.total.toLocaleString();
+  if(steps <= 0){
+    subEl.textContent = `base ${t.base.toLocaleString()} · no step data`;
+  } else if(t.creditedSteps === 0){
+    subEl.textContent = `base ${t.base.toLocaleString()} · ${steps.toLocaleString()} steps, none added (under ${TDEE_STEP_BASELINE.toLocaleString()})`;
+  } else {
+    subEl.textContent = `base ${t.base.toLocaleString()} + ${t.stepKcal.toLocaleString()} from ${steps.toLocaleString()} steps`;
+  }
+}
+
+// ---- Phone steps through Health Connect (capacitor-health plugin, registered as "HealthPlugin") ----
+function getHealthPlugin(){
+  return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.HealthPlugin;
+}
+
+// The plugin's TypeScript types say permissions come back as an array of {NAME: bool}, but its
+// Android code returns one object {NAME: bool}. Accept either.
+function healthPermissionGranted(resp, name){
+  const p = resp && resp.permissions;
+  if(!p) return false;
+  if(Array.isArray(p)) return p.some(o => o && o[name] === true);
+  return p[name] === true;
+}
+
+// The plugin wants ISO instants and converts them to the phone's local time, so local
+// midnight -> toISOString() lines "today" up with the person's own day, not UTC's.
+function localMidnightIso(dateStr){
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
+}
+
+const lastStepsRefresh = {};
+
+// Reads the day's step total. Only ever READS - asking for permission is left to the button,
+// so nothing pops up at startup. Returns {status, steps?, message?}.
+async function refreshPhoneSteps(dateStr, opts){
+  const Health = getHealthPlugin();
+  if(!Health) return {status: 'no-plugin'};
+  const force = !!(opts && opts.force);
+  const now = Date.now();
+  if(!force && lastStepsRefresh[dateStr] && now - lastStepsRefresh[dateStr] < 20000) return {status: 'throttled'};
+  lastStepsRefresh[dateStr] = now;
+
+  try{
+    // isHealthAvailable() must come first: it is what creates the plugin's Health Connect client
+    const avail = await Health.isHealthAvailable();
+    if(!(avail && avail.available)) return {status: 'unavailable'};
+
+    const perm = await Health.checkHealthPermissions({permissions: ['READ_STEPS']});
+    if(!healthPermissionGranted(perm, 'READ_STEPS')) return {status: 'no-permission'};
+
+    const res = await Health.queryAggregated({
+      startDate: localMidnightIso(dateStr),
+      endDate: localMidnightIso(shiftDate(dateStr, 1)),
+      dataType: 'steps',
+      bucket: 'day'
+    });
+    const rows = (res && res.aggregatedData) || [];
+    const steps = Math.round(rows.reduce((sum, r) => sum + (Number(r && r.value) || 0), 0));
+
+    // Never lower a good reading to zero because of one empty answer
+    const stored = getStepsMap()[dateStr];
+    if(steps > 0 || !stored || stored.phone === undefined){
+      setStepsField(dateStr, 'phone', steps);
+    }
+    // Keep the visible steps field in sync with Health Connect from the first step onward.
+    // This does not change the TDEE rule: only steps above 5,000 add calories.
+    if(dateStr === currentDate && steps > 0){
+      const stepsInput = document.getElementById('bodySteps');
+      if(stepsInput) stepsInput.value = String(steps);
+    }
+    updateTdeeDisplay();
+    return {status: steps > 0 ? 'ok' : 'no-data', steps};
+  }catch(e){
+    console.error('Reading phone steps failed', e);
+    return {status: 'error', message: (e && e.message) ? e.message : String(e)};
+  }
+}
+
+function setStepsStatus(text){
+  const el = document.getElementById('stepsStatus');
+  if(el) el.textContent = text;
+}
+
+function describePhoneSteps(){
+  if(!getHealthPlugin()){
+    return "Automatic step reading isn't available in this build. Type your steps above instead.";
+  }
+  const st = effectiveSteps(currentDate);
+  const phone = st ? Number(st.phone) || 0 : 0;
+  if(phone > 0){
+    return `Phone (Health Connect): ${phone.toLocaleString()} steps on ${formatDateShort(currentDate)}. If you also type a number, the higher one is used.`;
+  }
+  return 'No phone steps yet. Tap the button to connect Health Connect. It only has steps if an app like Google Fit or Samsung Health records them.';
+}
+
+async function connectPhoneSteps(){
+  const Health = getHealthPlugin();
+  if(!Health){
+    showToast("Automatic steps aren't available in this build — type them in");
+    return;
+  }
+  try{
+    const avail = await Health.isHealthAvailable();
+    if(!(avail && avail.available)){
+      const open = await showConfirmModal("Health Connect isn't available on this phone. Open the Play Store to install it?", 'Open Play Store');
+      if(open){
+        try{ await Health.showHealthConnectInPlayStore(); }catch(e){ /* nothing more to do */ }
+      }
+      return;
+    }
+
+    let perm = await Health.checkHealthPermissions({permissions: ['READ_STEPS']});
+    if(!healthPermissionGranted(perm, 'READ_STEPS')){
+      perm = await Health.requestHealthPermissions({permissions: ['READ_STEPS']});
+      if(!healthPermissionGranted(perm, 'READ_STEPS')){
+        showToast("Steps permission wasn't granted");
+        setStepsStatus("Steps permission wasn't granted, so the phone can't share your steps.");
+        return;
+      }
+    }
+
+    const r = await refreshPhoneSteps(currentDate, {force: true});
+    if(r.status === 'ok'){
+      showToast(`Read ${r.steps.toLocaleString()} steps`);
+      setStepsStatus(describePhoneSteps());
+    } else if(r.status === 'no-data'){
+      setStepsStatus('Connected, but Health Connect has no steps for this day. It only has steps if an app like Google Fit or Samsung Health records them.');
+    } else if(r.status === 'error'){
+      showErrorModal(r.message, 'Reading steps failed');
+    } else {
+      setStepsStatus('Could not read steps right now. Try again in a moment.');
+    }
+    updateBodyPreview();
+  }catch(e){
+    console.error('Connecting steps failed', e);
+    showErrorModal((e && e.message) ? e.message : String(e), 'Steps connection failed');
+  }
+}
+
+// ---- Body stats dialog ----
+let bodyDialogSex = null;
+
+function setBodySex(sex){
+  bodyDialogSex = sex;
+  document.getElementById('sexMaleBtn').classList.toggle('active', sex === 'male');
+  document.getElementById('sexFemaleBtn').classList.toggle('active', sex === 'female');
+  updateBodyPreview();
+}
+
+function readBodyInputs(){
+  return {
+    sex: bodyDialogSex,
+    age: parseLocaleNumber(document.getElementById('bodyAge').value),
+    heightCm: parseLocaleNumber(document.getElementById('bodyHeight').value),
+    weightKg: parseLocaleNumber(document.getElementById('bodyWeight').value)
+  };
+}
+
+function bodyInputsProblem(v){
+  if(v.sex !== 'male' && v.sex !== 'female') return 'Pick male or female';
+  if(!(v.age >= 15 && v.age <= 100)) return 'Enter your age (15–100)';
+  if(!(v.heightCm >= 100 && v.heightCm <= 250)) return 'Enter your height in cm (100–250)';
+  if(!(v.weightKg >= 30 && v.weightKg <= 300)) return 'Enter your weight in kg (30–300)';
+  return '';
+}
+
+function updateBodyPreview(){
+  const el = document.getElementById('bodyTdeePreview');
+  if(!el) return;
+  const v = readBodyInputs();
+  if(bodyInputsProblem(v)){
+    el.textContent = 'Fill in sex, age, height and weight to see your TDEE.';
+    return;
+  }
+  const wi = weighInOnOrBefore(currentDate);
+  const kg = wi ? wi.kg : v.weightKg;
+  const typed = parseSteps(document.getElementById('bodySteps').value);
+  const stored = effectiveSteps(currentDate);
+  const phone = stored ? Number(stored.phone) || 0 : 0;
+  const steps = Math.max(isNaN(typed) ? 0 : typed, phone);
+  const t = computeTdee(v, kg, steps);
+
+  let detail = `Resting ${t.bmr.toLocaleString()} × ${TDEE_ACTIVITY_FACTOR} = ${t.base.toLocaleString()}`;
+  if(t.creditedSteps > 0){
+    detail += ` + ${t.stepKcal.toLocaleString()} from ${t.creditedSteps.toLocaleString()} steps above ${TDEE_STEP_BASELINE.toLocaleString()} (${t.perStep.toFixed(3)} kcal each)`;
+  } else if(steps > 0){
+    detail += ` · ${steps.toLocaleString()} steps is under ${TDEE_STEP_BASELINE.toLocaleString()}, so none are added`;
+  }
+  el.innerHTML = `Estimated TDEE<span class="big">${t.total.toLocaleString()} kcal</span>${escapeHtml(detail)}`;
+}
+
+function openBodyDialog(){
+  const p = getProfile();
+  document.getElementById('bodyAge').value = p ? String(p.age) : '';
+  document.getElementById('bodyHeight').value = p ? String(p.heightCm) : '';
+  document.getElementById('bodyWeight').value = p ? String(p.weightKg) : '';
+
+  const wi = weighInOnOrBefore(currentDate);
+  document.getElementById('bodyWeightNote').textContent = wi
+    ? `Your latest weigh-in (${wi.kg} kg, ${formatDateShort(wi.date)}) is used instead of this whenever it's on or before the day you're viewing.`
+    : 'Once you log weigh-ins, the latest one is used automatically.';
+
+  const st = effectiveSteps(currentDate);
+  document.getElementById('bodyStepsLabel').textContent = `Steps for ${formatDateShort(currentDate)}`;
+  const shownSteps = st ? (Number(st.phone) > 0 ? Number(st.phone) : Number(st.manual) || 0) : 0;
+  document.getElementById('bodySteps').value = shownSteps > 0 ? String(shownSteps) : '';
+
+  document.getElementById('readStepsBtn').style.display = getHealthPlugin() ? '' : 'none';
+  setStepsStatus(describePhoneSteps());
+  setBodySex(p ? p.sex : null);
+  document.getElementById('bodyOverlay').classList.add('show');
+  // Pick up any steps the phone has recorded since the app was last open
+  refreshPhoneSteps(currentDate).then(r => {
+    if(r && (r.status === 'ok' || r.status === 'no-data')){
+      setStepsStatus(describePhoneSteps());
+      updateBodyPreview();
+    }
+  });
+}
+
+function closeBodyDialog(){
+  document.getElementById('bodyOverlay').classList.remove('show');
+}
+
+function saveBodyDialog(){
+  const v = readBodyInputs();
+  const problem = bodyInputsProblem(v);
+  if(problem){
+    showToast(problem);
+    return;
+  }
+
+  const raw = document.getElementById('bodySteps').value.trim();
+  let manual = null;
+  if(raw !== ''){
+    manual = parseSteps(raw);
+    if(isNaN(manual) || manual > 100000){
+      showToast('Enter steps as a whole number (up to 100,000)');
+      return;
+    }
+  }
+
+  saveProfile({sex: v.sex, age: Math.round(v.age), heightCm: roundNum(v.heightCm), weightKg: roundNum(v.weightKg)});
+  setStepsField(currentDate, 'manual', manual);
+  closeBodyDialog();
+  updateTdeeDisplay();
+  showToast('Saved');
+}
+
+document.getElementById('tdeeRow').addEventListener('click', openBodyDialog);
+document.getElementById('tdeeRow').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openBodyDialog(); }
+});
+document.getElementById('sexMaleBtn').addEventListener('click', ()=>setBodySex('male'));
+document.getElementById('sexFemaleBtn').addEventListener('click', ()=>setBodySex('female'));
+['bodyAge', 'bodyHeight', 'bodyWeight', 'bodySteps'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updateBodyPreview);
+});
+document.getElementById('readStepsBtn').addEventListener('click', connectPhoneSteps);
+document.getElementById('bodyCancelBtn').addEventListener('click', closeBodyDialog);
+document.getElementById('bodySaveBtn').addEventListener('click', saveBodyDialog);
+document.getElementById('bodyOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'bodyOverlay') closeBodyDialog();
+});
+
+// Coming back to the app is when new steps have usually piled up
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') refreshPhoneSteps(currentDate);
 });
 
 function collectAllData(){
@@ -2952,6 +3568,8 @@ function collectAllData(){
     // Optional extras - older backups simply won't have these fields
     data.weights = getWeightLog();
     data.hiddenItems = getHiddenPreviousItemNames();
+    data.profile = getProfile();
+    data.steps = getStepsMap();
   }catch(e){ console.error('Failed to collect data', e); }
   return data;
 }
@@ -2983,6 +3601,24 @@ function restoreAllData(data){
       const union = new Set(getHiddenPreviousItemNames());
       data.hiddenItems.forEach(n => { if(typeof n === 'string') union.add(n); });
       saveHiddenPreviousItemNames(Array.from(union));
+    }
+    if(data.profile && typeof data.profile === 'object'){
+      const p = data.profile;
+      if((p.sex === 'male' || p.sex === 'female') && p.age > 0 && p.heightCm > 0 && p.weightKg > 0){
+        saveProfile({sex: p.sex, age: Number(p.age), heightCm: Number(p.heightCm), weightKg: Number(p.weightKg)});
+      }
+    }
+    if(data.steps && typeof data.steps === 'object' && !Array.isArray(data.steps)){
+      const merged = getStepsMap();
+      Object.keys(data.steps).forEach(d=>{
+        const e = data.steps[d];
+        if(!e || typeof e !== 'object') return;
+        const entry = {};
+        if(e.manual !== undefined && e.manual !== null && isFinite(Number(e.manual))) entry.manual = Number(e.manual);
+        if(e.phone !== undefined && e.phone !== null && isFinite(Number(e.phone))) entry.phone = Number(e.phone);
+        if(Object.keys(entry).length) merged[d] = entry; // the backup wins for that day
+      });
+      saveStepsMap(merged);
     }
     return true;
   }catch(e){
@@ -3150,17 +3786,6 @@ document.getElementById('apiKeySaveBtn').addEventListener('click', ()=>{
   showToast(key ? 'API key saved' : 'API key cleared');
 });
 
-document.getElementById('photoBtn').addEventListener('click', async ()=>{
-  const key = getGeminiKey();
-  if(!key){
-    showToast('Set your Gemini API key first');
-    document.getElementById('apiKeyInput').value = '';
-    document.getElementById('apiKeyOverlay').classList.add('show');
-    return;
-  }
-  await takePhotoAndAnalyze();
-});
-
 function showLoadingOverlay(text){
   document.getElementById('photoLoadingTitle').textContent = text || 'Analyzing…';
   document.getElementById('photoLoadingOverlay').classList.add('show');
@@ -3178,109 +3803,6 @@ function extractGramsFromText(text){
   const match = text.match(/(\d+(?:\.\d+)?)\s*(?:g\b|grams?\b)/i);
   if(match) return Math.round(parseFloat(match[1]));
   return null;
-}
-
-document.getElementById('askGeminiBtn').addEventListener('click', async ()=>{
-  const key = getGeminiKey();
-  if(!key){
-    showToast('Set your Gemini API key first');
-    document.getElementById('apiKeyInput').value = '';
-    document.getElementById('apiKeyOverlay').classList.add('show');
-    return;
-  }
-  const input = document.getElementById('askGeminiInput').value.trim();
-  if(!input){
-    showToast('Type a food, e.g. "Snickers bar" or "Snickers bar macros and weight"');
-    return;
-  }
-  await askGeminiTextQuery(input);
-});
-
-
-async function takePhotoAndAnalyze(){
-  const CapCamera = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
-  if(!CapCamera){
-    showToast('Camera is only available in the installed app');
-    return;
-  }
-
-  let photo;
-  try{
-    photo = await CapCamera.getPhoto({
-      quality: 70,
-      resultType: 'base64',
-      source: 'PROMPT',
-      correctOrientation: true
-    });
-  }catch(e){
-    // User cancelled the camera/picker — not an error worth showing
-    return;
-  }
-
-  if(!photo || !photo.base64String){
-    showToast('Could not read that photo');
-    return;
-  }
-
-  lastPhotoBase64 = photo.base64String;
-  lastPhotoMimeType = 'image/' + (photo.format || 'jpeg');
-  lastTextQuery = null;
-  refinementNotes = [];
-  document.getElementById('photoAskAnswer').style.display = 'none';
-  document.getElementById('photoResultTitle').textContent = 'Photo analysis';
-
-  showLoadingOverlay('Analyzing photo…');
-
-  let result;
-  try{
-    result = await requestMacroEstimate('Look at this food photo and identify the food.', '');
-  }catch(e){
-    console.error('Gemini analysis failed', e);
-    hideLoadingOverlay();
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-
-  hideLoadingOverlay();
-
-  if(!result){
-    showToast('Could not analyze that photo');
-    return;
-  }
-
-  showPhotoResult(result);
-}
-
-async function askGeminiTextQuery(description){
-  lastPhotoBase64 = null;
-  lastPhotoMimeType = null;
-  lastTextQuery = description;
-  refinementNotes = [];
-  document.getElementById('photoAskAnswer').style.display = 'none';
-  document.getElementById('askGeminiAnswer').style.display = 'none';
-  document.getElementById('photoResultTitle').textContent = 'Estimate';
-
-  showLoadingOverlay('Getting estimate…');
-
-  let result;
-  try{
-    result = await requestMacroEstimate('The user describes this food: "' + description + '". Identify it and estimate its nutrition.', '');
-  }catch(e){
-    console.error('Gemini query failed', e);
-    hideLoadingOverlay();
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-
-  hideLoadingOverlay();
-
-  if(!result){
-    showToast('Could not get an estimate for that');
-    return;
-  }
-
-  document.getElementById('askGeminiInput').value = '';
-  showPhotoResult(result);
 }
 
 // Low-level call to Gemini's generateContent endpoint. Returns the raw text response.
@@ -3368,17 +3890,22 @@ function parseMacroJSON(text, finishReason){
 }
 
 // Builds the prompt parts array, attaching the stored photo if this session started from one.
-function buildPromptParts(promptText){
+// photo: undefined -> the photo of the item open in the fix/ask box (global state);
+//        null -> no photo; {base64, mime} -> that photo
+function buildPromptParts(promptText, photo){
   const parts = [{text: promptText}];
-  if(lastPhotoBase64){
-    parts.push({inline_data: {mime_type: lastPhotoMimeType, data: lastPhotoBase64}});
+  const p = photo === undefined
+    ? (lastPhotoBase64 ? {base64: lastPhotoBase64, mime: lastPhotoMimeType} : null)
+    : photo;
+  if(p){
+    parts.push({inline_data: {mime_type: p.mime, data: p.base64}});
   }
   return parts;
 }
 
 // Retries a flaky async call once after a brief pause. Gemini occasionally returns
 // a truncated/malformed response; a silent retry resolves this most of the time
-// without the user ever needing to notice or intervene.
+// without the person ever needing to notice or intervene.
 async function withRetry(fn, retries){
   if(retries === undefined) retries = 1;
   let lastErr;
@@ -3395,7 +3922,7 @@ async function withRetry(fn, retries){
   throw lastErr;
 }
 
-async function requestMacroEstimate(baseContext, extraContext){
+async function requestMacroEstimate(baseContext, extraContext, photo){
   const wantsWeight = mentionsWeight(baseContext) || mentionsWeight(extraContext || '');
 
   let schema = '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number, "fiber_per_100g": number, "salt_per_100g": number';
@@ -3417,7 +3944,7 @@ async function requestMacroEstimate(baseContext, extraContext){
     prompt += ' The user has provided corrections or additional context to improve accuracy — treat this as more reliable than your own guess: "' + extraContext + '". Update your estimate accordingly.';
   }
 
-  const parts = buildPromptParts(prompt);
+  const parts = buildPromptParts(prompt, photo);
   return await withRetry(async ()=>{
     const result = await callGeminiRaw(parts, true);
     return parseMacroJSON(result.text, result.finishReason);
@@ -3438,6 +3965,13 @@ async function askGeminiFreeform(question){
 }
 
 let multiPhotoItems = [];
+let resultEditTarget = null; // id of the item currently open in the fix / ask box
+
+// Each item: {id, name, per-100g values, grams (string), source: 'photo'|'barcode'|'text',
+//   thumbnail, photo: {base64, mime}|null, query: text Gemini can be asked about, notes: corrections so far}
+function newItemId(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
 
 function openMultiModal(){
   multiPhotoItems = [];
@@ -3445,16 +3979,39 @@ function openMultiModal(){
   document.getElementById('multiPhotoOverlay').classList.add('show');
 }
 
-// Opening the box doesn't need a Gemini key any more (barcodes don't use Gemini);
-// the key is only asked for when you add a photo.
-document.getElementById('multiPhotoBtn').addEventListener('click', openMultiModal);
-document.getElementById('multiBarcodeBtn').addEventListener('click', openMultiModal);
+document.getElementById('scanBtn').addEventListener('click', openMultiModal);
 
-async function addBarcodeToMulti(rawCode){
-  const result = await fetchBarcodeResult(rawCode);
-  if(!result) return false;
-  multiPhotoItems.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('multiPhotoOverlay').classList.remove('show');
+  multiPhotoItems = [];
+});
+
+// Photos and descriptions go through Gemini so they need the key; barcodes don't.
+function requireGeminiKey(){
+  if(getGeminiKey()) return true;
+  showToast('Set your Gemini API key first');
+  document.getElementById('apiKeyInput').value = '';
+  document.getElementById('apiKeyOverlay').classList.add('show');
+  return false;
+}
+
+function addItem(fields){
+  multiPhotoItems.push(Object.assign({
+    id: newItemId(), grams: '', thumbnail: null, source: 'text', photo: null, query: null, notes: []
+  }, fields));
+  renderMultiPhotoList();
+}
+
+function itemFromEstimate(result){
+  const hints = [];
+  if(result.missing && result.missing.length){
+    hints.push('Not in the database (shown as 0): ' + result.missing.join(', ') + '. Check the package.');
+  }
+  const typical = result.typicalWeightG > 0 ? Math.round(result.typicalWeightG) : 0;
+  if(typical > 0){
+    hints.push((result.weightLabel || 'Typical weight') + ' prefilled: ' + typical + 'g.');
+  }
+  return {
     name: result.name,
     calPer100: result.calPer100,
     proteinPer100: result.proteinPer100,
@@ -3462,36 +4019,39 @@ async function addBarcodeToMulti(rawCode){
     fatPer100: result.fatPer100,
     fiberPer100: result.fiberPer100,
     saltPer100: result.saltPer100,
-    grams: result.typicalWeightG > 0 ? String(Math.round(result.typicalWeightG)) : '',
-    thumbnail: null
-  });
-  renderMultiPhotoList();
+    grams: typical > 0 ? String(typical) : '',
+    hint: hints.join(' ')
+  };
+}
+
+async function addBarcodeToMulti(rawCode){
+  const result = await fetchBarcodeResult(rawCode);
+  if(!result) return false;
+  // Keeping the product name lets "fix / ask" fall back to Gemini if the database values look wrong
+  addItem(Object.assign(itemFromEstimate(result), {source: 'barcode', query: result.name}));
   return true;
 }
 
-document.getElementById('multiBarcodeAddBtn').addEventListener('click', async ()=>{
-  const code = await scanBarcodeCode('multiBarcodeInput');
-  if(code) await addBarcodeToMulti(code);
-});
-
-document.getElementById('multiBarcodeForm').addEventListener('submit', async function(e){
-  e.preventDefault();
-  const input = document.getElementById('multiBarcodeInput');
-  if(await addBarcodeToMulti(input.value)) input.value = '';
-});
-
-document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
-  document.getElementById('multiPhotoOverlay').classList.remove('show');
-  multiPhotoItems = [];
-});
-
-document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>{
-  if(!getGeminiKey()){
-    showToast('Set your Gemini API key first');
-    document.getElementById('apiKeyInput').value = '';
-    document.getElementById('apiKeyOverlay').classList.add('show');
-    return;
+async function addTextToMulti(description){
+  if(!requireGeminiKey()) return false;
+  showLoadingOverlay('Getting estimate…');
+  let result;
+  try{
+    // null = no photo. Asking about weight ("... macros and weight") also returns a typical weight.
+    result = await requestMacroEstimate('The user describes this food: "' + description + '". Identify it and estimate its nutrition.', '', null);
+  }catch(e){
+    console.error('Gemini query failed', e);
+    hideLoadingOverlay();
+    showErrorModal((e && e.message) ? e.message : 'Unknown error');
+    return false;
   }
+  hideLoadingOverlay();
+  addItem(Object.assign(itemFromEstimate(result), {source: 'text', query: description}));
+  return true;
+}
+
+async function addPhotoToMulti(){
+  if(!requireGeminiKey()) return;
   const CapCamera = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
   if(!CapCamera){
     showToast('Camera is only available in the installed app');
@@ -3507,7 +4067,7 @@ document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>
       correctOrientation: true
     });
   }catch(e){
-    return; // user cancelled
+    return; // person cancelled
   }
 
   if(!photo || !photo.base64String){
@@ -3515,45 +4075,55 @@ document.getElementById('multiPhotoAddBtn').addEventListener('click', async ()=>
     return;
   }
 
-  const mimeType = 'image/' + (photo.format || 'jpeg');
+  const mime = 'image/' + (photo.format || 'jpeg');
   showLoadingOverlay('Analyzing photo…');
-
   let result;
   try{
-    const prompt = 'You are a nutrition estimation assistant. Look at this food photo and identify the food. ' +
-      'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' +
-      '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number, "fiber_per_100g": number, "salt_per_100g": number}. ' +
-      'salt_per_100g is the salt content in grams per 100g (not sodium in mg). ' +
-      'Give your best realistic estimate even if you are not fully certain.';
-    const parts = [{text: prompt}, {inline_data: {mime_type: mimeType, data: photo.base64String}}];
-    result = await withRetry(async ()=>{
-      const raw = await callGeminiRaw(parts, true);
-      return parseMacroJSON(raw.text, raw.finishReason);
-    }, 1);
+    result = await requestMacroEstimate('Look at this food photo and identify the food.', '', {base64: photo.base64String, mime});
   }catch(e){
     console.error('Gemini analysis failed', e);
     hideLoadingOverlay();
     showErrorModal((e && e.message) ? e.message : 'Unknown error');
     return;
   }
-
   hideLoadingOverlay();
 
-  multiPhotoItems.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
-    name: result.name,
-    calPer100: result.calPer100,
-    proteinPer100: result.proteinPer100,
-    carbsPer100: result.carbsPer100,
-    fatPer100: result.fatPer100,
-    fiberPer100: result.fiberPer100,
-    saltPer100: result.saltPer100,
-    grams: '',
-    thumbnail: 'data:' + mimeType + ';base64,' + photo.base64String
-  });
+  addItem(Object.assign(itemFromEstimate(result), {
+    source: 'photo',
+    photo: {base64: photo.base64String, mime},
+    thumbnail: 'data:' + mime + ';base64,' + photo.base64String
+  }));
+}
 
-  renderMultiPhotoList();
+document.getElementById('multiPhotoAddBtn').addEventListener('click', addPhotoToMulti);
+
+document.getElementById('multiBarcodeAddBtn').addEventListener('click', async ()=>{
+  const code = await scanBarcodeCode('scanTextInput');
+  if(code) await addBarcodeToMulti(code);
 });
+
+// One typed field for both: a run of digits is a barcode, anything else is a description for Gemini
+document.getElementById('scanTextForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const input = document.getElementById('scanTextInput');
+  const raw = input.value.trim();
+  if(!raw){
+    showToast('Type a barcode number or describe a food');
+    return;
+  }
+  const added = /^[\d\s-]+$/.test(raw) ? await addBarcodeToMulti(raw) : await addTextToMulti(raw);
+  if(added) input.value = '';
+});
+
+// Estimated burn (TDEE) for one day, or null if body stats aren't set up yet
+function tdeeForDate(dateStr){
+  const profile = getProfile();
+  if(!profile) return null;
+  const wi = weighInOnOrBefore(dateStr);
+  const kg = wi ? wi.kg : profile.weightKg;
+  const st = effectiveSteps(dateStr);
+  return computeTdee(profile, kg, st ? st.steps : 0).total;
+}
 
 function computeMultiPhotoTotals(){
   let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFiber = 0, totalSalt = 0, totalGrams = 0;
@@ -3589,9 +4159,10 @@ function renderMultiPhotoList(){
     const row = document.createElement('div');
     row.className = 'multi-photo-item';
     row.innerHTML = `
-      ${item.thumbnail ? `<img class="multi-photo-thumb" src="${item.thumbnail}" alt="">` : '<div class="multi-photo-thumb multi-photo-thumb-barcode">🏷️</div>'}
+      ${item.thumbnail ? `<img class="multi-photo-thumb" src="${item.thumbnail}" alt="">` : `<div class="multi-photo-thumb multi-photo-thumb-barcode">${item.source === 'text' ? '✨' : '🏷️'}</div>`}
       <div class="multi-photo-info">
         <div class="multi-photo-name">${escapeHtml(item.name)}</div>
+        ${item.hint ? `<div class="multi-photo-hint">${escapeHtml(item.hint)}</div>` : ''}
         <div class="multi-photo-macro-grid">
           <div>
             <label>Cal/100g</label>
@@ -3623,7 +4194,10 @@ function renderMultiPhotoList(){
           <span class="multi-photo-subtotal">${g > 0 ? subtotalCal + ' cal' : ''}</span>
         </div>
       </div>
-      <button type="button" class="multi-photo-remove" data-id="${item.id}" aria-label="Remove">×</button>
+      <div class="multi-photo-side">
+        <button type="button" class="multi-photo-edit" data-id="${item.id}" aria-label="Fix or ask about this item">✎</button>
+        <button type="button" class="multi-photo-remove" data-id="${item.id}" aria-label="Remove">×</button>
+      </div>
     `;
     list.appendChild(row);
   });
@@ -3704,6 +4278,10 @@ function renderMultiPhotoList(){
       if(item) item.saltPer100 = parseLocaleNumber(input.value);
       updateMultiPhotoTotalDisplay();
     });
+  });
+
+  list.querySelectorAll('.multi-photo-edit').forEach(btn=>{
+    btn.addEventListener('click', ()=> openItemEditor(btn.getAttribute('data-id')));
   });
 
   list.querySelectorAll('.multi-photo-remove').forEach(btn=>{
@@ -3788,7 +4366,7 @@ function showPhotoResult(result, presetGrams){
 
   body.innerHTML = `
     <div class="photo-result-name">${escapeHtml(result.name)}</div>
-    <div class="photo-result-note">${escapeHtml(result.note || 'Estimated values, per 100g. Enter your actual serving size below to fill in the log.')}</div>
+    <div class="photo-result-note">${escapeHtml(result.note || 'Values per 100g. Correct them with Re-analyze or ask a question, then tap Update item.')}</div>
     <div class="photo-result-macros">
       <div>Cal<span>${roundNum(result.calPer100)}</span></div>
       <div>Prot<span>${roundNum(result.proteinPer100)}g</span></div>
@@ -3821,38 +4399,55 @@ function resetPhotoState(){
   refinementNotes = [];
 }
 
-document.getElementById('photoResultCancelBtn').addEventListener('click', ()=>{
+// The result box is now the per-item "fix or ask" box, opened with the pencil on a list item.
+function openItemEditor(id){
+  const item = multiPhotoItems.find(i => i.id === id);
+  if(!item) return;
+  resultEditTarget = id;
+  lastPhotoBase64 = item.photo ? item.photo.base64 : null;
+  lastPhotoMimeType = item.photo ? item.photo.mime : null;
+  lastTextQuery = item.photo ? null : (item.query || item.name);
+  refinementNotes = (item.notes || []).slice();
+  showPhotoResult({
+    name: item.name,
+    calPer100: item.calPer100,
+    proteinPer100: item.proteinPer100,
+    carbsPer100: item.carbsPer100,
+    fatPer100: item.fatPer100,
+    fiberPer100: item.fiberPer100,
+    saltPer100: item.saltPer100,
+    typicalWeightG: 0
+  }, item.grams);
+}
+
+function closeItemEditor(){
   document.getElementById('photoResultOverlay').classList.remove('show');
+  resultEditTarget = null;
   resetPhotoState();
-});
+}
+
+document.getElementById('photoResultCancelBtn').addEventListener('click', closeItemEditor);
 
 document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
-  if(!lastPhotoResult) return;
-  const gramsInput = document.getElementById('photoGramsInput');
-  const grams = parseLocaleNumber(gramsInput && gramsInput.value);
-
-  // Gemini always estimates per-100g, so force the form back to that mode
-  // regardless of whatever the toggle was last left on.
-  setEntryUnit('g');
-
-  document.getElementById('fName').value = lastPhotoResult.name;
-  document.getElementById('fGrams').value = grams || '';
-  document.getElementById('fCal').value = roundNum(lastPhotoResult.calPer100);
-  document.getElementById('fProtein').value = roundNum(lastPhotoResult.proteinPer100);
-  document.getElementById('fCarbs').value = roundNum(lastPhotoResult.carbsPer100);
-  document.getElementById('fFat').value = roundNum(lastPhotoResult.fatPer100);
-  document.getElementById('fFiber').value = roundNum(lastPhotoResult.fiberPer100);
-  document.getElementById('fSalt').value = roundNum(lastPhotoResult.saltPer100);
-  updateServingPreview();
-
-  document.getElementById('photoResultOverlay').classList.remove('show');
-  resetPhotoState();
-
-  showToast(grams > 0 ? 'Filled in — review and tap Add to log' : 'Filled in — enter your serving size, then tap Add to log');
-  const nameField = document.getElementById('fName');
-  if(typeof nameField.scrollIntoView === 'function'){
-    nameField.scrollIntoView({behavior:'smooth', block:'center'});
+  const item = multiPhotoItems.find(i => i.id === resultEditTarget);
+  if(!item || !lastPhotoResult){
+    closeItemEditor();
+    return;
   }
+  const gramsInput = document.getElementById('photoGramsInput');
+  item.name = lastPhotoResult.name;
+  item.calPer100 = lastPhotoResult.calPer100;
+  item.proteinPer100 = lastPhotoResult.proteinPer100;
+  item.carbsPer100 = lastPhotoResult.carbsPer100;
+  item.fatPer100 = lastPhotoResult.fatPer100;
+  item.fiberPer100 = lastPhotoResult.fiberPer100;
+  item.saltPer100 = lastPhotoResult.saltPer100;
+  item.grams = gramsInput ? gramsInput.value.trim() : item.grams;
+  if(refinementNotes.length !== (item.notes || []).length) item.hint = '';
+  item.notes = refinementNotes.slice();
+  closeItemEditor();
+  renderMultiPhotoList();
+  showToast('Item updated');
 });
 
 document.getElementById('photoRefineBtn').addEventListener('click', async ()=>{
@@ -3909,7 +4504,6 @@ document.getElementById('photoRefineBtn').addEventListener('click', async ()=>{
     return;
   }
 
-  document.getElementById('photoResultTitle').textContent = 'Estimate';
   showPhotoResult(result, preservedGrams);
   showToast('Updated based on your note');
 });
@@ -3968,6 +4562,7 @@ document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
   await loadSettings();
   await loadEntries(currentDate);
   render();
+  refreshPhoneSteps(currentDate);
 })();
 </script>
 </body>
