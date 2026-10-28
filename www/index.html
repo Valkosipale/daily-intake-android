@@ -1443,12 +1443,10 @@ body{
     <div class="backup-actions multi-add-row">
       <button type="button" id="multiBarcodeAddBtn" class="backup-btn">🏷️ Barcode</button>
       <button type="button" id="multiPhotoAddBtn" class="backup-btn">📷 AI</button>
-      <button type="button" id="multiGalleryAddBtn" class="backup-btn">🖼️ Choose photo</button>
-      <input type="file" id="multiGalleryInput" accept="image/*" style="display:none">
     </div>
     <form class="ask-gemini-row multi-barcode-form" id="scanTextForm">
       <input type="text" id="scanTextInput" placeholder="Barcode number, or describe a food">
-      <button type="submit" class="backup-btn">Add</button>
+      <button type="submit" class="backup-btn">Add / Ask AI</button>
     </form>
     <div class="multi-photo-total" id="multiPhotoTotal">Add at least one item to see the combined total</div>
     <div class="data-actions">
@@ -4126,68 +4124,11 @@ async function addPhotoToMulti(){
   addItem(Object.assign(itemFromEstimate(result), {
     source: 'photo',
     photo: {base64: photo.base64String, mime},
-    thumbnail: 'data:' + mime + ';base64,' + photo.base64String
+    thumbnail: null
   }));
 }
 
 document.getElementById('multiPhotoAddBtn').addEventListener('click', addPhotoToMulti);
-
-async function analyzeGalleryFile(file){
-  if(!file || !file.type || !file.type.startsWith('image/')){
-    showToast('Please choose an image');
-    return;
-  }
-  if(!requireGeminiKey()) return;
-  if(file.size > 12 * 1024 * 1024){
-    showToast('The image is too large. Choose an image under 12 MB.');
-    return;
-  }
-  let dataUrl;
-  try{
-    dataUrl = await new Promise((resolve, reject)=>{
-      const reader = new FileReader();
-      reader.onload = ()=>resolve(reader.result);
-      reader.onerror = ()=>reject(new Error('Could not read that photo'));
-      reader.readAsDataURL(file);
-    });
-  }catch(e){
-    showToast((e && e.message) || 'Could not read that photo');
-    return;
-  }
-  const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(String(dataUrl));
-  if(!match){
-    showToast('Could not read that photo');
-    return;
-  }
-  const mime = match[1];
-  const base64 = match[2];
-  showLoadingOverlay('Analyzing photo…');
-  let result;
-  try{
-    result = await requestMacroEstimate('Look at this food photo and identify the food.', '', {base64, mime});
-  }catch(e){
-    console.error('Gemini analysis failed', e);
-    hideLoadingOverlay();
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-  hideLoadingOverlay();
-  addItem(Object.assign(itemFromEstimate(result), {
-    source: 'photo',
-    photo: {base64, mime},
-    thumbnail: dataUrl
-  }));
-}
-
-const multiGalleryInput = document.getElementById('multiGalleryInput');
-document.getElementById('multiGalleryAddBtn').addEventListener('click', ()=>{
-  multiGalleryInput.value = '';
-  multiGalleryInput.click();
-});
-multiGalleryInput.addEventListener('change', async ()=>{
-  const file = multiGalleryInput.files && multiGalleryInput.files[0];
-  if(file) await analyzeGalleryFile(file);
-});
 
 document.getElementById('multiBarcodeAddBtn').addEventListener('click', async ()=>{
   const code = await scanBarcodeCode('scanTextInput');
@@ -4251,7 +4192,7 @@ function renderMultiPhotoList(){
     const row = document.createElement('div');
     row.className = 'multi-photo-item';
     row.innerHTML = `
-      ${item.thumbnail ? `<img class="multi-photo-thumb" src="${item.thumbnail}" alt="">` : `<div class="multi-photo-thumb multi-photo-thumb-barcode">${item.source === 'text' ? '✨' : '🏷️'}</div>`}
+      <div class="multi-photo-thumb multi-photo-thumb-barcode">${item.source === 'barcode' ? '🏷️' : '✨'}</div>
       <div class="multi-photo-info">
         <div class="multi-photo-name">${escapeHtml(item.name)}</div>
         ${item.hint ? `<div class="multi-photo-hint">${escapeHtml(item.hint)}</div>` : ''}
