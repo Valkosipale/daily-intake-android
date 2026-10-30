@@ -312,19 +312,6 @@ body{
   margin-top:10px;
 }
 .multi-add-row{margin-bottom:10px;}
-.body-weight-row{display:flex;gap:8px;align-items:stretch;}
-.body-weight-row input{flex:1;min-width:0;}
-.body-weight-trend-btn{
-  flex:0 0 auto;
-  padding:0 16px;
-  background:none;
-  border:1px solid var(--accent);
-  color:var(--accent);
-  font-family:'Space Mono',monospace;
-  font-size:12px;
-  cursor:pointer;
-}
-.body-weight-trend-btn:hover{background:var(--accent);color:#141210;}
 .multi-barcode-form{margin-bottom:12px;}
 .multi-photo-thumb-barcode{
   display:flex;
@@ -383,6 +370,23 @@ body{
   margin:2px 0;
 }
 
+.long-btn{
+  width:100%;
+  margin-top:10px;
+}
+.weekly-weight{
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px solid var(--hair);
+}
+.weekly-weight-title{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+  margin-bottom:8px;
+}
 .multi-photo-hint{
   font-size:10px;
   color:var(--ink-soft);
@@ -1404,20 +1408,22 @@ body{
 
   <div class="backup-section">
     <span class="eyebrow">Scan</span>
-    <p class="backup-desc">Add food by photo, barcode or a short description (Gemini). Add one item or several, mix them, and log the combined total.</p>
+    <p class="backup-desc">Scan a photo or barcode, or ask Gemini about a food. Add one item or several, mix them, and log the combined total.</p>
     <div class="backup-actions">
       <button type="button" id="scanBtn" class="backup-btn">📷 Scan</button>
     </div>
+    <button type="button" id="scanAskBtn" class="backup-btn long-btn">✨ Ask Gemini</button>
     <button type="button" id="apiKeyBtn" class="backup-btn api-key-long-btn">API key</button>
   </div>
 
   <div class="backup-section">
-    <span class="eyebrow">Monthly view</span>
-    <p class="backup-desc">See each logged day's macros, calories, steps and calorie balance. The monthly summary shows only the total surplus or deficit.</p>
+    <span class="eyebrow">Weekly view</span>
+    <p class="backup-desc">See 7 days at a glance with daily totals and your average. Tap a day to jump to it.</p>
     <div class="backup-actions">
-      <button type="button" id="monthlyBtn" class="backup-btn">View month</button>
+      <button type="button" id="weeklyBtn" class="backup-btn">View week</button>
     </div>
   </div>
+
   <div class="backup-section">
     <span class="eyebrow">Backup</span>
     <p class="backup-desc">Export your data before updating the app, then import it back afterward.</p>
@@ -1431,6 +1437,13 @@ body{
     </div>
   </div>
 
+  <div class="backup-section">
+    <span class="eyebrow">Settings</span>
+    <p class="backup-desc" id="bodyStatsSummary">Add your sex, age, height and weight to see your TDEE (daily calorie burn).</p>
+    <div class="backup-actions">
+      <button type="button" id="bodyStatsBtn" class="backup-btn">Body stats &amp; steps</button>
+    </div>
+  </div>
 
 
 </div>
@@ -1441,12 +1454,12 @@ body{
     <p class="data-desc">Add each item by photo, barcode or a short description. One item or several, mixed freely. Enter grams for each and the totals combine. Tap ✎ on an item to correct it or ask Gemini a question.</p>
     <div id="multiPhotoList"></div>
     <div class="backup-actions multi-add-row">
+      <button type="button" id="multiPhotoAddBtn" class="backup-btn">📷 Photo</button>
       <button type="button" id="multiBarcodeAddBtn" class="backup-btn">🏷️ Barcode</button>
-      <button type="button" id="multiPhotoAddBtn" class="backup-btn">📷 AI</button>
     </div>
     <form class="ask-gemini-row multi-barcode-form" id="scanTextForm">
       <input type="text" id="scanTextInput" placeholder="Barcode number, or describe a food">
-      <button type="submit" class="backup-btn">Add / Ask AI</button>
+      <button type="submit" class="backup-btn">Add</button>
     </form>
     <div class="multi-photo-total" id="multiPhotoTotal">Add at least one item to see the combined total</div>
     <div class="data-actions">
@@ -1557,10 +1570,7 @@ body{
       </div>
       <div class="field full">
         <label for="bodyWeight">Weight (kg)</label>
-        <div class="body-weight-row">
-          <input type="text" inputmode="decimal" id="bodyWeight" placeholder="e.g. 82,4">
-          <button type="button" id="bodyWeightTrendBtn" class="body-weight-trend-btn">Trend</button>
-        </div>
+        <input type="text" inputmode="decimal" id="bodyWeight" placeholder="e.g. 82,4">
       </div>
     </div>
     <p class="body-note" id="bodyWeightNote"></p>
@@ -1569,7 +1579,8 @@ body{
       <label for="bodySteps" id="bodyStepsLabel">Steps</label>
       <input type="text" inputmode="numeric" id="bodySteps" placeholder="e.g. 6800">
     </div>
-    <p class="body-note">Enter your steps manually for the selected day.</p>
+    <div class="steps-status" id="stepsStatus"></div>
+    <button type="button" class="backup-btn api-key-long-btn" id="readStepsBtn" style="margin-top:0;">Read steps from phone</button>
 
     <div class="body-tdee" id="bodyTdeePreview"></div>
     <p class="body-note">How it's calculated (deliberately on the low side): Mifflin–St Jeor resting calories × 1.2, the lowest standard activity factor. Only steps beyond 5,000 a day are added, each at the net energy cost of walking (0.5 kcal per kg per km, from the ACSM walking equation) using a step length of 0.413 × your height. Gym workouts and other exercise aren't counted.</p>
@@ -1581,24 +1592,13 @@ body{
   </div>
 </div>
 
-<div class="data-overlay" id="weightOverlay">
-  <div class="data-box weight-box">
-    <div class="data-title">Weight history</div>
-    <div id="weightChart" class="weight-chart"></div>
-    <div class="weight-stats" id="weightStats"></div>
-    <div id="weightList"></div>
-    <div class="data-actions">
-      <button type="button" id="weightCloseBtn" class="primary">Close</button>
-    </div>
-  </div>
-</div>
-
 <div class="data-overlay" id="weeklyOverlay">
   <div class="data-box weekly-box">
     <div class="data-title">Weekly view</div>
     <p class="data-desc" id="weeklyRange"></p>
     <div id="weeklyList"></div>
     <div class="weekly-summary" id="weeklySummary"></div>
+    <div class="weekly-weight" id="weeklyWeight"></div>
     <div class="data-actions">
       <button type="button" id="weeklyPrevBtn" class="secondary">‹ Earlier</button>
       <button type="button" id="weeklyNextBtn" class="secondary">Later ›</button>
@@ -1609,21 +1609,6 @@ body{
   </div>
 </div>
 
-<div class="data-overlay" id="monthlyOverlay">
-  <div class="data-box weekly-box">
-    <div class="data-title">Monthly view</div>
-    <p class="data-desc" id="monthlyRange"></p>
-    <div id="monthlyList"></div>
-    <div class="weekly-summary" id="monthlySummary"></div>
-    <div class="data-actions">
-      <button type="button" id="monthlyPrevBtn" class="secondary">‹ Earlier</button>
-      <button type="button" id="monthlyNextBtn" class="secondary">Later ›</button>
-    </div>
-    <div class="data-actions">
-      <button type="button" id="monthlyCloseBtn" class="primary">Close</button>
-    </div>
-  </div>
-</div>
 <div class="data-overlay" id="csvOverlay">
   <div class="data-box">
     <div class="data-title">Export CSV</div>
@@ -1766,7 +1751,7 @@ function render(){
   document.getElementById('totalFat').textContent = roundNum(totals.fat) + 'g';
   document.getElementById('totalFiber').textContent = roundNum(totals.fiber) + 'g';
   document.getElementById('totalSalt').textContent = roundNum(totals.salt) + 'g';
-  updateWeightSummary();
+  updateTdeeDisplay();
 
   const remaining = currentGoal - totals.cal;
   const remainingRow = document.getElementById('remainingRow');
@@ -2098,7 +2083,7 @@ async function switchDate(newDate){
   currentDate = newDate;
   await loadEntries(currentDate);
   render();
-
+  refreshPhoneSteps(currentDate);
 }
 
 document.getElementById('dateInput').addEventListener('change', (e)=>{
@@ -2515,103 +2500,68 @@ function saveWeightLog(arr){
   }catch(e){ console.error('Failed to save weight log', e); }
 }
 
-function updateWeightSummary(){
-  const latestEl = document.getElementById('weightLatest');
-  const forDateEl = document.getElementById('weightForDate');
-  if(!latestEl || !forDateEl) return;
-
-  const log = getWeightLog();
-  const latest = log[log.length - 1];
-  latestEl.textContent = latest
-    ? `Latest: ${latest.kg} kg (${formatDateShort(latest.date)})`
-    : 'No weigh-ins yet.';
-
-  const existing = log.find(w => w.date === currentDate);
-  forDateEl.textContent = existing
-    ? `Saved for ${formatDateShort(currentDate)}: ${existing.kg} kg — logging again replaces it.`
-    : `Will be saved for ${formatDateShort(currentDate)} (the day you're viewing).`;
-  updateTdeeDisplay();
-}
-
-const weightForm = document.getElementById('weightForm');
-if(weightForm) weightForm.addEventListener('submit', function(e){
-  e.preventDefault();
-  const input = document.getElementById('weightInput');
-  const value = parseLocaleNumber(input.value);
-  // Sanity range catches typos like 8,24 or 824 instead of 82,4
-  if(!(value >= 20 && value <= 400)){
-    showToast('Enter a valid weight in kg (20–400)');
-    input.focus();
-    return;
-  }
-  const kg = roundNum(value);
-  const log = getWeightLog().filter(w => w.date !== currentDate);
-  log.push({date: currentDate, kg});
-  saveWeightLog(log);
-  input.value = '';
-  updateWeightSummary();
-  showToast(`Logged ${kg} kg`);
-});
-
 function dateToTime(dateStr){
   const [y, m, d] = dateStr.split('-').map(Number);
   return new Date(y, m - 1, d).getTime();
 }
 
-function renderWeightHistory(){
-  const log = getWeightLog(); // oldest -> newest
-  const chart = document.getElementById('weightChart');
-  const stats = document.getElementById('weightStats');
-  const list = document.getElementById('weightList');
+// One weigh-in per day. Typing a weight into Body stats is how you log one.
+function logWeighIn(dateStr, kg){
+  const log = getWeightLog().filter(w => w.date !== dateStr);
+  log.push({date: dateStr, kg});
+  saveWeightLog(log);
+}
 
-  if(log.length === 0){
-    chart.innerHTML = '<div class="weight-empty">No weigh-ins yet. Log your weight above to start tracking.</div>';
-    stats.textContent = '';
-    list.innerHTML = '';
+const signedKg = d => (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d);
+
+// Weight trend for the 7 days the weekly view is showing (startDate..endDate, inclusive)
+function renderWeeklyWeight(startDate, endDate){
+  const box = document.getElementById('weeklyWeight');
+  if(!box) return;
+
+  const all = getWeightLog();                                   // oldest -> newest
+  const inWeek = all.filter(w => w.date >= startDate && w.date <= endDate);
+  const before = all.filter(w => w.date < startDate).pop() || null; // last weigh-in before this week
+  const title = '<div class="weekly-weight-title">Weight trend</div>';
+
+  if(inWeek.length === 0){
+    box.innerHTML = title + '<div class="weight-empty">No weigh-ins this week. Enter your weight in Body stats (tap the TDEE row) to track it.</div>';
     return;
   }
 
-  const recent = log.slice(-30);
-  if(recent.length < 2){
-    chart.innerHTML = '<div class="weight-empty">Log at least two weigh-ins on different days to see a trend.</div>';
-    stats.textContent = '';
-  } else {
+  let chart = '';
+  if(inWeek.length >= 2){
     const W = 300, H = 90, padX = 12, padY = 14;
-    const times = recent.map(w => dateToTime(w.date));
-    const tMin = times[0], tMax = times[times.length - 1];
-    const vals = recent.map(w => w.kg);
+    const t0 = dateToTime(startDate), t1 = dateToTime(endDate);
+    const vals = inWeek.map(w => w.kg);
     const vMin = Math.min(...vals), vMax = Math.max(...vals);
-
-    const pts = recent.map((w, i) => {
-      const x = padX + ((times[i] - tMin) / (tMax - tMin)) * (W - 2 * padX);
-      const y = vMax === vMin
-        ? H / 2
-        : padY + (1 - (w.kg - vMin) / (vMax - vMin)) * (H - 2 * padY);
+    const pts = inWeek.map(w => {
+      const x = padX + ((dateToTime(w.date) - t0) / (t1 - t0)) * (W - 2 * padX);
+      const y = vMax === vMin ? H / 2 : padY + (1 - (w.kg - vMin) / (vMax - vMin)) * (H - 2 * padY);
       return [x, y];
     });
-
     const polyline = pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
     const dots = pts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3"/>`).join('');
-    chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight trend"><polyline points="${polyline}"/>${dots}</svg>`;
-
-    const change = roundNum(recent[recent.length - 1].kg - recent[0].kg);
-    const days = Math.max(1, Math.round((tMax - tMin) / 86400000));
-    stats.innerHTML =
-      `Min ${vMin} kg · Max ${vMax} kg<br>` +
-      `${change > 0 ? '+' : ''}${change} kg over ${days} day${days === 1 ? '' : 's'}` +
-      (log.length > recent.length ? ` (last ${recent.length} weigh-ins)` : '');
+    chart = `<div class="weight-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight trend this week"><polyline points="${polyline}"/>${dots}</svg></div>`;
   }
 
-  // Newest first in the list, with the change since the previous weigh-in
-  let html = '';
-  for(let i = log.length - 1; i >= 0; i--){
-    const w = log[i];
-    let delta = '';
-    if(i > 0){
-      const d = roundNum(w.kg - log[i - 1].kg);
-      delta = (d > 0 ? '+' : '') + d;
-    }
-    html += `
+  const latest = inWeek[inWeek.length - 1];
+  const avg = roundNum(inWeek.reduce((sum, w) => sum + w.kg, 0) / inWeek.length);
+  let change = '';
+  if(inWeek.length >= 2){
+    change = `${signedKg(roundNum(latest.kg - inWeek[0].kg))} kg over this week`;
+  } else if(before){
+    change = `${signedKg(roundNum(latest.kg - before.kg))} kg since ${formatDateShort(before.date)}`;
+  }
+  const stats = `<div class="weight-stats">Latest ${latest.kg} kg · week average ${avg} kg${change ? '<br>' + change : ''}</div>`;
+
+  // Newest first, each with its change since the weigh-in before it
+  let rowsHtml = '';
+  for(let i = inWeek.length - 1; i >= 0; i--){
+    const w = inWeek[i];
+    const prev = i > 0 ? inWeek[i - 1] : before;
+    const delta = prev ? signedKg(roundNum(w.kg - prev.kg)) : '';
+    rowsHtml += `
       <div class="weight-row">
         <div class="weight-row-date">${formatDateShort(w.date)}</div>
         <div class="weight-row-kg">${w.kg} kg</div>
@@ -2619,9 +2569,10 @@ function renderWeightHistory(){
         <button type="button" class="weight-row-del" data-date="${w.date}" aria-label="Delete weigh-in">×</button>
       </div>`;
   }
-  list.innerHTML = html;
 
-  list.querySelectorAll('.weight-row-del').forEach(btn=>{
+  box.innerHTML = title + chart + stats + rowsHtml;
+
+  box.querySelectorAll('.weight-row-del').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const date = btn.getAttribute('data-date');
       const entry = getWeightLog().find(w => w.date === date);
@@ -2629,27 +2580,11 @@ function renderWeightHistory(){
       const confirmed = await showConfirmModal(`Delete the ${formatDateShort(date)} weigh-in (${entry.kg} kg)?`);
       if(!confirmed) return;
       saveWeightLog(getWeightLog().filter(w => w.date !== date));
-      renderWeightHistory();
-      updateWeightSummary();
+      renderWeekly();
+      updateTdeeDisplay();
     });
   });
 }
-
-const weightHistoryBtn = document.getElementById('weightHistoryBtn');
-if(weightHistoryBtn) weightHistoryBtn.addEventListener('click', ()=>{
-  renderWeightHistory();
-  document.getElementById('weightOverlay').classList.add('show');
-});
-
-document.getElementById('weightCloseBtn').addEventListener('click', ()=>{
-  document.getElementById('weightOverlay').classList.remove('show');
-});
-
-document.getElementById('weightOverlay').addEventListener('click', (e)=>{
-  if(e.target.id === 'weightOverlay'){
-    document.getElementById('weightOverlay').classList.remove('show');
-  }
-});
 
 // ---- Weekly view ----
 let weeklyAnchor = null;
@@ -2732,6 +2667,8 @@ function renderWeekly(){
   // Average only over days that actually have something logged — an empty day
   // almost certainly means "didn't log", not "ate nothing", so counting it would
   // drag the average down misleadingly.
+  renderWeeklyWeight(days[6].date, days[0].date);
+
   const logged = days.filter(d => d.totals.count > 0);
   const summary = document.getElementById('weeklySummary');
 
@@ -2777,7 +2714,7 @@ function renderWeekly(){
     balanceHtml += `<div class="wb-row"><span class="wb-label">Week vs your TDEE</span><span class="wb-val">${signed(vsTdee)} cal <small>${word(vsTdee)}</small></span></div>` +
       `<div class="wb-sub">${eatenTotal.toLocaleString()} eaten − ${tdeeTotal.toLocaleString()} estimated burn${todayNote}</div>`;
   } else {
-    balanceHtml += '<div class="wb-sub" style="margin-top:8px;">Tap the TDEE row to add your body stats and compare against your TDEE too.</div>';
+    balanceHtml += '<div class="wb-sub" style="margin-top:8px;">Add your body stats in Settings to compare against your TDEE too.</div>';
   }
   balanceHtml += '</div>';
 
@@ -2789,8 +2726,7 @@ function renderWeekly(){
     Week total: ${Math.round(sum.cal).toLocaleString()} cal${balanceHtml}`;
 }
 
-const weeklyBtn = document.getElementById('weeklyBtn');
-if(weeklyBtn) weeklyBtn.addEventListener('click', ()=>{
+document.getElementById('weeklyBtn').addEventListener('click', ()=>{
   weeklyAnchor = currentDate;
   renderWeekly();
   document.getElementById('weeklyOverlay').classList.add('show');
@@ -2814,98 +2750,6 @@ document.getElementById('weeklyOverlay').addEventListener('click', (e)=>{
   if(e.target.id === 'weeklyOverlay'){
     document.getElementById('weeklyOverlay').classList.remove('show');
   }
-});
-
-// ---- Monthly view ----
-let monthlyAnchor = null;
-function monthKeyFromDate(dateStr){ return dateStr.slice(0, 7); }
-function shiftMonth(dateStr, deltaMonths){
-  const [y, m] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m - 1 + deltaMonths, 1);
-  return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-01';
-}
-function monthDates(dateStr){
-  const [y, m] = dateStr.split('-').map(Number);
-  const count = new Date(y, m, 0).getDate();
-  const out = [];
-  for(let d = 1; d <= count; d++) out.push(y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0'));
-  return out;
-}
-async function refreshMonthlySteps(){
-  const dates = monthDates(monthlyAnchor).filter(ds => getDayTotalsFromStorage(ds).count > 0);
-
-}
-function renderMonthly(){
-  const dates = monthDates(monthlyAnchor);
-  const today = todayStr();
-  const logged = dates.map(date => ({date, totals:getDayTotalsFromStorage(date)})).filter(d => d.totals.count > 0);
-  const [y, m] = monthlyAnchor.split('-').map(Number);
-  document.getElementById('monthlyRange').textContent = new Date(y, m - 1, 1).toLocaleDateString(undefined, {month:'long', year:'numeric'}) + ' · tap a day to open it';
-  const list = document.getElementById('monthlyList');
-  if(logged.length === 0){
-    list.innerHTML = '<div class="weight-empty">Nothing logged in this month yet.</div>';
-    document.getElementById('monthlySummary').textContent = 'No calorie surplus or deficit to show.';
-    return;
-  }
-  list.innerHTML = logged.map(day => {
-    const t = day.totals;
-    const stepsData = effectiveSteps(day.date);
-    const steps = stepsData ? stepsData.steps : 0;
-    const tdee = tdeeForDate(day.date);
-    const balance = tdee === null ? null : Math.round(t.cal - tdee);
-    const balanceText = balance === null ? 'TDEE not set' : (balance > 0 ? '+' : balance < 0 ? '−' : '±') + Math.abs(balance).toLocaleString() + ' cal';
-    const balanceWord = balance === null ? '' : (balance > 0 ? ' over' : balance < 0 ? ' under' : ' on target');
-    const [yy, mm, dd] = day.date.split('-').map(Number);
-    const dt = new Date(yy, mm - 1, dd);
-    const weekday = dt.toLocaleDateString(undefined, {weekday:'short'});
-    return `
-      <button type="button" class="weekly-row" data-date="${day.date}">
-        <div class="weekly-day ${day.date === today ? 'is-today' : ''}">${escapeHtml(weekday)}<br>${String(dd).padStart(2,'0')}/${String(mm).padStart(2,'0')}</div>
-        <div class="weekly-macros" style="grid-column:2 / -1; font-size:11px; color:var(--ink);">${Math.round(t.cal).toLocaleString()} cal · ${steps.toLocaleString()} steps · ${balanceText}${balanceWord}</div>
-        <div class="weekly-macros">P ${roundNum(t.protein)}g · C ${roundNum(t.carbs)}g · F ${roundNum(t.fat)}g · Fiber ${roundNum(t.fiber)}g · Salt ${roundNum(t.salt)}g</div>
-      </button>`;
-  }).join('');
-  list.querySelectorAll('.weekly-row').forEach(btn => btn.addEventListener('click', async () => {
-    document.getElementById('monthlyOverlay').classList.remove('show');
-    await switchDate(btn.getAttribute('data-date'));
-    try{ window.scrollTo(0, 0); }catch(e){}
-  }));
-  const balances = logged.map(d => {
-    const tdee = tdeeForDate(d.date);
-    return tdee === null ? null : Math.round(d.totals.cal - tdee);
-  });
-  const summary = document.getElementById('monthlySummary');
-  if(balances.some(v => v === null)){
-    summary.textContent = 'Add your body stats in Settings to calculate the monthly calorie surplus or deficit.';
-  }else{
-    const total = balances.reduce((a,b) => a+b, 0);
-    const sign = total > 0 ? '+' : total < 0 ? '−' : '±';
-    const word = total > 0 ? 'surplus' : total < 0 ? 'deficit' : 'on target';
-    summary.innerHTML = `Month calorie balance<span class="avg-cal">${sign}${Math.abs(total).toLocaleString()} cal</span>${word}`;
-  }
-}
-document.getElementById('monthlyBtn').addEventListener('click', async () => {
-  monthlyAnchor = currentDate.slice(0, 7) + '-01';
-  document.getElementById('monthlyOverlay').classList.add('show');
-  renderMonthly();
-  await refreshMonthlySteps();
-  renderMonthly();
-});
-document.getElementById('monthlyPrevBtn').addEventListener('click', async () => {
-  monthlyAnchor = shiftMonth(monthlyAnchor, -1);
-  renderMonthly();
-  await refreshMonthlySteps();
-  renderMonthly();
-});
-document.getElementById('monthlyNextBtn').addEventListener('click', async () => {
-  monthlyAnchor = shiftMonth(monthlyAnchor, 1);
-  renderMonthly();
-  await refreshMonthlySteps();
-  renderMonthly();
-});
-document.getElementById('monthlyCloseBtn').addEventListener('click', () => document.getElementById('monthlyOverlay').classList.remove('show'));
-document.getElementById('monthlyOverlay').addEventListener('click', e => {
-  if(e.target.id === 'monthlyOverlay') document.getElementById('monthlyOverlay').classList.remove('show');
 });
 
 // ---- CSV export ----
@@ -3278,11 +3122,21 @@ function parseSteps(raw){
   return digits === '' ? NaN : parseInt(digits, 10);
 }
 
-// ---- Summary card TDEE row ----
+// ---- Summary card row + Settings card ----
+function updateBodySummary(){
+  const el = document.getElementById('bodyStatsSummary');
+  if(!el) return;
+  const p = getProfile();
+  el.textContent = p
+    ? `${p.sex === 'male' ? 'Male' : 'Female'} · ${p.age} y · ${p.heightCm} cm · ${p.weightKg} kg`
+    : 'Add your sex, age, height and weight to see your TDEE (daily calorie burn).';
+}
+
 function updateTdeeDisplay(){
   const valueEl = document.getElementById('tdeeValue');
   const subEl = document.getElementById('tdeeSub');
   if(!valueEl || !subEl) return;
+  updateBodySummary();
 
   const profile = getProfile();
   if(!profile){
@@ -3291,1311 +3145,4 @@ function updateTdeeDisplay(){
     return;
   }
 
-  const wi = weighInOnOrBefore(currentDate);
-  const kg = wi ? wi.kg : profile.weightKg;
-  const st = effectiveSteps(currentDate);
-  const steps = st ? st.steps : 0;
-  const t = computeTdee(profile, kg, steps);
-
-  valueEl.textContent = t.total.toLocaleString();
-  if(steps <= 0){
-    subEl.textContent = `base ${t.base.toLocaleString()} · no step data`;
-  } else if(t.creditedSteps === 0){
-    subEl.textContent = `base ${t.base.toLocaleString()} · ${steps.toLocaleString()} steps, none added (under ${TDEE_STEP_BASELINE.toLocaleString()})`;
-  } else {
-    subEl.textContent = `base ${t.base.toLocaleString()} + ${t.stepKcal.toLocaleString()} from ${steps.toLocaleString()} steps`;
-  }
-}
-
-// ---- Phone steps through Health Connect (capacitor-health plugin, registered as "HealthPlugin") ----
-function getHealthPlugin(){
-  const plugins = window.Capacitor && window.Capacitor.Plugins;
-  if(!plugins) return null;
-  // Different capacitor-health releases expose the native bridge under either name.
-  return plugins.HealthPlugin || plugins.Health || null;
-}
-
-// The plugin's TypeScript types say permissions come back as an array of {NAME: bool}, but its
-// Android code returns one object {NAME: bool}. Accept either.
-function healthPermissionGranted(resp, name){
-  const p = resp && resp.permissions;
-  if(!p) return false;
-  if(Array.isArray(p)) return p.some(o => o && o[name] === true);
-  return p[name] === true;
-}
-
-// The plugin wants ISO instants and converts them to the phone's local time, so local
-// midnight -> toISOString() lines "today" up with the person's own day, not UTC's.
-function localMidnightIso(dateStr){
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
-}
-
-const lastStepsRefresh = {};
-
-// Reads the day's step total. Only ever READS - asking for permission is left to the button,
-// so nothing pops up at startup. Returns {status, steps?, message?}.
-async function refreshPhoneSteps(dateStr, opts){
-  const Health = getHealthPlugin();
-  if(!Health) return {status: 'no-plugin'};
-  const force = !!(opts && opts.force);
-  const now = Date.now();
-  if(!force && lastStepsRefresh[dateStr] && now - lastStepsRefresh[dateStr] < 20000) return {status: 'throttled'};
-  lastStepsRefresh[dateStr] = now;
-
-  try{
-    // isHealthAvailable() must come first: it is what creates the plugin's Health Connect client
-    const avail = await Health.isHealthAvailable();
-    if(!(avail && avail.available)) return {status: 'unavailable'};
-
-    const perm = await Health.checkHealthPermissions({permissions: ['READ_STEPS']});
-    if(!healthPermissionGranted(perm, 'READ_STEPS')) return {status: 'no-permission'};
-
-    const res = await Health.queryAggregated({
-      startDate: localMidnightIso(dateStr),
-      endDate: localMidnightIso(shiftDate(dateStr, 1)),
-      dataType: 'steps',
-      bucket: 'day'
-    });
-    const rows = (res && res.aggregatedData) || [];
-    const steps = Math.round(rows.reduce((sum, r) => sum + (Number(r && r.value) || 0), 0));
-
-    // Never lower a good reading to zero because of one empty answer
-    const stored = getStepsMap()[dateStr];
-    if(steps > 0 || !stored || stored.phone === undefined){
-      setStepsField(dateStr, 'phone', steps);
-    }
-    // Keep the visible steps field in sync with Health Connect from the first step onward.
-    // This does not change the TDEE rule: only steps above 5,000 add calories.
-    if(dateStr === currentDate){
-      const stepsInput = document.getElementById('bodySteps');
-      if(stepsInput){
-        stepsInput.value = String(steps);
-        stepsInput.dataset.source = 'phone';
-        stepsInput.dataset.phoneValue = String(steps);
-      }
-      setStepsStatus(steps > 0
-        ? `Automatic steps from Health Connect: ${steps.toLocaleString()}. You can still type a correction.`
-        : 'Health Connect is connected, but it has no steps for this day yet.');
-      updateBodyPreview();
-    }
-    updateTdeeDisplay();
-    return {status: steps > 0 ? 'ok' : 'no-data', steps};
-  }catch(e){
-    console.error('Reading phone steps failed', e);
-    return {status: 'error', message: (e && e.message) ? e.message : String(e)};
-  }
-}
-
-function setStepsStatus(text){
-  const el = document.getElementById('stepsStatus');
-  if(el) el.textContent = text;
-}
-
-function describePhoneSteps(){
-  if(!getHealthPlugin()){
-    return "Automatic step reading isn't available in this build. Type your steps above instead.";
-  }
-  const st = effectiveSteps(currentDate);
-  const phone = st ? Number(st.phone) || 0 : 0;
-  if(phone > 0){
-    return `Phone (Health Connect): ${phone.toLocaleString()} steps on ${formatDateShort(currentDate)}. If you also type a number, the higher one is used.`;
-  }
-  return 'No phone steps yet. Opening this view connects Health Connect automatically. Health Connect only has steps if a compatible app records them.';
-}
-
-async function connectPhoneSteps(){
-  const Health = getHealthPlugin();
-  if(!Health){
-    showToast("Automatic steps aren't available in this build — type them in");
-    return;
-  }
-  try{
-    const avail = await Health.isHealthAvailable();
-    if(!(avail && avail.available)){
-      const open = await showConfirmModal("Health Connect isn't available on this phone. Open the Play Store to install it?", 'Open Play Store');
-      if(open){
-        try{ await Health.showHealthConnectInPlayStore(); }catch(e){ /* nothing more to do */ }
-      }
-      return;
-    }
-
-    let perm = await Health.checkHealthPermissions({permissions: ['READ_STEPS']});
-    if(!healthPermissionGranted(perm, 'READ_STEPS')){
-      perm = await Health.requestHealthPermissions({permissions: ['READ_STEPS']});
-      if(!healthPermissionGranted(perm, 'READ_STEPS')){
-        showToast("Steps permission wasn't granted");
-        setStepsStatus("Steps permission wasn't granted, so the phone can't share your steps.");
-        return;
-      }
-    }
-
-    const r = await refreshPhoneSteps(currentDate, {force: true});
-    if(r.status === 'ok'){
-      showToast(`Read ${r.steps.toLocaleString()} steps`);
-      setStepsStatus(describePhoneSteps());
-    } else if(r.status === 'no-data'){
-      setStepsStatus('Connected, but Health Connect has no steps for this day. It only has steps if an app like Google Fit or Samsung Health records them.');
-    } else if(r.status === 'error'){
-      showErrorModal(r.message, 'Reading steps failed');
-    } else {
-      setStepsStatus('Could not read steps right now. Try again in a moment.');
-    }
-    updateBodyPreview();
-  }catch(e){
-    console.error('Connecting steps failed', e);
-    showErrorModal((e && e.message) ? e.message : String(e), 'Steps connection failed');
-  }
-}
-
-// ---- Body stats dialog ----
-let bodyDialogSex = null;
-
-function setBodySex(sex){
-  bodyDialogSex = sex;
-  document.getElementById('sexMaleBtn').classList.toggle('active', sex === 'male');
-  document.getElementById('sexFemaleBtn').classList.toggle('active', sex === 'female');
-  updateBodyPreview();
-}
-
-function readBodyInputs(){
-  return {
-    sex: bodyDialogSex,
-    age: parseLocaleNumber(document.getElementById('bodyAge').value),
-    heightCm: parseLocaleNumber(document.getElementById('bodyHeight').value),
-    weightKg: parseLocaleNumber(document.getElementById('bodyWeight').value)
-  };
-}
-
-function bodyInputsProblem(v){
-  if(v.sex !== 'male' && v.sex !== 'female') return 'Pick male or female';
-  if(!(v.age >= 15 && v.age <= 100)) return 'Enter your age (15–100)';
-  if(!(v.heightCm >= 100 && v.heightCm <= 250)) return 'Enter your height in cm (100–250)';
-  if(!(v.weightKg >= 30 && v.weightKg <= 300)) return 'Enter your weight in kg (30–300)';
-  return '';
-}
-
-function updateBodyPreview(){
-  const el = document.getElementById('bodyTdeePreview');
-  if(!el) return;
-  const v = readBodyInputs();
-  if(bodyInputsProblem(v)){
-    el.textContent = 'Fill in sex, age, height and weight to see your TDEE.';
-    return;
-  }
-  const wi = weighInOnOrBefore(currentDate);
-  const kg = wi ? wi.kg : v.weightKg;
-  const typed = parseSteps(document.getElementById('bodySteps').value);
-  const stored = effectiveSteps(currentDate);
-  const phone = stored ? Number(stored.phone) || 0 : 0;
-  const steps = Math.max(isNaN(typed) ? 0 : typed, phone);
-  const t = computeTdee(v, kg, steps);
-
-  let detail = `Resting ${t.bmr.toLocaleString()} × ${TDEE_ACTIVITY_FACTOR} = ${t.base.toLocaleString()}`;
-  if(t.creditedSteps > 0){
-    detail += ` + ${t.stepKcal.toLocaleString()} from ${t.creditedSteps.toLocaleString()} steps above ${TDEE_STEP_BASELINE.toLocaleString()} (${t.perStep.toFixed(3)} kcal each)`;
-  } else if(steps > 0){
-    detail += ` · ${steps.toLocaleString()} steps is under ${TDEE_STEP_BASELINE.toLocaleString()}, so none are added`;
-  }
-  el.innerHTML = `Estimated TDEE<span class="big">${t.total.toLocaleString()} kcal</span>${escapeHtml(detail)}`;
-}
-
-function openBodyDialog(){
-  const p = getProfile();
-  document.getElementById('bodyAge').value = p ? String(p.age) : '';
-  document.getElementById('bodyHeight').value = p ? String(p.heightCm) : '';
-  document.getElementById('bodyWeight').value = p ? String(p.weightKg) : '';
-
-  const wi = weighInOnOrBefore(currentDate);
-  document.getElementById('bodyWeightNote').textContent = wi
-    ? `Your latest weigh-in (${wi.kg} kg, ${formatDateShort(wi.date)}) is used instead of this whenever it's on or before the day you're viewing.`
-    : 'Once you log weigh-ins, the latest one is used automatically.';
-
-  const st = effectiveSteps(currentDate);
-  document.getElementById('bodyStepsLabel').textContent = `Steps for ${formatDateShort(currentDate)}`;
-  const stepsInput = document.getElementById('bodySteps');
-  const hasPhoneSteps = !!(st && st.phone !== undefined);
-  const shownSteps = hasPhoneSteps ? Number(st.phone) || 0 : (st ? Number(st.manual) || 0 : 0);
-  stepsInput.value = (hasPhoneSteps || shownSteps > 0) ? String(shownSteps) : '';
-  stepsInput.dataset.source = hasPhoneSteps ? 'phone' : 'manual';
-  stepsInput.dataset.phoneValue = hasPhoneSteps ? String(Number(st.phone) || 0) : '';
-
-  setStepsStatus(describePhoneSteps());
-  setBodySex(p ? p.sex : null);
-  document.getElementById('bodyOverlay').classList.add('show');
-  // Opening TDEE is the explicit user action that starts Health Connect setup.
-}
-
-function closeBodyDialog(){
-  document.getElementById('bodyOverlay').classList.remove('show');
-}
-
-function saveBodyDialog(){
-  const v = readBodyInputs();
-  const problem = bodyInputsProblem(v);
-  if(problem){
-    showToast(problem);
-    return;
-  }
-
-  const stepsInput = document.getElementById('bodySteps');
-  const raw = stepsInput.value.trim();
-  const unchangedAutomaticValue = stepsInput.dataset.source === 'phone' && raw === stepsInput.dataset.phoneValue;
-  let manual = null;
-  if(raw !== '' && !unchangedAutomaticValue){
-    manual = parseSteps(raw);
-    if(isNaN(manual) || manual > 100000){
-      showToast('Enter steps as a whole number (up to 100,000)');
-      return;
-    }
-  }
-
-  const loggedWeight = roundNum(v.weightKg);
-  const weightLog = getWeightLog().filter(w => w.date !== currentDate);
-  weightLog.push({date: currentDate, kg: loggedWeight});
-  saveWeightLog(weightLog);
-
-  saveProfile({sex: v.sex, age: Math.round(v.age), heightCm: roundNum(v.heightCm), weightKg: loggedWeight});
-  setStepsField(currentDate, 'manual', manual);
-  closeBodyDialog();
-  updateTdeeDisplay();
-  showToast('Saved');
-}
-
-document.getElementById('tdeeRow').addEventListener('click', openBodyDialog);
-document.getElementById('tdeeRow').addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openBodyDialog(); }
-});
-document.getElementById('sexMaleBtn').addEventListener('click', ()=>setBodySex('male'));
-document.getElementById('sexFemaleBtn').addEventListener('click', ()=>setBodySex('female'));
-['bodyAge', 'bodyHeight', 'bodyWeight', 'bodySteps'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', ()=>{
-    if(id === 'bodySteps') document.getElementById(id).dataset.source = 'manual';
-    updateBodyPreview();
-  });
-});
-document.getElementById('bodyCancelBtn').addEventListener('click', closeBodyDialog);
-document.getElementById('bodySaveBtn').addEventListener('click', saveBodyDialog);
-document.getElementById('bodyWeightTrendBtn').addEventListener('click', ()=>{
-  renderWeightHistory();
-  document.getElementById('weightOverlay').classList.add('show');
-});
-document.getElementById('bodyOverlay').addEventListener('click', (e)=>{
-  if(e.target.id === 'bodyOverlay') closeBodyDialog();
-});
-
-
-function collectAllData(){
-  const data = {app:'daily-intake-calculator', exportedAt:new Date().toISOString(), version:1, settings:null, logs:{}};
-  if(!hasStorage()) return data;
-  try{
-    const settingsRaw = window.localStorage.getItem('dic:settings');
-    data.settings = settingsRaw ? JSON.parse(settingsRaw) : null;
-    for(let i=0;i<window.localStorage.length;i++){
-      const key = window.localStorage.key(i);
-      if(key && key.indexOf('dic:log:') === 0){
-        const dateStr = key.slice('dic:log:'.length);
-        try{ data.logs[dateStr] = JSON.parse(window.localStorage.getItem(key)); }catch(e){}
-      }
-    }
-    // Optional extras - older backups simply won't have these fields
-    data.weights = getWeightLog();
-    data.hiddenItems = getHiddenPreviousItemNames();
-    data.profile = getProfile();
-    data.steps = getStepsMap();
-  }catch(e){ console.error('Failed to collect data', e); }
-  return data;
-}
-
-function restoreAllData(data){
-  if(!hasStorage()) return false;
-  if(!data || typeof data !== 'object') return false;
-  try{
-    if(data.settings){
-      window.localStorage.setItem('dic:settings', JSON.stringify(data.settings));
-    }
-    if(data.logs && typeof data.logs === 'object'){
-      Object.keys(data.logs).forEach(dateStr=>{
-        window.localStorage.setItem('dic:log:'+dateStr, JSON.stringify(data.logs[dateStr]));
-      });
-    }
-    // Weigh-ins merge by date (the backup wins on a clash), like logs overwrite per day
-    if(Array.isArray(data.weights)){
-      const merged = getWeightLog();
-      data.weights.forEach(w=>{
-        if(!w || typeof w.date !== 'string' || typeof w.kg !== 'number') return;
-        const idx = merged.findIndex(x => x.date === w.date);
-        if(idx >= 0) merged[idx] = {date: w.date, kg: w.kg};
-        else merged.push({date: w.date, kg: w.kg});
-      });
-      saveWeightLog(merged);
-    }
-    if(Array.isArray(data.hiddenItems)){
-      const union = new Set(getHiddenPreviousItemNames());
-      data.hiddenItems.forEach(n => { if(typeof n === 'string') union.add(n); });
-      saveHiddenPreviousItemNames(Array.from(union));
-    }
-    if(data.profile && typeof data.profile === 'object'){
-      const p = data.profile;
-      if((p.sex === 'male' || p.sex === 'female') && p.age > 0 && p.heightCm > 0 && p.weightKg > 0){
-        saveProfile({sex: p.sex, age: Number(p.age), heightCm: Number(p.heightCm), weightKg: Number(p.weightKg)});
-      }
-    }
-    if(data.steps && typeof data.steps === 'object' && !Array.isArray(data.steps)){
-      const merged = getStepsMap();
-      Object.keys(data.steps).forEach(d=>{
-        const e = data.steps[d];
-        if(!e || typeof e !== 'object') return;
-        const entry = {};
-        if(e.manual !== undefined && e.manual !== null && isFinite(Number(e.manual))) entry.manual = Number(e.manual);
-        if(e.phone !== undefined && e.phone !== null && isFinite(Number(e.phone))) entry.phone = Number(e.phone);
-        if(Object.keys(entry).length) merged[d] = entry; // the backup wins for that day
-      });
-      saveStepsMap(merged);
-    }
-    return true;
-  }catch(e){
-    console.error('Failed to restore data', e);
-    return false;
-  }
-}
-
-// Backup text is gzip-compressed then base64-encoded to keep it much shorter and
-// easier to paste/store. Falls back to plain JSON if the browser can't compress
-// (older WebViews), and import transparently handles both formats.
-const BACKUP_PREFIX = 'DICGZ1:';
-
-function arrayBufferToBase64(buffer){
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  for(let i=0; i<bytes.length; i+=chunkSize){
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunkSize));
-  }
-  return btoa(binary);
-}
-
-function base64ToUint8Array(base64){
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for(let i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
-async function compressToBase64(str){
-  const stream = new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
-  const buffer = await new Response(stream).arrayBuffer();
-  return arrayBufferToBase64(buffer);
-}
-
-async function decompressFromBase64(base64){
-  const bytes = base64ToUint8Array(base64);
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-  const buffer = await new Response(stream).arrayBuffer();
-  return new TextDecoder().decode(buffer);
-}
-
-document.getElementById('exportBtn').addEventListener('click', async ()=>{
-  const data = collectAllData();
-  const jsonStr = JSON.stringify(data);
-  let output = jsonStr;
-
-  if(typeof CompressionStream !== 'undefined'){
-    try{
-      const compressed = BACKUP_PREFIX + await compressToBase64(jsonStr);
-      // Only use the compressed version if it actually comes out shorter
-      if(compressed.length < jsonStr.length){
-        output = compressed;
-      }
-    }catch(e){
-      console.error('Compression failed, using plain JSON instead', e);
-    }
-  }
-
-  document.getElementById('exportText').value = output;
-  document.getElementById('exportOverlay').classList.add('show');
-});
-
-document.getElementById('exportCloseBtn').addEventListener('click', ()=>{
-  document.getElementById('exportOverlay').classList.remove('show');
-});
-
-document.getElementById('exportCopyBtn').addEventListener('click', async ()=>{
-  const textarea = document.getElementById('exportText');
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      await navigator.clipboard.writeText(textarea.value);
-    } else {
-      textarea.select();
-      document.execCommand('copy');
-    }
-    showToast('Copied to clipboard');
-  }catch(e){
-    textarea.select();
-    showToast('Select and copy manually');
-  }
-});
-
-document.getElementById('importBtn').addEventListener('click', ()=>{
-  document.getElementById('importText').value = '';
-  document.getElementById('importOverlay').classList.add('show');
-});
-
-document.getElementById('importCloseBtn').addEventListener('click', ()=>{
-  document.getElementById('importOverlay').classList.remove('show');
-});
-
-document.getElementById('importConfirmBtn').addEventListener('click', async ()=>{
-  const raw = document.getElementById('importText').value.trim();
-  if(!raw){ showToast('Paste your backup text first'); return; }
-
-  let jsonStr = raw;
-  if(raw.indexOf(BACKUP_PREFIX) === 0){
-    if(typeof DecompressionStream === 'undefined'){
-      showToast("This backup is compressed but your app can't decompress it");
-      return;
-    }
-    try{
-      jsonStr = await decompressFromBase64(raw.slice(BACKUP_PREFIX.length));
-    }catch(e){
-      console.error('Decompression failed', e);
-      showToast('Could not read this backup text');
-      return;
-    }
-  }
-
-  let parsed;
-  try{
-    parsed = JSON.parse(jsonStr);
-  }catch(e){
-    showToast("That doesn't look like valid backup text");
-    return;
-  }
-
-  const confirmed = await showConfirmModal('This replaces your current log data with the imported backup. Continue?', 'Import');
-  if(!confirmed) return;
-
-  const ok = restoreAllData(parsed);
-  if(ok){
-    document.getElementById('importOverlay').classList.remove('show');
-    await loadSettings();
-    await loadEntries(currentDate);
-    render();
-    showToast('Data imported');
-  } else {
-    showToast('Import failed');
-  }
-});
-
-const GEMINI_MODEL = 'gemini-3.5-flash';
-
-function getGeminiKey(){
-  if(!hasStorage()) return '';
-  try{
-    return window.localStorage.getItem('dic:geminiKey') || '';
-  }catch(e){ return ''; }
-}
-
-function setGeminiKey(key){
-  if(!hasStorage()) return;
-  try{
-    window.localStorage.setItem('dic:geminiKey', key);
-  }catch(e){ console.error('Failed to save API key', e); }
-}
-
-document.getElementById('apiKeyBtn').addEventListener('click', ()=>{
-  document.getElementById('apiKeyInput').value = getGeminiKey();
-  document.getElementById('apiKeyOverlay').classList.add('show');
-});
-
-document.getElementById('apiKeyCloseBtn').addEventListener('click', ()=>{
-  document.getElementById('apiKeyOverlay').classList.remove('show');
-});
-
-document.getElementById('apiKeySaveBtn').addEventListener('click', ()=>{
-  const key = document.getElementById('apiKeyInput').value.trim();
-  setGeminiKey(key);
-  document.getElementById('apiKeyOverlay').classList.remove('show');
-  showToast(key ? 'API key saved' : 'API key cleared');
-});
-
-function showLoadingOverlay(text){
-  document.getElementById('photoLoadingTitle').textContent = text || 'Analyzing…';
-  document.getElementById('photoLoadingOverlay').classList.add('show');
-}
-
-function hideLoadingOverlay(){
-  document.getElementById('photoLoadingOverlay').classList.remove('show');
-}
-
-function mentionsWeight(text){
-  return /\b(gram|grams|weigh|weighs|weight|how many grams|how much does)\b/i.test(text);
-}
-
-function extractGramsFromText(text){
-  const match = text.match(/(\d+(?:\.\d+)?)\s*(?:g\b|grams?\b)/i);
-  if(match) return Math.round(parseFloat(match[1]));
-  return null;
-}
-
-// Low-level call to Gemini's generateContent endpoint. Returns the raw text response.
-// jsonMode=true requests structured JSON output; jsonMode=false leaves it as free-form text.
-async function callGeminiRaw(parts, jsonMode){
-  const apiKey = getGeminiKey();
-  if(!apiKey) throw new Error('No Gemini API key set');
-
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
-
-  const body = { contents: [{ parts }] };
-  body.generationConfig = { maxOutputTokens: 1024 };
-  if(jsonMode){
-    body.generationConfig.responseMimeType = 'application/json';
-  }
-
-  let res;
-  try{
-    res = await fetch(url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
-    });
-  }catch(networkErr){
-    throw new Error('Network request to Gemini failed: ' + (networkErr && networkErr.message ? networkErr.message : networkErr));
-  }
-
-  if(!res.ok){
-    const errText = await res.text().catch(()=> '');
-    throw new Error('Gemini API HTTP ' + res.status + ' (model: ' + GEMINI_MODEL + '): ' + errText);
-  }
-
-  const data = await res.json();
-
-  const blockReason = data && data.promptFeedback && data.promptFeedback.blockReason;
-  if(blockReason){
-    throw new Error('Gemini blocked this request: ' + blockReason);
-  }
-
-  const candidate = data && data.candidates && data.candidates[0];
-  const finishReason = candidate && candidate.finishReason;
-  const text = candidate && candidate.content && candidate.content.parts &&
-    candidate.content.parts[0] && candidate.content.parts[0].text;
-
-  if(!text){
-    throw new Error('No response text from Gemini. finishReason: ' + (finishReason || 'unknown') + '. Raw: ' + JSON.stringify(data).slice(0, 300));
-  }
-
-  return {text, finishReason};
-}
-
-function parseMacroJSON(text, finishReason){
-  let cleanText = text.trim();
-  if(cleanText.indexOf('```') === 0){
-    cleanText = cleanText.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
-  }
-
-  let parsed;
-  try{
-    parsed = JSON.parse(cleanText);
-  }catch(parseErr){
-    const firstBrace = cleanText.indexOf('{');
-    const lastBrace = cleanText.lastIndexOf('}');
-    if(firstBrace !== -1 && lastBrace > firstBrace){
-      try{
-        parsed = JSON.parse(cleanText.slice(firstBrace, lastBrace + 1));
-      }catch(secondErr){
-        throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total, finishReason: ' + (finishReason || 'unknown') + '). Raw text: ' + cleanText.slice(0, 1500));
-      }
-    } else {
-      throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total, finishReason: ' + (finishReason || 'unknown') + '). Raw text: ' + cleanText.slice(0, 1500));
-    }
-  }
-
-  return {
-    name: String(parsed.food_name || 'Food'),
-    calPer100: Number(parsed.calories_per_100g) || 0,
-    proteinPer100: Number(parsed.protein_per_100g) || 0,
-    carbsPer100: Number(parsed.carbs_per_100g) || 0,
-    fatPer100: Number(parsed.fat_per_100g) || 0,
-    fiberPer100: Number(parsed.fiber_per_100g) || 0,
-    saltPer100: Number(parsed.salt_per_100g) || 0,
-    typicalWeightG: Number(parsed.typical_weight_g) || 0
-  };
-}
-
-// Builds the prompt parts array, attaching the stored photo if this session started from one.
-// photo: undefined -> the photo of the item open in the fix/ask box (global state);
-//        null -> no photo; {base64, mime} -> that photo
-function buildPromptParts(promptText, photo){
-  const parts = [{text: promptText}];
-  const p = photo === undefined
-    ? (lastPhotoBase64 ? {base64: lastPhotoBase64, mime: lastPhotoMimeType} : null)
-    : photo;
-  if(p){
-    parts.push({inline_data: {mime_type: p.mime, data: p.base64}});
-  }
-  return parts;
-}
-
-// Retries a flaky async call once after a brief pause. Gemini occasionally returns
-// a truncated/malformed response; a silent retry resolves this most of the time
-// without the person ever needing to notice or intervene.
-async function withRetry(fn, retries){
-  if(retries === undefined) retries = 1;
-  let lastErr;
-  for(let attempt = 0; attempt <= retries; attempt++){
-    try{
-      return await fn();
-    }catch(e){
-      lastErr = e;
-      if(attempt < retries){
-        await new Promise(resolve=>setTimeout(resolve, 400));
-      }
-    }
-  }
-  throw lastErr;
-}
-
-async function requestMacroEstimate(baseContext, extraContext, photo){
-  const wantsWeight = mentionsWeight(baseContext) || mentionsWeight(extraContext || '');
-
-  let schema = '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number, "fiber_per_100g": number, "salt_per_100g": number';
-  if(wantsWeight){
-    schema += ', "typical_weight_g": number';
-  }
-  schema += '}';
-
-  let prompt = 'You are a nutrition estimation assistant. ' + baseContext + ' ' +
-    'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' + schema + '. ' +
-    'salt_per_100g is the salt content in grams per 100g (not sodium in mg) — typical foods range roughly 0 to 2g salt per 100g. ' +
-    'Give your best realistic estimate even if you are not fully certain.';
-
-  if(wantsWeight){
-    prompt += ' Include typical_weight_g as your best estimate of a typical single serving/item weight in grams for this specific food (e.g. one bar, one portion) — this is separate from the per-100g values.';
-  }
-
-  if(extraContext){
-    prompt += ' The user has provided corrections or additional context to improve accuracy — treat this as more reliable than your own guess: "' + extraContext + '". Update your estimate accordingly.';
-  }
-
-  const parts = buildPromptParts(prompt, photo);
-  return await withRetry(async ()=>{
-    const result = await callGeminiRaw(parts, true);
-    return parseMacroJSON(result.text, result.finishReason);
-  }, 1);
-}
-
-async function askGeminiFreeform(question){
-  let context = '';
-  if(lastPhotoBase64){
-    context = 'Look at the attached food photo. ';
-  } else if(lastTextQuery){
-    context = 'The user previously described this food: "' + lastTextQuery + '". ';
-  }
-  const prompt = context + 'Answer the user\'s question directly, concisely, and in plain text (not JSON, not markdown). Question: "' + question + '"';
-  const parts = buildPromptParts(prompt);
-  const result = await withRetry(()=>callGeminiRaw(parts, false), 1);
-  return result.text.trim();
-}
-
-let multiPhotoItems = [];
-let resultEditTarget = null; // id of the item currently open in the fix / ask box
-
-// Each item: {id, name, per-100g values, grams (string), source: 'photo'|'barcode'|'text',
-//   thumbnail, photo: {base64, mime}|null, query: text Gemini can be asked about, notes: corrections so far}
-function newItemId(){
-  return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-}
-
-function openMultiModal(){
-  multiPhotoItems = [];
-  renderMultiPhotoList();
-  document.getElementById('multiPhotoOverlay').classList.add('show');
-}
-
-document.getElementById('scanBtn').addEventListener('click', openMultiModal);
-
-document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
-  document.getElementById('multiPhotoOverlay').classList.remove('show');
-  multiPhotoItems = [];
-});
-
-// Photos and descriptions go through Gemini so they need the key; barcodes don't.
-function requireGeminiKey(){
-  if(getGeminiKey()) return true;
-  showToast('Set your Gemini API key first');
-  document.getElementById('apiKeyInput').value = '';
-  document.getElementById('apiKeyOverlay').classList.add('show');
-  return false;
-}
-
-function addItem(fields){
-  multiPhotoItems.push(Object.assign({
-    id: newItemId(), grams: '', thumbnail: null, source: 'text', photo: null, query: null, notes: []
-  }, fields));
-  renderMultiPhotoList();
-}
-
-function itemFromEstimate(result){
-  const hints = [];
-  if(result.missing && result.missing.length){
-    hints.push('Not in the database (shown as 0): ' + result.missing.join(', ') + '. Check the package.');
-  }
-  const typical = result.typicalWeightG > 0 ? Math.round(result.typicalWeightG) : 0;
-  if(typical > 0){
-    hints.push((result.weightLabel || 'Typical weight') + ' prefilled: ' + typical + 'g.');
-  }
-  return {
-    name: result.name,
-    calPer100: result.calPer100,
-    proteinPer100: result.proteinPer100,
-    carbsPer100: result.carbsPer100,
-    fatPer100: result.fatPer100,
-    fiberPer100: result.fiberPer100,
-    saltPer100: result.saltPer100,
-    grams: typical > 0 ? String(typical) : '',
-    hint: hints.join(' ')
-  };
-}
-
-async function addBarcodeToMulti(rawCode){
-  const result = await fetchBarcodeResult(rawCode);
-  if(!result) return false;
-  // Keeping the product name lets "fix / ask" fall back to Gemini if the database values look wrong
-  addItem(Object.assign(itemFromEstimate(result), {source: 'barcode', query: result.name}));
-  return true;
-}
-
-async function addTextToMulti(description){
-  if(!requireGeminiKey()) return false;
-  showLoadingOverlay('Getting estimate…');
-  let result;
-  try{
-    // null = no photo. Asking about weight ("... macros and weight") also returns a typical weight.
-    result = await requestMacroEstimate('The user describes this food: "' + description + '". Identify it and estimate its nutrition.', '', null);
-  }catch(e){
-    console.error('Gemini query failed', e);
-    hideLoadingOverlay();
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return false;
-  }
-  hideLoadingOverlay();
-  addItem(Object.assign(itemFromEstimate(result), {source: 'text', query: description}));
-  return true;
-}
-
-async function addPhotoToMulti(){
-  if(!requireGeminiKey()) return;
-  const CapCamera = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
-  if(!CapCamera){
-    showToast('Camera is only available in the installed app');
-    return;
-  }
-
-  let photo;
-  try{
-    photo = await CapCamera.getPhoto({
-      quality: 70,
-      resultType: 'base64',
-      source: 'PROMPT',
-      correctOrientation: true
-    });
-  }catch(e){
-    return; // person cancelled
-  }
-
-  if(!photo || !photo.base64String){
-    showToast('Could not read that photo');
-    return;
-  }
-
-  const mime = 'image/' + (photo.format || 'jpeg');
-  showLoadingOverlay('Analyzing photo…');
-  let result;
-  try{
-    result = await requestMacroEstimate('Look at this food photo and identify the food.', '', {base64: photo.base64String, mime});
-  }catch(e){
-    console.error('Gemini analysis failed', e);
-    hideLoadingOverlay();
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-  hideLoadingOverlay();
-
-  addItem(Object.assign(itemFromEstimate(result), {
-    source: 'photo',
-    photo: {base64: photo.base64String, mime},
-    thumbnail: null
-  }));
-}
-
-document.getElementById('multiPhotoAddBtn').addEventListener('click', addPhotoToMulti);
-
-document.getElementById('multiBarcodeAddBtn').addEventListener('click', async ()=>{
-  const code = await scanBarcodeCode('scanTextInput');
-  if(code) await addBarcodeToMulti(code);
-});
-
-// One typed field for both: a run of digits is a barcode, anything else is a description for Gemini
-document.getElementById('scanTextForm').addEventListener('submit', async function(e){
-  e.preventDefault();
-  const input = document.getElementById('scanTextInput');
-  const raw = input.value.trim();
-  if(!raw){
-    showToast('Type a barcode number or describe a food');
-    return;
-  }
-  const added = /^[\d\s-]+$/.test(raw) ? await addBarcodeToMulti(raw) : await addTextToMulti(raw);
-  if(added) input.value = '';
-});
-
-// Estimated burn (TDEE) for one day, or null if body stats aren't set up yet
-function tdeeForDate(dateStr){
-  const profile = getProfile();
-  if(!profile) return null;
-  const wi = weighInOnOrBefore(dateStr);
-  const kg = wi ? wi.kg : profile.weightKg;
-  const st = effectiveSteps(dateStr);
-  return computeTdee(profile, kg, st ? st.steps : 0).total;
-}
-
-function computeMultiPhotoTotals(){
-  let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFiber = 0, totalSalt = 0, totalGrams = 0;
-  multiPhotoItems.forEach(item=>{
-    const g = parseLocaleNumber(item.grams);
-    const scale = g / 100;
-    totalGrams += g;
-    totalCal += item.calPer100 * scale;
-    totalProtein += item.proteinPer100 * scale;
-    totalCarbs += item.carbsPer100 * scale;
-    totalFat += item.fatPer100 * scale;
-    totalFiber += (item.fiberPer100 || 0) * scale;
-    totalSalt += (item.saltPer100 || 0) * scale;
-  });
-  return {
-    calories: Math.round(totalCal),
-    protein: roundNum(totalProtein),
-    carbs: roundNum(totalCarbs),
-    fat: roundNum(totalFat),
-    fiber: roundNum(totalFiber),
-    salt: roundNum(totalSalt),
-    grams: totalGrams
-  };
-}
-
-function renderMultiPhotoList(){
-  const list = document.getElementById('multiPhotoList');
-  list.innerHTML = '';
-
-  multiPhotoItems.forEach(item=>{
-    const g = parseLocaleNumber(item.grams);
-    const subtotalCal = Math.round(item.calPer100 * (g/100));
-    const row = document.createElement('div');
-    row.className = 'multi-photo-item';
-    row.innerHTML = `
-      <div class="multi-photo-thumb multi-photo-thumb-barcode">${item.source === 'barcode' ? '🏷️' : '✨'}</div>
-      <div class="multi-photo-info">
-        <div class="multi-photo-name">${escapeHtml(item.name)}</div>
-        ${item.hint ? `<div class="multi-photo-hint">${escapeHtml(item.hint)}</div>` : ''}
-        <div class="multi-photo-macro-grid">
-          <div>
-            <label>Cal/100g</label>
-            <input type="text" inputmode="decimal" class="mp-cal-input" data-id="${item.id}" value="${roundNum(item.calPer100)}">
-          </div>
-          <div>
-            <label>Prot/100g</label>
-            <input type="text" inputmode="decimal" class="mp-protein-input" data-id="${item.id}" value="${roundNum(item.proteinPer100)}">
-          </div>
-          <div>
-            <label>Carb/100g</label>
-            <input type="text" inputmode="decimal" class="mp-carbs-input" data-id="${item.id}" value="${roundNum(item.carbsPer100)}">
-          </div>
-          <div>
-            <label>Fat/100g</label>
-            <input type="text" inputmode="decimal" class="mp-fat-input" data-id="${item.id}" value="${roundNum(item.fatPer100)}">
-          </div>
-          <div>
-            <label>Fiber/100g</label>
-            <input type="text" inputmode="decimal" class="mp-fiber-input" data-id="${item.id}" value="${roundNum(item.fiberPer100)}">
-          </div>
-          <div>
-            <label>Salt/100g</label>
-            <input type="text" inputmode="decimal" class="mp-salt-input" data-id="${item.id}" value="${roundNum(item.saltPer100)}">
-          </div>
-        </div>
-        <div class="multi-photo-grams-row">
-          <input type="text" inputmode="decimal" class="multi-photo-grams-input" data-id="${item.id}" placeholder="grams" value="${item.grams || ''}">
-          <span class="multi-photo-subtotal">${g > 0 ? subtotalCal + ' cal' : ''}</span>
-        </div>
-      </div>
-      <div class="multi-photo-side">
-        <button type="button" class="multi-photo-edit" data-id="${item.id}" aria-label="Fix or ask about this item">✎</button>
-        <button type="button" class="multi-photo-remove" data-id="${item.id}" aria-label="Remove">×</button>
-      </div>
-    `;
-    list.appendChild(row);
-  });
-
-  function refreshRowSubtotal(id){
-    const item = multiPhotoItems.find(i=>i.id === id);
-    if(!item) return;
-    const g = parseLocaleNumber(item.grams);
-    const subtotalCal = Math.round(item.calPer100 * (g/100));
-    const row = list.querySelector(`.multi-photo-item .multi-photo-grams-input[data-id="${id}"]`).closest('.multi-photo-item');
-    row.querySelector('.multi-photo-subtotal').textContent = g > 0 ? subtotalCal + ' cal' : '';
-  }
-
-  list.querySelectorAll('.multi-photo-grams-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item){
-        item.grams = input.value;
-        refreshRowSubtotal(id);
-      }
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-cal-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item){
-        item.calPer100 = parseLocaleNumber(input.value);
-        refreshRowSubtotal(id);
-      }
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-protein-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.proteinPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-carbs-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.carbsPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-fat-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.fatPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-fiber-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.fiberPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-salt-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.saltPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.multi-photo-edit').forEach(btn=>{
-    btn.addEventListener('click', ()=> openItemEditor(btn.getAttribute('data-id')));
-  });
-
-  list.querySelectorAll('.multi-photo-remove').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const id = btn.getAttribute('data-id');
-      multiPhotoItems = multiPhotoItems.filter(i=>i.id !== id);
-      renderMultiPhotoList();
-    });
-  });
-
-  updateMultiPhotoTotalDisplay();
-}
-
-function updateMultiPhotoTotalDisplay(){
-  const totalBox = document.getElementById('multiPhotoTotal');
-  if(multiPhotoItems.length === 0){
-    totalBox.textContent = 'Add at least one item to see the combined total';
-    return;
-  }
-  const totals = computeMultiPhotoTotals();
-  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span> (${totals.grams}g total)`;
-}
-
-document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
-  if(multiPhotoItems.length === 0){
-    showToast('Add at least one item first');
-    return;
-  }
-  const totals = computeMultiPhotoTotals();
-  if(totals.grams <= 0){
-    showToast('Enter grams for at least one item');
-    return;
-  }
-
-  const scale = totals.grams / 100;
-  const blendedCalPer100 = Math.round(totals.calories / scale);
-  const blendedProteinPer100 = roundNum(totals.protein / scale);
-  const blendedCarbsPer100 = roundNum(totals.carbs / scale);
-  const blendedFatPer100 = roundNum(totals.fat / scale);
-  const blendedFiberPer100 = roundNum(totals.fiber / scale);
-  const blendedSaltPer100 = roundNum(totals.salt / scale);
-
-  const names = multiPhotoItems.map(i=>i.name);
-  const combinedName = names.length > 3
-    ? names.slice(0,3).join(', ') + ' + ' + (names.length - 3) + ' more'
-    : names.join(', ');
-
-  // The blended values are per-100g, so force the form back to that mode
-  setEntryUnit('g');
-
-  document.getElementById('fName').value = combinedName;
-  document.getElementById('fGrams').value = totals.grams;
-  document.getElementById('fCal').value = blendedCalPer100;
-  document.getElementById('fProtein').value = blendedProteinPer100;
-  document.getElementById('fCarbs').value = blendedCarbsPer100;
-  document.getElementById('fFat').value = blendedFatPer100;
-  document.getElementById('fFiber').value = blendedFiberPer100;
-  document.getElementById('fSalt').value = blendedSaltPer100;
-  updateServingPreview();
-
-  document.getElementById('multiPhotoOverlay').classList.remove('show');
-  multiPhotoItems = [];
-
-  showToast('Combined total filled in — review and tap Add to log');
-  const nameField = document.getElementById('fName');
-  if(typeof nameField.scrollIntoView === 'function'){
-    nameField.scrollIntoView({behavior:'smooth', block:'center'});
-  }
-});
-
-let lastPhotoResult = null;
-let lastPhotoBase64 = null;
-let lastPhotoMimeType = null;
-let lastTextQuery = null;
-let refinementNotes = [];
-
-function showPhotoResult(result, presetGrams){
-  lastPhotoResult = result;
-  const body = document.getElementById('photoResultBody');
-  const hasTypicalWeight = result.typicalWeightG && result.typicalWeightG > 0;
-  const autoGrams = presetGrams || (hasTypicalWeight ? Math.round(result.typicalWeightG) : '');
-
-  body.innerHTML = `
-    <div class="photo-result-name">${escapeHtml(result.name)}</div>
-    <div class="photo-result-note">${escapeHtml(result.note || 'Values per 100g. Correct them with Re-analyze or ask a question, then tap Update item.')}</div>
-    <div class="photo-result-macros">
-      <div>Cal<span>${roundNum(result.calPer100)}</span></div>
-      <div>Prot<span>${roundNum(result.proteinPer100)}g</span></div>
-      <div>Carbs<span>${roundNum(result.carbsPer100)}g</span></div>
-      <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
-      <div>Fiber<span>${roundNum(result.fiberPer100)}g</span></div>
-      <div>Salt<span>${roundNum(result.saltPer100)}g</span></div>
-    </div>
-    ${hasTypicalWeight ? `<div class="photo-typical-weight">${escapeHtml(result.weightLabel || 'Typical weight')}: ~${Math.round(result.typicalWeightG)}g — filled in below, adjust if needed</div>` : ''}
-    <div class="photo-grams-field">
-      <label for="photoGramsInput">Serving size (g) — ask "how many grams is this" below to estimate</label>
-      <input type="text" inputmode="decimal" id="photoGramsInput" placeholder="e.g. 150" value="${autoGrams ? escapeHtml(String(autoGrams)) : ''}">
-    </div>
-  `;
-  document.getElementById('photoRefineInput').value = '';
-  document.getElementById('photoAskAnswer').style.display = 'none';
-  document.getElementById('photoAskAnswer').textContent = '';
-  document.getElementById('photoResultOverlay').classList.add('show');
-  setTimeout(()=>{
-    const gramsInput = document.getElementById('photoGramsInput');
-    if(gramsInput && !autoGrams) gramsInput.focus();
-  }, 50);
-}
-
-function resetPhotoState(){
-  lastPhotoResult = null;
-  lastPhotoBase64 = null;
-  lastPhotoMimeType = null;
-  lastTextQuery = null;
-  refinementNotes = [];
-}
-
-// The result box is now the per-item "fix or ask" box, opened with the pencil on a list item.
-function openItemEditor(id){
-  const item = multiPhotoItems.find(i => i.id === id);
-  if(!item) return;
-  resultEditTarget = id;
-  lastPhotoBase64 = item.photo ? item.photo.base64 : null;
-  lastPhotoMimeType = item.photo ? item.photo.mime : null;
-  lastTextQuery = item.photo ? null : (item.query || item.name);
-  refinementNotes = (item.notes || []).slice();
-  showPhotoResult({
-    name: item.name,
-    calPer100: item.calPer100,
-    proteinPer100: item.proteinPer100,
-    carbsPer100: item.carbsPer100,
-    fatPer100: item.fatPer100,
-    fiberPer100: item.fiberPer100,
-    saltPer100: item.saltPer100,
-    typicalWeightG: 0
-  }, item.grams);
-}
-
-function closeItemEditor(){
-  document.getElementById('photoResultOverlay').classList.remove('show');
-  resultEditTarget = null;
-  resetPhotoState();
-}
-
-document.getElementById('photoResultCancelBtn').addEventListener('click', closeItemEditor);
-
-document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
-  const item = multiPhotoItems.find(i => i.id === resultEditTarget);
-  if(!item || !lastPhotoResult){
-    closeItemEditor();
-    return;
-  }
-  const gramsInput = document.getElementById('photoGramsInput');
-  item.name = lastPhotoResult.name;
-  item.calPer100 = lastPhotoResult.calPer100;
-  item.proteinPer100 = lastPhotoResult.proteinPer100;
-  item.carbsPer100 = lastPhotoResult.carbsPer100;
-  item.fatPer100 = lastPhotoResult.fatPer100;
-  item.fiberPer100 = lastPhotoResult.fiberPer100;
-  item.saltPer100 = lastPhotoResult.saltPer100;
-  item.grams = gramsInput ? gramsInput.value.trim() : item.grams;
-  if(refinementNotes.length !== (item.notes || []).length) item.hint = '';
-  item.notes = refinementNotes.slice();
-  closeItemEditor();
-  renderMultiPhotoList();
-  showToast('Item updated');
-});
-
-document.getElementById('photoRefineBtn').addEventListener('click', async ()=>{
-  const note = document.getElementById('photoRefineInput').value.trim();
-  if(!note){
-    showToast('Type a note first');
-    return;
-  }
-  if(!lastPhotoBase64 && !lastTextQuery){
-    showToast('Nothing to re-analyze — take a photo or ask about a food first');
-    return;
-  }
-
-  const gramsInput = document.getElementById('photoGramsInput');
-  const preservedGrams = gramsInput ? gramsInput.value : '';
-
-  refinementNotes.push(note);
-  const combinedNote = refinementNotes.join('; ');
-
-  const refineBtn = document.getElementById('photoRefineBtn');
-  const askBtn = document.getElementById('photoAskBtn');
-  refineBtn.disabled = true;
-  askBtn.disabled = true;
-  refineBtn.textContent = '…';
-
-  document.getElementById('photoResultOverlay').classList.remove('show');
-  showLoadingOverlay('Re-analyzing…');
-
-  const baseContext = lastPhotoBase64
-    ? 'Look at this food photo and identify the food.'
-    : 'The user describes this food: "' + lastTextQuery + '". Identify it and estimate its nutrition.';
-
-  let result;
-  try{
-    result = await requestMacroEstimate(baseContext, combinedNote);
-  }catch(e){
-    console.error('Gemini re-analysis failed', e);
-    hideLoadingOverlay();
-    refineBtn.disabled = false;
-    askBtn.disabled = false;
-    refineBtn.textContent = 'Re-analyze macros';
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-
-  hideLoadingOverlay();
-  refineBtn.disabled = false;
-  askBtn.disabled = false;
-  refineBtn.textContent = 'Re-analyze macros';
-
-  if(!result){
-    showToast('Could not re-analyze that');
-    document.getElementById('photoResultOverlay').classList.add('show');
-    return;
-  }
-
-  showPhotoResult(result, preservedGrams);
-  showToast('Updated based on your note');
-});
-
-document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
-  const question = document.getElementById('photoRefineInput').value.trim();
-  if(!question){
-    showToast('Type a question first');
-    return;
-  }
-  if(!lastPhotoBase64 && !lastTextQuery){
-    showToast('Nothing to ask about yet');
-    return;
-  }
-
-  const refineBtn = document.getElementById('photoRefineBtn');
-  const askBtn = document.getElementById('photoAskBtn');
-  const originalLabel = askBtn.textContent;
-  refineBtn.disabled = true;
-  askBtn.disabled = true;
-  askBtn.textContent = '…';
-
-  let answer;
-  try{
-    answer = await askGeminiFreeform(question);
-  }catch(e){
-    console.error('Gemini question failed', e);
-    refineBtn.disabled = false;
-    askBtn.disabled = false;
-    askBtn.textContent = originalLabel;
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-
-  refineBtn.disabled = false;
-  askBtn.disabled = false;
-  askBtn.textContent = originalLabel;
-
-  const answerBox = document.getElementById('photoAskAnswer');
-  answerBox.textContent = answer;
-  answerBox.style.display = 'block';
-
-  if(mentionsWeight(question)){
-    const grams = extractGramsFromText(answer);
-    if(grams){
-      const gramsInput = document.getElementById('photoGramsInput');
-      if(gramsInput){
-        gramsInput.value = grams;
-        showToast('Serving size filled in: ' + grams + 'g');
-      }
-    }
-  }
-});
-
-(async function init(){
-  await loadSettings();
-  await loadEntries(currentDate);
-  render();
-})();
-</script>
-</body>
-</html>
+  const wi = weighInOnOrBefore(curren
