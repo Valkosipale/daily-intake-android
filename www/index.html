@@ -370,6 +370,11 @@ body{
   margin:2px 0;
 }
 
+.weekly-summary .weekly-balance{
+  margin-top:0;
+  padding-top:0;
+  border-top:none;
+}
 .long-btn{
   width:100%;
   margin-top:10px;
@@ -1417,10 +1422,11 @@ body{
   </div>
 
   <div class="backup-section">
-    <span class="eyebrow">Weekly view</span>
-    <p class="backup-desc">See 7 days at a glance with daily totals and your average. Tap a day to jump to it.</p>
+    <span class="eyebrow">Progress</span>
+    <p class="backup-desc">See how your week or month compares with your TDEE, plus your weight trend. Tap a day to jump to it.</p>
     <div class="backup-actions">
       <button type="button" id="weeklyBtn" class="backup-btn">View week</button>
+      <button type="button" id="monthlyBtn" class="backup-btn">View month</button>
     </div>
   </div>
 
@@ -1594,7 +1600,7 @@ body{
 
 <div class="data-overlay" id="weeklyOverlay">
   <div class="data-box weekly-box">
-    <div class="data-title">Weekly view</div>
+    <div class="data-title" id="weeklyTitle">Weekly view</div>
     <p class="data-desc" id="weeklyRange"></p>
     <div id="weeklyList"></div>
     <div class="weekly-summary" id="weeklySummary"></div>
@@ -2515,7 +2521,8 @@ function logWeighIn(dateStr, kg){
 const signedKg = d => (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d);
 
 // Weight trend for the 7 days the weekly view is showing (startDate..endDate, inclusive)
-function renderWeeklyWeight(startDate, endDate){
+function renderWeeklyWeight(startDate, endDate, period){
+  period = period || 'week';
   const box = document.getElementById('weeklyWeight');
   if(!box) return;
 
@@ -2525,7 +2532,7 @@ function renderWeeklyWeight(startDate, endDate){
   const title = '<div class="weekly-weight-title">Weight trend</div>';
 
   if(inWeek.length === 0){
-    box.innerHTML = title + '<div class="weight-empty">No weigh-ins this week. Enter your weight in Body stats (tap the TDEE row) to track it.</div>';
+    box.innerHTML = title + `<div class="weight-empty">No weigh-ins this ${period}. Enter your weight in Body stats (tap the TDEE row) to track it.</div>`;
     return;
   }
 
@@ -2536,24 +2543,25 @@ function renderWeeklyWeight(startDate, endDate){
     const vals = inWeek.map(w => w.kg);
     const vMin = Math.min(...vals), vMax = Math.max(...vals);
     const pts = inWeek.map(w => {
-      const x = padX + ((dateToTime(w.date) - t0) / (t1 - t0)) * (W - 2 * padX);
+      const frac = t1 === t0 ? 0.5 : (dateToTime(w.date) - t0) / (t1 - t0);
+      const x = padX + frac * (W - 2 * padX);
       const y = vMax === vMin ? H / 2 : padY + (1 - (w.kg - vMin) / (vMax - vMin)) * (H - 2 * padY);
       return [x, y];
     });
     const polyline = pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
     const dots = pts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3"/>`).join('');
-    chart = `<div class="weight-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight trend this week"><polyline points="${polyline}"/>${dots}</svg></div>`;
+    chart = `<div class="weight-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight trend"><polyline points="${polyline}"/>${dots}</svg></div>`;
   }
 
   const latest = inWeek[inWeek.length - 1];
   const avg = roundNum(inWeek.reduce((sum, w) => sum + w.kg, 0) / inWeek.length);
   let change = '';
   if(inWeek.length >= 2){
-    change = `${signedKg(roundNum(latest.kg - inWeek[0].kg))} kg over this week`;
+    change = `${signedKg(roundNum(latest.kg - inWeek[0].kg))} kg over this ${period}`;
   } else if(before){
     change = `${signedKg(roundNum(latest.kg - before.kg))} kg since ${formatDateShort(before.date)}`;
   }
-  const stats = `<div class="weight-stats">Latest ${latest.kg} kg · week average ${avg} kg${change ? '<br>' + change : ''}</div>`;
+  const stats = `<div class="weight-stats">Latest ${latest.kg} kg · ${period} average ${avg} kg${change ? '<br>' + change : ''}</div>`;
 
   // Newest first, each with its change since the weigh-in before it
   let rowsHtml = '';
@@ -2615,15 +2623,47 @@ function getDayTotalsFromStorage(dateStr){
   return totals;
 }
 
+// 'week'  = the 7 days ending on the day you're viewing
+// 'month' = the calendar month of the day you're viewing
+let periodMode = 'week';
+
+function twoDigits(n){ return String(n).padStart(2, '0'); }
+function firstOfMonth(dateStr){
+  const [y, m] = dateStr.split('-').map(Number);
+  return y + '-' + twoDigits(m) + '-01';
+}
+function lastOfMonth(dateStr){
+  const [y, m] = dateStr.split('-').map(Number);
+  return y + '-' + twoDigits(m) + '-' + twoDigits(new Date(y, m, 0).getDate());
+}
+function shiftMonth(dateStr, delta){
+  const [y, m] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1 + delta, 1);
+  return dt.getFullYear() + '-' + twoDigits(dt.getMonth() + 1) + '-01';
+}
+
+// First and last day shown. The current month stops at today so future days don't clutter the list.
+function periodRange(){
+  if(periodMode === 'month'){
+    const start = firstOfMonth(weeklyAnchor);
+    const monthEnd = lastOfMonth(weeklyAnchor);
+    const today = todayStr();
+    return {start, end: (today >= start && today <= monthEnd) ? today : monthEnd};
+  }
+  return {start: shiftDate(weeklyAnchor, -6), end: weeklyAnchor};
+}
+
 function renderWeekly(){
-  const days = [];
-  for(let i = 0; i < 7; i++){
-    const ds = shiftDate(weeklyAnchor, -i);
-    days.push({date: ds, totals: getDayTotalsFromStorage(ds)});
+  const {start, end} = periodRange();
+  const noun = periodMode === 'month' ? 'month' : 'week';
+
+  const days = []; // newest first
+  for(let d = end; d >= start; d = shiftDate(d, -1)){
+    days.push({date: d, totals: getDayTotalsFromStorage(d)});
   }
 
   document.getElementById('weeklyRange').textContent =
-    formatDateShort(days[6].date) + ' – ' + formatDateShort(days[0].date) + ' · tap a day to open it';
+    formatDateShort(start) + ' – ' + formatDateShort(end) + ' · tap a day to open it';
 
   const today = todayStr();
   const list = document.getElementById('weeklyList');
@@ -2664,81 +2704,52 @@ function renderWeekly(){
     });
   });
 
-  // Average only over days that actually have something logged — an empty day
-  // almost certainly means "didn't log", not "ate nothing", so counting it would
-  // drag the average down misleadingly.
-  renderWeeklyWeight(days[6].date, days[0].date);
+  renderWeeklyWeight(start, end, noun);
 
-  const logged = days.filter(d => d.totals.count > 0);
   const summary = document.getElementById('weeklySummary');
-
+  const logged = days.filter(d => d.totals.count > 0);
   if(logged.length === 0){
     summary.textContent = 'Nothing logged in this range yet.';
     return;
   }
 
-  const sum = logged.reduce((acc, d)=>{
-    acc.cal += d.totals.cal;
-    acc.protein += d.totals.protein;
-    acc.carbs += d.totals.carbs;
-    acc.fat += d.totals.fat;
-    acc.fiber += d.totals.fiber;
-    acc.salt += d.totals.salt;
-    return acc;
-  }, {cal:0, protein:0, carbs:0, fat:0, fiber:0, salt:0});
-
-  const n = logged.length;
-  const avgCal = Math.round(sum.cal / n);
-  const diff = avgCal - currentGoal;
-  const diffText = currentGoal > 0
-    ? `${diff > 0 ? '+' : ''}${diff.toLocaleString()} cal vs your ${currentGoal.toLocaleString()} goal`
-    : '';
-
-  // Week balance: what was eaten against the goal and against the estimated burn (TDEE),
-  // counted over the logged days only (an unlogged day isn't a zero-calorie day).
-  const eatenTotal = Math.round(sum.cal);
+  // The one number this box shows: eaten against the estimated burn (TDEE), over the days that
+  // were logged (an unlogged day isn't a zero-calorie day).
+  const tdeeByDay = logged.map(d => tdeeForDate(d.date));
+  if(!tdeeByDay.every(v => v !== null)){
+    summary.textContent = `Add your body stats in Settings to see how your ${noun} compares with your TDEE.`;
+    return;
+  }
+  const eatenTotal = Math.round(logged.reduce((sum, d) => sum + d.totals.cal, 0));
+  const tdeeTotal = tdeeByDay.reduce((a, b) => a + b, 0);
+  const vsTdee = eatenTotal - tdeeTotal;
   const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toLocaleString();
   const word = v => (v > 0 ? 'over' : v < 0 ? 'under' : 'on target');
   const todayNote = logged.some(d => d.date === today) ? ' · includes today so far' : '';
-  let balanceHtml = '<div class="weekly-balance">';
-  if(currentGoal > 0){
-    const goalTotal = currentGoal * n;
-    const vsGoal = eatenTotal - goalTotal;
-    balanceHtml += `<div class="wb-row"><span class="wb-label">Week vs your goal</span><span class="wb-val">${signed(vsGoal)} cal <small>${word(vsGoal)}</small></span></div>` +
-      `<div class="wb-sub">${eatenTotal.toLocaleString()} eaten − ${goalTotal.toLocaleString()} goal (${n} logged day${n === 1 ? '' : 's'} × ${currentGoal.toLocaleString()})${todayNote}</div>`;
-  }
-  const tdeeByDay = logged.map(d => tdeeForDate(d.date));
-  if(tdeeByDay.every(v => v !== null)){
-    const tdeeTotal = tdeeByDay.reduce((a, b) => a + b, 0);
-    const vsTdee = eatenTotal - tdeeTotal;
-    balanceHtml += `<div class="wb-row"><span class="wb-label">Week vs your TDEE</span><span class="wb-val">${signed(vsTdee)} cal <small>${word(vsTdee)}</small></span></div>` +
-      `<div class="wb-sub">${eatenTotal.toLocaleString()} eaten − ${tdeeTotal.toLocaleString()} estimated burn${todayNote}</div>`;
-  } else {
-    balanceHtml += '<div class="wb-sub" style="margin-top:8px;">Add your body stats in Settings to compare against your TDEE too.</div>';
-  }
-  balanceHtml += '</div>';
-
-  summary.innerHTML = `
-    Average over ${n} logged day${n === 1 ? '' : 's'}
-    <span class="avg-cal">${avgCal.toLocaleString()} cal</span>
-    <span class="avg-macros">P ${roundNum(sum.protein / n)}g · C ${roundNum(sum.carbs / n)}g · F ${roundNum(sum.fat / n)}g · Fiber ${roundNum(sum.fiber / n)}g · Salt ${roundNum(sum.salt / n)}g</span>
-    ${diffText}<br>
-    Week total: ${Math.round(sum.cal).toLocaleString()} cal${balanceHtml}`;
+  summary.innerHTML = `<div class="weekly-balance">` +
+    `<div class="wb-row"><span class="wb-label">${noun === 'month' ? 'Month' : 'Week'} vs your TDEE</span><span class="wb-val">${signed(vsTdee)} cal <small>${word(vsTdee)}</small></span></div>` +
+    `<div class="wb-sub">${eatenTotal.toLocaleString()} eaten − ${tdeeTotal.toLocaleString()} estimated burn${todayNote}</div>` +
+    `</div>`;
 }
 
-document.getElementById('weeklyBtn').addEventListener('click', ()=>{
+function openPeriod(mode){
+  periodMode = mode;
   weeklyAnchor = currentDate;
+  document.getElementById('weeklyTitle').textContent = mode === 'month' ? 'Monthly view' : 'Weekly view';
   renderWeekly();
   document.getElementById('weeklyOverlay').classList.add('show');
-});
+}
+
+document.getElementById('weeklyBtn').addEventListener('click', ()=> openPeriod('week'));
+document.getElementById('monthlyBtn').addEventListener('click', ()=> openPeriod('month'));
 
 document.getElementById('weeklyPrevBtn').addEventListener('click', ()=>{
-  weeklyAnchor = shiftDate(weeklyAnchor, -7);
+  weeklyAnchor = periodMode === 'month' ? shiftMonth(weeklyAnchor, -1) : shiftDate(weeklyAnchor, -7);
   renderWeekly();
 });
 
 document.getElementById('weeklyNextBtn').addEventListener('click', ()=>{
-  weeklyAnchor = shiftDate(weeklyAnchor, 7);
+  weeklyAnchor = periodMode === 'month' ? shiftMonth(weeklyAnchor, 1) : shiftDate(weeklyAnchor, 7);
   renderWeekly();
 });
 
