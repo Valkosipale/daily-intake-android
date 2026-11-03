@@ -288,6 +288,25 @@ body{
   font-size:10px;
   color:var(--ink-soft);
 }
+.weekly-cal small{
+  display:block;
+  font-family:'Space Mono',monospace;
+  font-size:9px;
+  font-weight:normal;
+  color:var(--ink-soft);
+  margin-top:2px;
+}
+.monthly-day-stats{
+  grid-column:1 / -1;
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px 14px;
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  line-height:1.5;
+  color:var(--ink);
+}
+.monthly-day-stats .missing{color:var(--ink-soft);}
 .weekly-summary{
   border:1px solid var(--accent);
   padding:10px 12px;
@@ -2677,13 +2696,23 @@ function renderWeekly(){
     const shortDate = String(d).padStart(2, '0') + '/' + String(m).padStart(2, '0');
     const t = day.totals;
     const isToday = day.date === today;
+    let dailyStats = '';
+    if(periodMode === 'month'){
+      const tdee = tdeeForDate(day.date);
+      const steps = effectiveSteps(day.date);
+      dailyStats = `<div class="monthly-day-stats">
+        <span class="${tdee === null ? 'missing' : ''}">${tdee === null ? 'TDEE — add body stats' : `TDEE (est.) ${tdee.toLocaleString()} kcal`}</span>
+        <span class="${steps ? '' : 'missing'}">${steps ? `${steps.steps.toLocaleString()} steps` : 'Steps not recorded'}</span>
+      </div>`;
+    }
 
     if(t.count === 0){
       return `
         <button type="button" class="weekly-row empty" data-date="${day.date}">
           <div class="weekly-day ${isToday ? 'is-today' : ''}">${escapeHtml(weekday)}<br>${shortDate}</div>
           <div class="weekly-bar-track"><div class="weekly-bar-fill" style="width:0%"></div></div>
-          <div class="weekly-cal">—</div>
+          <div class="weekly-cal">—${periodMode === 'month' ? '<small>not logged</small>' : ''}</div>
+          ${dailyStats}
         </button>`;
     }
 
@@ -2693,7 +2722,8 @@ function renderWeekly(){
       <button type="button" class="weekly-row" data-date="${day.date}">
         <div class="weekly-day ${isToday ? 'is-today' : ''}">${escapeHtml(weekday)}<br>${shortDate}</div>
         <div class="weekly-bar-track"><div class="weekly-bar-fill ${over ? 'over' : ''}" style="width:${pct}%"></div></div>
-        <div class="weekly-cal">${Math.round(t.cal).toLocaleString()}</div>
+        <div class="weekly-cal">${Math.round(t.cal).toLocaleString()}${periodMode === 'month' ? '<small>kcal eaten</small>' : ''}</div>
+        ${dailyStats}
         <div class="weekly-macros">P ${roundNum(t.protein)}g · C ${roundNum(t.carbs)}g · F ${roundNum(t.fat)}g · Fiber ${roundNum(t.fiber)}g · Salt ${roundNum(t.salt)}g</div>
       </button>`;
   }).join('');
