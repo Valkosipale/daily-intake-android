@@ -1575,22 +1575,8 @@ body{
       <label for="bodySteps" id="bodyStepsLabel">Steps</label>
       <input type="text" inputmode="numeric" id="bodySteps" placeholder="e.g. 6800">
     </div>
-    <div class="field full" id="stepsSourceField" style="margin-top:12px;">
-      <label for="stepsSource">Automatic step source</label>
-      <select id="stepsSource">
-        <option value="samsung">Samsung Health (including synced watch steps)</option>
-        <option value="all">Health Connect combined total</option>
-      </select>
-    </div>
-    <div class="steps-status" id="stepsStatus" role="status" aria-live="polite"></div>
+    <div class="steps-status" id="stepsStatus"></div>
     <button type="button" class="backup-btn api-key-long-btn" id="readStepsBtn" style="margin-top:0;">Connect automatic steps</button>
-    <button type="button" class="backup-btn api-key-long-btn" id="runStepCheckBtn">Check step data</button>
-    <div id="stepCheckPanel" hidden>
-      <p class="body-note" id="stepCheckSummary" role="status" aria-live="polite"></p>
-      <label for="stepCheckReport">Step diagnostic report (stays on this device until you share it)</label>
-      <textarea id="stepCheckReport" readonly rows="10" style="width:100%;margin:8px 0;" aria-label="Step diagnostic report"></textarea>
-      <button type="button" class="backup-btn" id="copyStepCheckBtn" disabled>Copy step report</button>
-    </div>
 
     <div class="field full" style="margin-top:14px;">
       <label for="gymMinutes">Gym workout (minutes)</label>
@@ -3152,7 +3138,7 @@ function weighInOnOrBefore(dateStr){
   return best;
 }
 
-// ---- Steps per day: manual, combined (phone), and Samsung totals kept separately ----
+// ---- Steps per day: {manual?: n, phone?: n}; the higher of the two is used ----
 function getStepsMap(){
   if(!hasStorage()) return {};
   try{
@@ -3179,11 +3165,10 @@ function setStepsField(dateStr, field, value){
 
 function effectiveSteps(dateStr){
   const e = getStepsMap()[dateStr];
-  if(!e) return null;
-  const source = getStepSource();
-  const automatic = source === 'samsung' ? e.samsung : e.phone;
-  if(e.manual === undefined && automatic === undefined) return null;
-  return {steps: Math.max(Number(e.manual) || 0, Number(automatic) || 0), manual: e.manual, phone: automatic, source};
+  if(!e || (e.manual === undefined && e.phone === undefined)) return null;
+  const manual = Number(e.manual) || 0;
+  const phone = Number(e.phone) || 0;
+  return {steps: Math.max(manual, phone), manual: e.manual, phone: e.phone};
 }
 
 // Digits only, so "6 842" or "6,842" or "6.842" all mean 6842
@@ -3228,17 +3213,6 @@ function getHealthPlugin(){
   return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.HealthPlugin;
 }
 
-const SAMSUNG_HEALTH_PACKAGE = 'com.sec.android.app.shealth';
-
-function getStepSource(){
-  try{ return window.localStorage.getItem('dic:stepSource') === 'all' ? 'all' : 'samsung'; }
-  catch(e){ return 'samsung'; }
-}
-
-function stepSourceLabel(source){
-  return source === 'samsung' ? 'Samsung Health' : 'Health Connect combined total';
-}
-
 // The plugin's TypeScript types say permissions come back as an array of {NAME: bool}, but its
 // Android code returns one object {NAME: bool}. Accept either.
 function healthPermissionGranted(resp, name){
@@ -3263,12 +3237,10 @@ const stepsRefreshInFlight = {};
 async function refreshPhoneSteps(dateStr, opts){
   const Health = getHealthPlugin();
   if(!Health) return {status: 'no-plugin'};
-  const source = getStepSource();
-  const refreshKey = source + ':' + dateStr;
-  if(stepsRefreshInFlight[refreshKey]) return stepsRefreshInFlight[refreshKey];
+  if(stepsRefreshInFlight[dateStr]) return stepsRefreshInFlight[dateStr];
   const force = !!(opts && opts.force);
   const now = Date.now();
-  if(!force && lastStepsRefresh[refreshKey] && now - lastStepsRefresh[refreshKey] < 20000) return {status: 'throttled'};
+  if(!force && lastStepsRefresh[dateStr] && now - lastStepsRefresh[dateStr] < 20000) return {status: 'throttled'};
 
   const read = async () => {
     try{
@@ -3281,12 +3253,8 @@ async function refreshPhoneSteps(dateStr, opts){
         startDate: localMidnightIso(dateStr),
         endDate: localMidnightIso(shiftDate(dateStr, 1)),
         dataType: 'steps',
-        bucket: 'day',
-        sourcePackage: source === 'samsung' ? SAMSUNG_HEALTH_PACKAGE : ''
+        bucket: 'day'
       });
-      if(source === 'samsung' && (!res || res.sourcePackage !== SAMSUNG_HEALTH_PACKAGE)){
-        throw new Error('This Android build cannot select Samsung Health. Install the latest APK.');
-      }
       const rows = res && res.aggregatedData;
       if(!Array.isArray(rows)) throw new Error('The phone returned an invalid step reading.');
       // Empty/null buckets mean no data, rather than a measured zero.
@@ -3295,10 +3263,10 @@ async function refreshPhoneSteps(dateStr, opts){
       if(!values.length) return {status: 'no-data'};
       const steps = Math.round(values.reduce((sum, n) => sum + n, 0));
       if(!Number.isSafeInteger(steps)) throw new Error('The phone returned an invalid step count.');
-      setStepsField(dateStr, source === 'samsung' ? 'samsung' : 'phone', steps);
-      lastStepsRefresh[refreshKey] = Date.now();
+      setStepsField(dateStr, 'phone', steps);
+      lastStepsRefresh[dateStr] = Date.now();
       updateTdeeDisplay();
-      if(dateStr === currentDate && source === getStepSource()){
+      if(dateStr === currentDate){
         setStepsStatus(describePhoneSteps());
         updateBodyPreview();
       }
@@ -3308,19 +3276,17 @@ async function refreshPhoneSteps(dateStr, opts){
       return {status: 'error', message: (e && e.message) ? e.message : String(e)};
     }
   };
-  stepsRefreshInFlight[refreshKey] = read();
+  stepsRefreshInFlight[dateStr] = read();
   try{
-    const result = await stepsRefreshInFlight[refreshKey];
-    if(dateStr === currentDate && source === getStepSource()){
+    const result = await stepsRefreshInFlight[dateStr];
+    if(dateStr === currentDate){
       if(result.status === 'no-permission') setStepsStatus('Step access is off. Connect automatic steps to grant access in Health Connect.');
       if(result.status === 'unavailable') setStepsStatus('Health Connect is unavailable. Install or update it, then connect automatic steps.');
-      if(result.status === 'no-data') setStepsStatus(source === 'samsung'
-        ? 'Samsung Health has not shared a step total for this day with Health Connect. Sync your watch in Samsung Health, then check its Health Connect sharing. No phone total is substituted.'
-        : 'No combined step total is available for this day. Saved totals for this source are kept.');
+      if(result.status === 'no-data') setStepsStatus('Connected, but no new step data is available for this day. Check that your recording app shares steps with Health Connect. Saved totals are kept.');
       if(result.status === 'error') setStepsStatus('Could not refresh steps. Saved totals are kept; the app will try again.');
     }
     return result;
-  }finally{ delete stepsRefreshInFlight[refreshKey]; }
+  }finally{ delete stepsRefreshInFlight[dateStr]; }
 }
 
 function setStepsStatus(text){
@@ -3335,11 +3301,9 @@ function describePhoneSteps(){
   const st = effectiveSteps(currentDate);
   const phone = st ? Number(st.phone) || 0 : 0;
   if(st && st.phone !== undefined){
-    return `Automatic steps — ${stepSourceLabel(getStepSource())}: ${phone.toLocaleString()} on ${formatDateShort(currentDate)}. Refreshes every minute while this app is open and when you return. If you type a number, the higher one is used.`;
+    return `Automatic steps: ${phone.toLocaleString()} on ${formatDateShort(currentDate)}. Refreshes every minute while this app is open and when you return. If you type a number, the higher one is used.`;
   }
-  return getStepSource() === 'samsung'
-    ? 'Connect once to read Samsung Health steps shared with Health Connect, including watch steps after Samsung syncs them. Manual steps still work.'
-    : 'Connect once to read Health Connect’s combined step total. Manual steps still work.';
+  return 'Connect Health Connect once to sync steps automatically. Google Fit or Samsung Health must record and share steps with Health Connect. Manual steps still work.';
 }
 
 async function connectPhoneSteps(){
@@ -3378,7 +3342,7 @@ async function connectPhoneSteps(){
       showToast(`Automatic steps connected: ${r.steps.toLocaleString()} steps`);
       setStepsStatus(describePhoneSteps());
     } else if(r.status === 'no-data'){
-      // refreshPhoneSteps already explains which source has no data.
+      setStepsStatus('Connected, but Health Connect has no steps for this day. It only has steps if an app like Google Fit or Samsung Health records them.');
     } else if(r.status === 'error'){
       showErrorModal(r.message, 'Reading steps failed');
     } else {
@@ -3470,9 +3434,6 @@ function openBodyDialog(){
   document.getElementById('bodySteps').value = (st && st.manual !== undefined) ? String(st.manual) : '';
 
   document.getElementById('readStepsBtn').style.display = getHealthPlugin() ? '' : 'none';
-  document.getElementById('runStepCheckBtn').style.display = getHealthPlugin() ? '' : 'none';
-  document.getElementById('stepsSourceField').style.display = getHealthPlugin() ? '' : 'none';
-  document.getElementById('stepsSource').value = getStepSource();
   setStepsStatus(describePhoneSteps());
   setBodySex(p ? p.sex : null);
   document.getElementById('bodyOverlay').classList.add('show');
@@ -3533,15 +3494,6 @@ document.getElementById('bodyWeight').addEventListener('input', ()=>{ bodyWeight
 document.getElementById('gymMinutes').addEventListener('input', updateBodyPreview);
 document.getElementById('gymIntensity').addEventListener('change', updateBodyPreview);
 document.getElementById('readStepsBtn').addEventListener('click', connectPhoneSteps);
-document.getElementById('stepsSource').addEventListener('change', async e=>{
-  const source = e.target.value === 'all' ? 'all' : 'samsung';
-  try{ window.localStorage.setItem('dic:stepSource', source); }
-  catch(err){ showToast('Could not save step source'); return; }
-  setStepsStatus(describePhoneSteps());
-  updateTdeeDisplay();
-  updateBodyPreview();
-  await refreshPhoneSteps(currentDate, {force: true});
-});
 document.getElementById('bodyCancelBtn').addEventListener('click', closeBodyDialog);
 document.getElementById('bodySaveBtn').addEventListener('click', saveBodyDialog);
 document.getElementById('bodyOverlay').addEventListener('click', (e)=>{
@@ -3576,7 +3528,6 @@ function collectAllData(){
     data.hiddenItems = getHiddenPreviousItemNames();
     data.profile = getProfile();
     data.steps = getStepsMap();
-    data.stepSource = getStepSource();
     data.gym = getGymMap();
   }catch(e){ console.error('Failed to collect data', e); }
   return data;
@@ -3623,7 +3574,6 @@ function restoreAllData(data){
         if(!e || typeof e !== 'object') return;
         const entry = {};
         if(e.manual !== undefined && e.manual !== null && isFinite(Number(e.manual))) entry.manual = Number(e.manual);
-        if(e.samsung !== undefined && e.samsung !== null && isFinite(Number(e.samsung))) entry.samsung = Number(e.samsung);
         if(e.phone !== undefined && e.phone !== null && isFinite(Number(e.phone))) entry.phone = Number(e.phone);
         if(Object.keys(entry).length) merged[d] = entry; // the backup wins for that day
       });
@@ -3644,7 +3594,6 @@ function restoreAllData(data){
       });
       window.localStorage.setItem('dic:gym', JSON.stringify(mergedGym));
     }
-    if(data.stepSource === 'samsung' || data.stepSource === 'all') window.localStorage.setItem('dic:stepSource', data.stepSource);
     return true;
   }catch(e){
     console.error('Failed to restore data', e);
@@ -4600,6 +4549,5 @@ document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
   refreshPhoneSteps(currentDate);
 })();
 </script>
-<script src="step-diagnostics.js"></script>
 </body>
 </html>
