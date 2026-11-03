@@ -1576,7 +1576,7 @@ body{
       <input type="text" inputmode="numeric" id="bodySteps" placeholder="e.g. 6800">
     </div>
     <div class="steps-status" id="stepsStatus"></div>
-    <button type="button" class="backup-btn api-key-long-btn" id="readStepsBtn" style="margin-top:0;">Read steps from phone</button>
+    <button type="button" class="backup-btn api-key-long-btn" id="readStepsBtn" style="margin-top:0;">Connect automatic steps</button>
 
     <div class="field full" style="margin-top:14px;">
       <label for="gymMinutes">Gym workout (minutes)</label>
@@ -3230,45 +3230,63 @@ function localMidnightIso(dateStr){
 }
 
 const lastStepsRefresh = {};
+const stepsRefreshInFlight = {};
 
 // Reads the day's step total. Only ever READS - asking for permission is left to the button,
 // so nothing pops up at startup. Returns {status, steps?, message?}.
 async function refreshPhoneSteps(dateStr, opts){
   const Health = getHealthPlugin();
   if(!Health) return {status: 'no-plugin'};
+  if(stepsRefreshInFlight[dateStr]) return stepsRefreshInFlight[dateStr];
   const force = !!(opts && opts.force);
   const now = Date.now();
   if(!force && lastStepsRefresh[dateStr] && now - lastStepsRefresh[dateStr] < 20000) return {status: 'throttled'};
-  lastStepsRefresh[dateStr] = now;
 
-  try{
-    // isHealthAvailable() must come first: it is what creates the plugin's Health Connect client
-    const avail = await Health.isHealthAvailable();
-    if(!(avail && avail.available)) return {status: 'unavailable'};
+  const read = async () => {
+    try{
+      const avail = await Health.isHealthAvailable();
+      if(!(avail && avail.available)) return {status: 'unavailable'};
+      const perm = await Health.checkHealthPermissions({permissions: ['READ_STEPS']});
+      if(!healthPermissionGranted(perm, 'READ_STEPS')) return {status: 'no-permission'};
 
-    const perm = await Health.checkHealthPermissions({permissions: ['READ_STEPS']});
-    if(!healthPermissionGranted(perm, 'READ_STEPS')) return {status: 'no-permission'};
-
-    const res = await Health.queryAggregated({
-      startDate: localMidnightIso(dateStr),
-      endDate: localMidnightIso(shiftDate(dateStr, 1)),
-      dataType: 'steps',
-      bucket: 'day'
-    });
-    const rows = (res && res.aggregatedData) || [];
-    const steps = Math.round(rows.reduce((sum, r) => sum + (Number(r && r.value) || 0), 0));
-
-    // Never lower a good reading to zero because of one empty answer
-    const stored = getStepsMap()[dateStr];
-    if(steps > 0 || !stored || stored.phone === undefined){
+      const res = await Health.queryAggregated({
+        startDate: localMidnightIso(dateStr),
+        endDate: localMidnightIso(shiftDate(dateStr, 1)),
+        dataType: 'steps',
+        bucket: 'day'
+      });
+      const rows = res && res.aggregatedData;
+      if(!Array.isArray(rows)) throw new Error('The phone returned an invalid step reading.');
+      // Empty/null buckets mean no data, rather than a measured zero.
+      const values = rows.filter(r => r && r.value !== null && r.value !== undefined).map(r => Number(r.value));
+      if(values.some(n => !Number.isFinite(n) || n < 0)) throw new Error('The phone returned an invalid step count.');
+      if(!values.length) return {status: 'no-data'};
+      const steps = Math.round(values.reduce((sum, n) => sum + n, 0));
+      if(!Number.isSafeInteger(steps)) throw new Error('The phone returned an invalid step count.');
       setStepsField(dateStr, 'phone', steps);
+      lastStepsRefresh[dateStr] = Date.now();
+      updateTdeeDisplay();
+      if(dateStr === currentDate){
+        setStepsStatus(describePhoneSteps());
+        updateBodyPreview();
+      }
+      return {status: 'ok', steps};
+    }catch(e){
+      console.error('Reading phone steps failed', e);
+      return {status: 'error', message: (e && e.message) ? e.message : String(e)};
     }
-    updateTdeeDisplay();
-    return {status: steps > 0 ? 'ok' : 'no-data', steps};
-  }catch(e){
-    console.error('Reading phone steps failed', e);
-    return {status: 'error', message: (e && e.message) ? e.message : String(e)};
-  }
+  };
+  stepsRefreshInFlight[dateStr] = read();
+  try{
+    const result = await stepsRefreshInFlight[dateStr];
+    if(dateStr === currentDate){
+      if(result.status === 'no-permission') setStepsStatus('Step access is off. Connect automatic steps to grant access in Health Connect.');
+      if(result.status === 'unavailable') setStepsStatus('Health Connect is unavailable. Install or update it, then connect automatic steps.');
+      if(result.status === 'no-data') setStepsStatus('Connected, but no new step data is available for this day. Check that your recording app shares steps with Health Connect. Saved totals are kept.');
+      if(result.status === 'error') setStepsStatus('Could not refresh steps. Saved totals are kept; the app will try again.');
+    }
+    return result;
+  }finally{ delete stepsRefreshInFlight[dateStr]; }
 }
 
 function setStepsStatus(text){
@@ -3282,10 +3300,10 @@ function describePhoneSteps(){
   }
   const st = effectiveSteps(currentDate);
   const phone = st ? Number(st.phone) || 0 : 0;
-  if(phone > 0){
-    return `Phone (Health Connect): ${phone.toLocaleString()} steps on ${formatDateShort(currentDate)}. If you also type a number, the higher one is used.`;
+  if(st && st.phone !== undefined){
+    return `Automatic steps: ${phone.toLocaleString()} on ${formatDateShort(currentDate)}. Refreshes every minute while this app is open and when you return. If you type a number, the higher one is used.`;
   }
-  return 'No phone steps yet. Tap the button to connect Health Connect. It only has steps if an app like Google Fit or Samsung Health records them.';
+  return 'Connect Health Connect once to sync steps automatically. Google Fit or Samsung Health must record and share steps with Health Connect. Manual steps still work.';
 }
 
 async function connectPhoneSteps(){
@@ -3294,6 +3312,10 @@ async function connectPhoneSteps(){
     showToast("Automatic steps aren't available in this build — type them in");
     return;
   }
+  const button = document.getElementById('readStepsBtn');
+  if(button.disabled) return;
+  button.disabled = true;
+  setStepsStatus('Connecting to Health Connect…');
   try{
     const avail = await Health.isHealthAvailable();
     if(!(avail && avail.available)){
@@ -3301,6 +3323,7 @@ async function connectPhoneSteps(){
       if(open){
         try{ await Health.showHealthConnectInPlayStore(); }catch(e){ /* nothing more to do */ }
       }
+      setStepsStatus('Install or update Health Connect, then connect again.');
       return;
     }
 
@@ -3316,7 +3339,7 @@ async function connectPhoneSteps(){
 
     const r = await refreshPhoneSteps(currentDate, {force: true});
     if(r.status === 'ok'){
-      showToast(`Read ${r.steps.toLocaleString()} steps`);
+      showToast(`Automatic steps connected: ${r.steps.toLocaleString()} steps`);
       setStepsStatus(describePhoneSteps());
     } else if(r.status === 'no-data'){
       setStepsStatus('Connected, but Health Connect has no steps for this day. It only has steps if an app like Google Fit or Samsung Health records them.');
@@ -3328,7 +3351,10 @@ async function connectPhoneSteps(){
     updateBodyPreview();
   }catch(e){
     console.error('Connecting steps failed', e);
+    setStepsStatus('Could not connect. Your saved and manual steps are unchanged. Try again.');
     showErrorModal((e && e.message) ? e.message : String(e), 'Steps connection failed');
+  }finally{
+    button.disabled = false;
   }
 }
 
@@ -3413,7 +3439,7 @@ function openBodyDialog(){
   document.getElementById('bodyOverlay').classList.add('show');
   // Pick up any steps the phone has recorded since the app was last open
   refreshPhoneSteps(currentDate).then(r => {
-    if(r && (r.status === 'ok' || r.status === 'no-data')){
+    if(r && r.status === 'ok'){
       setStepsStatus(describePhoneSteps());
       updateBodyPreview();
     }
@@ -3476,8 +3502,13 @@ document.getElementById('bodyOverlay').addEventListener('click', (e)=>{
 
 // Coming back to the app is when new steps have usually piled up
 document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible') refreshPhoneSteps(currentDate);
+  if(document.visibilityState === 'visible') refreshPhoneSteps(currentDate, {force: true});
 });
+
+// Health Connect records in the background; read only while our UI is visible.
+setInterval(()=>{
+  if(document.visibilityState === 'visible') refreshPhoneSteps(currentDate);
+}, 60000);
 
 function collectAllData(){
   const data = {app:'daily-intake-calculator', exportedAt:new Date().toISOString(), version:1, settings:null, logs:{}};

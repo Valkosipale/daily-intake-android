@@ -1,0 +1,125 @@
+name: Publish Health Connect preview
+
+on:
+  push:
+    branches: [codex/health-connect-preview]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Test automatic step sync
+        run: npm test
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Configure Android project for barcode scanning
+        run: |
+          python3 - << 'PY'
+          import re, sys
+          from xml.dom import minidom
+
+          manifest_path = 'android/app/src/main/AndroidManifest.xml'
+          gradle_path = 'android/app/build.gradle'
+
+          with open(manifest_path) as f:
+              manifest = f.read()
+
+          # 1) Camera + flashlight permissions (before <application>)
+          perms = ''
+          for p in ('android.permission.CAMERA', 'android.permission.FLASHLIGHT'):
+              if p not in manifest:
+                  perms += '    <uses-permission android:name="%s" />\n' % p
+          if perms:
+              manifest, n = re.subn(r'([ \t]*)<application', lambda m: perms + m.group(0), manifest, count=1)
+              if n != 1:
+                  sys.exit('ERROR: could not find <application> in AndroidManifest.xml')
+
+          # 2) Google ML Kit module dependency (inside <application>)
+          if 'com.google.mlkit.vision.DEPENDENCIES' not in manifest:
+              meta = '<meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />'
+              manifest, n = re.subn(r'(<application[^>]*>)', lambda m: m.group(1) + '\n        ' + meta, manifest, count=1)
+              if n != 1:
+                  sys.exit('ERROR: could not add meta-data to <application>')
+
+          minidom.parseString(manifest)  # fail the build early if the XML is malformed
+          with open(manifest_path, 'w') as f:
+              f.write(manifest)
+
+          # 3) Data binding, required by the barcode scanner plugin
+          with open(gradle_path) as f:
+              gradle = f.read()
+          if 'dataBinding' not in gradle:
+              block = '\n    buildFeatures {\n        dataBinding true\n    }\n    dataBinding {\n        enabled = true\n    }'
+              gradle, n = re.subn(r'(\nandroid\s*\{)', lambda m: m.group(1) + block, gradle, count=1)
+              if n != 1:
+                  sys.exit('ERROR: could not find android { } block in app/build.gradle')
+              with open(gradle_path, 'w') as f:
+                  f.write(gradle)
+
+          print('Android project configured for barcode scanning')
+          PY
+
+      - name: Configure Android project for phone steps (Health Connect)
+        run: python3 scripts/configure-health.py
+
+      - name: Generate app icons and splash screen
+        run: npx capacitor-assets generate --android
+
+      - name: Sync web assets into Android project
+        run: npx cap sync android
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-intake-calculator-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publish preview APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-health-connect-debug.apk
+          sha256sum daily-intake-health-connect-debug.apk > SHA256SUMS
+          cat > release-notes.md <<'NOTES'
+          Automatic daily steps from Health Connect, with walking-calorie and TDEE updates.
+
+          Tap TDEE/body stats → Connect automatic steps and allow step access. Google Fit, Samsung Health, or another recording app must share steps with Health Connect.
+
+          This is a debug-signed preview. Automated tests and the Android build run before publication. Actual Health Connect authorization and import still require testing on a phone.
+          NOTES
+          if gh release view health-connect-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload health-connect-preview-2026-11-04 daily-intake-health-connect-debug.apk SHA256SUMS --clobber
+          else
+            gh release create health-connect-preview-2026-11-04 daily-intake-health-connect-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Health Connect steps — preview APK' --notes-file release-notes.md --prerelease --latest=false
+          fi
