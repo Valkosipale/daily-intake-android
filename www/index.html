@@ -3497,6 +3497,7 @@ function collectAllData(){
     data.hiddenItems = getHiddenPreviousItemNames();
     data.profile = getProfile();
     data.steps = getStepsMap();
+    data.gym = getGymMap();
   }catch(e){ console.error('Failed to collect data', e); }
   return data;
 }
@@ -3546,6 +3547,21 @@ function restoreAllData(data){
         if(Object.keys(entry).length) merged[d] = entry; // the backup wins for that day
       });
       saveStepsMap(merged);
+    }
+    // Gym workouts merge by date; imported days replace matching local days.
+    // Older backups without a gym field leave existing workouts untouched.
+    if(data.gym && typeof data.gym === 'object' && !Array.isArray(data.gym)){
+      const mergedGym = getGymMap();
+      Object.keys(data.gym).forEach(dateStr=>{
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
+        const g = data.gym[dateStr];
+        if(!g || typeof g !== 'object' || Array.isArray(g)) return;
+        const minutes = Number(g.minutes);
+        if(!Number.isFinite(minutes) || minutes <= 0 || minutes > 300) return;
+        if(!Object.prototype.hasOwnProperty.call(GYM_METS, g.intensity)) return;
+        mergedGym[dateStr] = {minutes, intensity:g.intensity};
+      });
+      window.localStorage.setItem('dic:gym', JSON.stringify(mergedGym));
     }
     return true;
   }catch(e){
