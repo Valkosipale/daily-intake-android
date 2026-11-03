@@ -1423,9 +1423,8 @@ body{
 
   <div class="backup-section">
     <span class="eyebrow">Progress</span>
-    <p class="backup-desc">See how your week or month compares with your TDEE, plus your weight trend. Tap a day to jump to it.</p>
+    <p class="backup-desc">See how your month compares with your TDEE, plus your weight trend. Tap a day to jump to it.</p>
     <div class="backup-actions">
-      <button type="button" id="weeklyBtn" class="backup-btn">View week</button>
       <button type="button" id="monthlyBtn" class="backup-btn">View month</button>
     </div>
   </div>
@@ -1442,15 +1441,6 @@ body{
       <button type="button" id="exportCsvBtn" class="backup-btn">Export CSV</button>
     </div>
   </div>
-
-  <div class="backup-section">
-    <span class="eyebrow">Settings</span>
-    <p class="backup-desc" id="bodyStatsSummary">Add your sex, age, height and weight to see your TDEE (daily calorie burn).</p>
-    <div class="backup-actions">
-      <button type="button" id="bodyStatsBtn" class="backup-btn">Body stats &amp; steps</button>
-    </div>
-  </div>
-
 
 </div>
 
@@ -1588,8 +1578,21 @@ body{
     <div class="steps-status" id="stepsStatus"></div>
     <button type="button" class="backup-btn api-key-long-btn" id="readStepsBtn" style="margin-top:0;">Read steps from phone</button>
 
+    <div class="field full" style="margin-top:14px;">
+      <label for="gymMinutes">Gym workout (minutes)</label>
+      <input type="number" min="0" max="300" step="5" id="gymMinutes" placeholder="0 (no workout)">
+    </div>
+    <div class="field full" style="margin-top:10px;">
+      <label for="gymIntensity">Gym intensity</label>
+      <select id="gymIntensity">
+        <option value="light">Light — long rests</option>
+        <option value="moderate">Moderate — normal lifting</option>
+        <option value="hard">Hard — short rests, high volume</option>
+      </select>
+    </div>
+    <p class="body-note">Gym calories are estimated above resting expenditure using MET values (2.5 / 3.5 / 5.0), your weight and workout duration. Don't include walking already counted as steps.</p>
     <div class="body-tdee" id="bodyTdeePreview"></div>
-    <p class="body-note">How it's calculated (deliberately on the low side): Mifflin–St Jeor resting calories × 1.2, the lowest standard activity factor. Only steps beyond 5,000 a day are added, each at the net energy cost of walking (0.5 kcal per kg per km, from the ACSM walking equation) using a step length of 0.413 × your height. Gym workouts and other exercise aren't counted.</p>
+    <p class="body-note">How it's estimated: Mifflin–St Jeor resting calories × 1.2 provides the baseline. The estimated net walking cost of every recorded step is then added, starting from the first step. Walking distance is estimated from your height (step length = 0.413 × height) and walking cost from your weight (0.5 kcal per kg per km). If no step data is available, no step calories are added. Other exercise isn't counted.</p>
 
     <div class="data-actions">
       <button type="button" id="bodyCancelBtn" class="secondary">Cancel</button>
@@ -2717,7 +2720,7 @@ function renderWeekly(){
   // were logged (an unlogged day isn't a zero-calorie day).
   const tdeeByDay = logged.map(d => tdeeForDate(d.date));
   if(!tdeeByDay.every(v => v !== null)){
-    summary.textContent = `Add your body stats in Settings to see how your ${noun} compares with your TDEE.`;
+    summary.textContent = `Tap the TDEE figure to add your body stats and see how your ${noun} compares with your TDEE.`;
     return;
   }
   const eatenTotal = Math.round(logged.reduce((sum, d) => sum + d.totals.cal, 0));
@@ -2740,7 +2743,6 @@ function openPeriod(mode){
   document.getElementById('weeklyOverlay').classList.add('show');
 }
 
-document.getElementById('weeklyBtn').addEventListener('click', ()=> openPeriod('week'));
 document.getElementById('monthlyBtn').addEventListener('click', ()=> openPeriod('month'));
 
 document.getElementById('weeklyPrevBtn').addEventListener('click', ()=>{
@@ -3038,15 +3040,11 @@ async function scanBarcodeCode(fallbackInputId){
 }
 
 // ---- Body stats, TDEE and steps ----
-// Deliberately conservative ("harsh"): every choice below is the low end of what is standard.
-//  - Resting energy: Mifflin-St Jeor (the most validated equation; lower than older Harris-Benedict).
-//  - Activity factor 1.2: the lowest standard factor (sedentary).
-//  - Only steps beyond 5,000/day are added: under ~5,000 is the usual "sedentary" range that
-//    the 1.2 factor already assumes.
-//  - Each extra step costs only the NET energy of walking from the ACSM walking equation
-//    (0.5 kcal per kg per km, above resting), with step length = 0.413 x height.
+// Mifflin-St Jeor estimates resting energy. BMR × 1.2 is the baseline;
+// the estimated net walking cost of EVERY recorded step is added on top.
+// Step length scales with height; walking energy scales with body weight.
+// This is an estimate: actual stride length, pace, terrain and gait vary.
 const TDEE_ACTIVITY_FACTOR = 1.2;
-const TDEE_STEP_BASELINE = 5000;
 const WALK_NET_KCAL_PER_KG_KM = 0.5;
 const STEP_LENGTH_PER_HEIGHT = 0.413;
 
@@ -3061,12 +3059,58 @@ function kcalPerStep(heightCm, weightKg){
 
 function computeTdee(profile, weightKg, steps){
   const bmr = computeBmr(profile.sex, profile.age, profile.heightCm, weightKg);
-  const base = Math.round(bmr * TDEE_ACTIVITY_FACTOR);
+  const sedentaryBaseline = Math.round(bmr * TDEE_ACTIVITY_FACTOR);
   const perStep = kcalPerStep(profile.heightCm, weightKg);
-  const creditedSteps = Math.max(0, (steps || 0) - TDEE_STEP_BASELINE);
-  const stepKcal = Math.round(creditedSteps * perStep);
-  // total is the sum of the two rounded parts so what's shown always adds up
-  return { bmr: Math.round(bmr), base, perStep, creditedSteps, stepKcal, total: base + stepKcal };
+  const base = sedentaryBaseline;
+  const actualSteps = Math.max(0, Number(steps) || 0);
+  const stepKcal = Math.round(actualSteps * perStep);
+  const total = base + stepKcal;
+  return {
+    bmr: Math.round(bmr),
+    sedentaryBaseline,
+    base,
+    perStep,
+    steps: actualSteps,
+    stepKcal,
+    total
+  };
+}
+
+// ---- Gym workouts stored per day; net energy above resting level ----
+const GYM_METS = {light:2.5, moderate:3.5, hard:5.0};
+function getGymMap(){
+  if(!hasStorage()) return {};
+  try{
+    const m = JSON.parse(window.localStorage.getItem('dic:gym') || '{}');
+    return m && typeof m === 'object' && !Array.isArray(m) ? m : {};
+  }catch(e){ return {}; }
+}
+function getGymWorkout(dateStr){
+  const g = getGymMap()[dateStr];
+  return g && Number.isFinite(Number(g.minutes)) && GYM_METS[g.intensity]
+    ? {minutes:Math.max(0, Math.min(300, Number(g.minutes))), intensity:g.intensity}
+    : {minutes:0, intensity:'moderate'};
+}
+function saveGymWorkout(dateStr, minutes, intensity){
+  if(!hasStorage()) return;
+  const m = getGymMap();
+  if(minutes > 0) m[dateStr] = {minutes, intensity};
+  else delete m[dateStr];
+  try{ window.localStorage.setItem('dic:gym', JSON.stringify(m)); }
+  catch(e){ console.error('Failed to save gym workout', e); }
+}
+function gymKcal(weightKg, workout){
+  const met = GYM_METS[workout.intensity] || GYM_METS.moderate;
+  return Math.round(Math.max(0, met - 1) * 3.5 * weightKg / 200 * workout.minutes);
+}
+function readGymInputs(){
+  const raw = document.getElementById('gymMinutes').value.trim();
+  return {minutes:raw === '' ? 0 : Number(raw), intensity:document.getElementById('gymIntensity').value};
+}
+function gymInputsProblem(g){
+  if(!Number.isFinite(g.minutes) || g.minutes < 0 || g.minutes > 300) return 'Enter workout minutes (0–300)';
+  if(!GYM_METS[g.intensity]) return 'Select a workout intensity';
+  return '';
 }
 
 // ---- Profile (sex / age / height / weight) ----
@@ -3133,21 +3177,11 @@ function parseSteps(raw){
   return digits === '' ? NaN : parseInt(digits, 10);
 }
 
-// ---- Summary card row + Settings card ----
-function updateBodySummary(){
-  const el = document.getElementById('bodyStatsSummary');
-  if(!el) return;
-  const p = getProfile();
-  el.textContent = p
-    ? `${p.sex === 'male' ? 'Male' : 'Female'} · ${p.age} y · ${p.heightCm} cm · ${p.weightKg} kg`
-    : 'Add your sex, age, height and weight to see your TDEE (daily calorie burn).';
-}
-
+// ---- TDEE summary ----
 function updateTdeeDisplay(){
   const valueEl = document.getElementById('tdeeValue');
   const subEl = document.getElementById('tdeeSub');
   if(!valueEl || !subEl) return;
-  updateBodySummary();
 
   const profile = getProfile();
   if(!profile){
@@ -3159,16 +3193,18 @@ function updateTdeeDisplay(){
   const wi = weighInOnOrBefore(currentDate);
   const kg = wi ? wi.kg : profile.weightKg;
   const st = effectiveSteps(currentDate);
+  // Missing step data is not the same as zero steps: use the 5,000-step
+  // sedentary assumption until the user records an actual step count.
   const steps = st ? st.steps : 0;
   const t = computeTdee(profile, kg, steps);
+  const gym = gymKcal(kg, getGymWorkout(currentDate));
+  const total = t.total + gym;
 
-  valueEl.textContent = t.total.toLocaleString();
-  if(steps <= 0){
-    subEl.textContent = `base ${t.base.toLocaleString()} · no step data`;
-  } else if(t.creditedSteps === 0){
-    subEl.textContent = `base ${t.base.toLocaleString()} · ${steps.toLocaleString()} steps, none added (under ${TDEE_STEP_BASELINE.toLocaleString()})`;
+  valueEl.textContent = total.toLocaleString();
+  if(!st){
+    subEl.textContent = `${total.toLocaleString()} estimated · no step data recorded${gym ? ` · gym +${gym}` : ''}`;
   } else {
-    subEl.textContent = `base ${t.base.toLocaleString()} + ${t.stepKcal.toLocaleString()} from ${steps.toLocaleString()} steps`;
+    subEl.textContent = `base ${t.base.toLocaleString()} + ${t.stepKcal.toLocaleString()} from ${steps.toLocaleString()} steps${gym ? ` + ${gym} gym` : ''}`;
   }
 }
 
@@ -3242,7 +3278,7 @@ function setStepsStatus(text){
 
 function describePhoneSteps(){
   if(!getHealthPlugin()){
-    return "Automatic step reading isn't available in this build. Type your steps above instead.";
+    return '';
   }
   const st = effectiveSteps(currentDate);
   const phone = st ? Number(st.phone) || 0 : 0;
@@ -3333,19 +3369,24 @@ function updateBodyPreview(){
     return;
   }
   const kg = v.weightKg; // the weight field already shows the day's weight
-  const typed = parseSteps(document.getElementById('bodySteps').value);
+  const typedRaw = document.getElementById('bodySteps').value.trim();
+  const typed = parseSteps(typedRaw);
   const stored = effectiveSteps(currentDate);
   const phone = stored ? Number(stored.phone) || 0 : 0;
-  const steps = Math.max(isNaN(typed) ? 0 : typed, phone);
+  const hasStepInput = typedRaw !== '' || phone > 0;
+  const steps = hasStepInput
+    ? Math.max(isNaN(typed) ? 0 : typed, phone)
+    : 0;
   const t = computeTdee(v, kg, steps);
+  const gymInput = readGymInputs();
+  const gymProblem = gymInputsProblem(gymInput);
+  if(gymProblem){ el.textContent = gymProblem; return; }
+  const gym = gymKcal(kg, gymInput);
 
-  let detail = `Resting ${t.bmr.toLocaleString()} × ${TDEE_ACTIVITY_FACTOR} = ${t.base.toLocaleString()}`;
-  if(t.creditedSteps > 0){
-    detail += ` + ${t.stepKcal.toLocaleString()} from ${t.creditedSteps.toLocaleString()} steps above ${TDEE_STEP_BASELINE.toLocaleString()} (${t.perStep.toFixed(3)} kcal each)`;
-  } else if(steps > 0){
-    detail += ` · ${steps.toLocaleString()} steps is under ${TDEE_STEP_BASELINE.toLocaleString()}, so none are added`;
-  }
-  el.innerHTML = `Estimated TDEE<span class="big">${t.total.toLocaleString()} kcal</span>${escapeHtml(detail)}`;
+  let detail = `Resting ${t.bmr.toLocaleString()} × ${TDEE_ACTIVITY_FACTOR} = ${t.sedentaryBaseline.toLocaleString()}; add ${t.stepKcal.toLocaleString()} for ${steps.toLocaleString()} steps (${t.perStep.toFixed(3)} kcal/step).`;
+  if(!hasStepInput) detail += ` No step data: no step calories added.`;
+  if(gym) detail += ` Gym +${gym.toLocaleString()} kcal (${gymInput.minutes} min, ${gymInput.intensity}).`;
+  el.innerHTML = `Estimated TDEE<span class="big">${(t.total + gym).toLocaleString()} kcal</span>${escapeHtml(detail)}`;
 }
 
 function openBodyDialog(){
@@ -3359,6 +3400,9 @@ function openBodyDialog(){
     ? `Your weight for ${formatDateShort(currentDate)} (latest weigh-in: ${wi.kg} kg on ${formatDateShort(wi.date)}). Changing it logs a weigh-in for this day and feeds the trend in the weekly view.`
     : `Entering a weight also logs a weigh-in for ${formatDateShort(currentDate)}, which feeds the trend in the weekly view.`;
 
+  const savedGym = getGymWorkout(currentDate);
+  document.getElementById('gymMinutes').value = savedGym.minutes ? String(savedGym.minutes) : '';
+  document.getElementById('gymIntensity').value = savedGym.intensity;
   const st = effectiveSteps(currentDate);
   document.getElementById('bodyStepsLabel').textContent = `Steps you typed for ${formatDateShort(currentDate)}`;
   document.getElementById('bodySteps').value = (st && st.manual !== undefined) ? String(st.manual) : '';
@@ -3381,6 +3425,9 @@ function closeBodyDialog(){
 }
 
 function saveBodyDialog(){
+  const gymInput = readGymInputs();
+  const gymProblem = gymInputsProblem(gymInput);
+  if(gymProblem){ showToast(gymProblem); return; }
   const v = readBodyInputs();
   const problem = bodyInputsProblem(v);
   if(problem){
@@ -3402,12 +3449,12 @@ function saveBodyDialog(){
   // Only when a weight was actually typed, so saving something else (like steps) doesn't add a phantom point
   if(bodyWeightTouched) logWeighIn(currentDate, roundNum(v.weightKg));
   setStepsField(currentDate, 'manual', manual);
+  saveGymWorkout(currentDate, gymInput.minutes, gymInput.intensity);
   closeBodyDialog();
   updateTdeeDisplay();
   showToast('Saved');
 }
 
-document.getElementById('bodyStatsBtn').addEventListener('click', openBodyDialog);
 document.getElementById('tdeeRow').addEventListener('click', openBodyDialog);
 document.getElementById('tdeeRow').addEventListener('keydown', (e)=>{
   if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openBodyDialog(); }
@@ -3418,6 +3465,8 @@ document.getElementById('sexFemaleBtn').addEventListener('click', ()=>setBodySex
   document.getElementById(id).addEventListener('input', updateBodyPreview);
 });
 document.getElementById('bodyWeight').addEventListener('input', ()=>{ bodyWeightTouched = true; });
+document.getElementById('gymMinutes').addEventListener('input', updateBodyPreview);
+document.getElementById('gymIntensity').addEventListener('change', updateBodyPreview);
 document.getElementById('readStepsBtn').addEventListener('click', connectPhoneSteps);
 document.getElementById('bodyCancelBtn').addEventListener('click', closeBodyDialog);
 document.getElementById('bodySaveBtn').addEventListener('click', saveBodyDialog);
@@ -4008,7 +4057,9 @@ function tdeeForDate(dateStr){
   const wi = weighInOnOrBefore(dateStr);
   const kg = wi ? wi.kg : profile.weightKg;
   const st = effectiveSteps(dateStr);
-  return computeTdee(profile, kg, st ? st.steps : 0).total;
+  // For dates without step records, add no step calories.
+  return computeTdee(profile, kg, st ? st.steps : 0).total
+    + gymKcal(kg, getGymWorkout(dateStr));
 }
 
 function computeMultiPhotoTotals(){
