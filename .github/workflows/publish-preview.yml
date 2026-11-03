@@ -1,4 +1,4 @@
-name: Publish Health Connect preview
+name: Publish step diagnostic companion
 
 on:
   push:
@@ -31,6 +31,22 @@ jobs:
 
       - name: Test automatic step sync
         run: npm test
+
+      - name: Prepare separate diagnostic companion
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('capacitor.config.json')
+          config = json.loads(p.read_text())
+          config['appId'] = 'com.dailyintake.calculator.stepcheck'
+          config['appName'] = 'Daily Intake Step Check'
+          p.write_text(json.dumps(config, indent=2))
+          p = Path('www/index.html')
+          page = p.read_text().replace('</head>', '<script>window.STEP_CHECK_COMPANION = true;</script></head>')
+          page = page.replace('<title>Daily Intake Calculator</title>', '<title>Daily Intake Step Check</title>')
+          p.write_text(page)
+          PY
 
       - name: Add Android platform
         run: npx cap add android
@@ -94,6 +110,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
+      - name: Retain diagnostic preview signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: daily-intake-stepcheck-debug-signing-v1
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug
@@ -109,19 +131,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-samsung-health-debug.apk
-          sha256sum daily-intake-samsung-health-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-step-check.apk
+          sha256sum daily-intake-step-check.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Reads Samsung Health step records explicitly through Health Connect, with walking-calorie and TDEE updates. The combined Health Connect total remains available as an alternative.
+          Separate diagnostic companion for investigating Samsung Health/watch step totals. Installs alongside Daily Intake Calculator; do not uninstall the calculator or clear its data.
 
-          Tap TDEE/body stats → Automatic step source → Samsung Health, then Connect automatic steps. Samsung Health must export its watch-synced steps to Health Connect. Missing Samsung records produce an explanatory message; phone totals are not substituted.
+          Open Daily Intake Step Check, tap Check step data, and allow step read access. Tap Copy step report and paste it into the support conversation. Choose the day with the mismatch before running the check if needed.
 
-          Export a backup from the previous preview before installation. Debug APKs built on separate runners may use different signing keys, requiring the old preview to be uninstalled before this one can be installed. Import your backup afterward.
+          Compares direct and daily-bucket totals for Samsung Health and all Health Connect sources, then scans paginated step records for source app packages and watch/phone metadata. Raw sums are diagnostic only and are not used as calorie totals. A source scan failure is reported as incomplete, never as missing Samsung data.
 
-          This is a debug-signed preview. Automated tests and the Android build run before publication. Actual Health Connect authorization and import still require testing on a phone.
+          Data stays on-device until you choose to copy/share the report. No food logs, body stats, account identifiers, or individual step records are included. This debug-signed APK has been built and tested automatically; real device results are still needed to establish the cause.
           NOTES
-          if gh release view samsung-health-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload samsung-health-preview-2026-11-04 daily-intake-samsung-health-debug.apk SHA256SUMS --clobber
+          if gh release view step-check-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload step-check-preview-2026-11-04 daily-intake-step-check.apk SHA256SUMS --clobber
           else
-            gh release create samsung-health-preview-2026-11-04 daily-intake-samsung-health-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Samsung Health steps — preview APK' --notes-file release-notes.md --prerelease --latest=false
+            gh release create step-check-preview-2026-11-04 daily-intake-step-check.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Daily Intake Step Check — diagnostic app' --notes-file release-notes.md --prerelease --latest=false
           fi

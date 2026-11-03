@@ -32,3 +32,9 @@ cd android
 `npm test` covers automatic reads, permissions, concurrent refreshes, saved totals, invalid readings, and local-day boundaries. Actual Health Connect authorization and step import still require testing on a phone with a recording app. In a browser, manual entry works and the native connect button is hidden.
 
 The pinned `capacitor-health@0.0.14` native source-filter patch in `patches/` is applied by `patch-package` during `npm ci`. Do not skip install scripts. Android builds verify the patched code compiles.
+
+## Step diagnostics
+
+Tap **Check step data** in the body-stats dialog. This explicitly requests only step-read permission, then compares independent direct and daily-bucket aggregation queries for Samsung Health and the combined total. Paginated raw step records identify source packages and optional watch/phone metadata. Raw sums can overlap or cross midnight and are diagnostic only. Read failures and pagination limits are reported as incomplete. No diagnostic query changes saved step totals or TDEE. The report stays on-device unless copied/shared by the user.
+
+The preview workflow currently packages a separate **Daily Intake Step Check** companion (`com.dailyintake.calculator.stepcheck`) so users can diagnose without uninstalling their calculator or losing local data. Companion permissions must be granted separately.

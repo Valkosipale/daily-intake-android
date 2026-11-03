@@ -1584,6 +1584,13 @@ body{
     </div>
     <div class="steps-status" id="stepsStatus" role="status" aria-live="polite"></div>
     <button type="button" class="backup-btn api-key-long-btn" id="readStepsBtn" style="margin-top:0;">Connect automatic steps</button>
+    <button type="button" class="backup-btn api-key-long-btn" id="runStepCheckBtn">Check step data</button>
+    <div id="stepCheckPanel" hidden>
+      <p class="body-note" id="stepCheckSummary" role="status" aria-live="polite"></p>
+      <label for="stepCheckReport">Step diagnostic report (stays on this device until you share it)</label>
+      <textarea id="stepCheckReport" readonly rows="10" style="width:100%;margin:8px 0;" aria-label="Step diagnostic report"></textarea>
+      <button type="button" class="backup-btn" id="copyStepCheckBtn" disabled>Copy step report</button>
+    </div>
 
     <div class="field full" style="margin-top:14px;">
       <label for="gymMinutes">Gym workout (minutes)</label>
@@ -3463,6 +3470,7 @@ function openBodyDialog(){
   document.getElementById('bodySteps').value = (st && st.manual !== undefined) ? String(st.manual) : '';
 
   document.getElementById('readStepsBtn').style.display = getHealthPlugin() ? '' : 'none';
+  document.getElementById('runStepCheckBtn').style.display = getHealthPlugin() ? '' : 'none';
   document.getElementById('stepsSourceField').style.display = getHealthPlugin() ? '' : 'none';
   document.getElementById('stepsSource').value = getStepSource();
   setStepsStatus(describePhoneSteps());
@@ -4592,5 +4600,6 @@ document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
   refreshPhoneSteps(currentDate);
 })();
 </script>
+<script src="step-diagnostics.js"></script>
 </body>
 </html>
