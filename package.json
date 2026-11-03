@@ -4,17 +4,19 @@
   "description": "A simple manual food and calorie log, packaged as a native Android app.",
   "scripts": {
     "build:android": "npx cap sync android && python3 scripts/configure-health.py",
-    "test": "node --test tests/*.test.cjs"
+    "test": "node --test tests/*.test.cjs",
+    "postinstall": "patch-package --error-on-fail"
   },
   "dependencies": {
-    "@capacitor/android": "^6.0.0",
-    "@capacitor/core": "^6.0.0",
-    "@capacitor/camera": "^6.0.0",
     "@capacitor-mlkit/barcode-scanning": "^6.2.0",
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/camera": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
     "capacitor-health": "0.0.14"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^6.0.0",
-    "@capacitor/assets": "^3.0.5"
+    "patch-package": "8.0.1"
   }
 }

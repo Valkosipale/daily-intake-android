@@ -27,7 +27,7 @@ jobs:
           java-version: '17'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Test automatic step sync
         run: npm test
@@ -109,17 +109,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-health-connect-debug.apk
-          sha256sum daily-intake-health-connect-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-samsung-health-debug.apk
+          sha256sum daily-intake-samsung-health-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Automatic daily steps from Health Connect, with walking-calorie and TDEE updates.
+          Reads Samsung Health step records explicitly through Health Connect, with walking-calorie and TDEE updates. The combined Health Connect total remains available as an alternative.
 
-          Tap TDEE/body stats → Connect automatic steps and allow step access. Google Fit, Samsung Health, or another recording app must share steps with Health Connect.
+          Tap TDEE/body stats → Automatic step source → Samsung Health, then Connect automatic steps. Samsung Health must export its watch-synced steps to Health Connect. Missing Samsung records produce an explanatory message; phone totals are not substituted.
+
+          Export a backup from the previous preview before installation. Debug APKs built on separate runners may use different signing keys, requiring the old preview to be uninstalled before this one can be installed. Import your backup afterward.
 
           This is a debug-signed preview. Automated tests and the Android build run before publication. Actual Health Connect authorization and import still require testing on a phone.
           NOTES
-          if gh release view health-connect-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload health-connect-preview-2026-11-04 daily-intake-health-connect-debug.apk SHA256SUMS --clobber
+          if gh release view samsung-health-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload samsung-health-preview-2026-11-04 daily-intake-samsung-health-debug.apk SHA256SUMS --clobber
           else
-            gh release create health-connect-preview-2026-11-04 daily-intake-health-connect-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Health Connect steps — preview APK' --notes-file release-notes.md --prerelease --latest=false
+            gh release create samsung-health-preview-2026-11-04 daily-intake-samsung-health-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Samsung Health steps — preview APK' --notes-file release-notes.md --prerelease --latest=false
           fi
