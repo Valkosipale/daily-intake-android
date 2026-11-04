@@ -332,6 +332,7 @@ body{
 }
 .multi-add-row{margin-bottom:10px;}
 .multi-barcode-form{margin-bottom:12px;}
+#multiPhotoOverlay .ask-ai-label{white-space:nowrap;}
 #multiPhotoOverlay .scan-control-row{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -1430,7 +1431,7 @@ body{
     <span class="eyebrow">Scan</span>
     <p class="backup-desc">Scan a photo or barcode, or describe a food to ask AI. Add one item or several, mix them, and log the combined total.</p>
     <div class="backup-actions">
-      <button type="button" id="scanBtn" class="backup-btn">📷 Scan</button>
+      <button type="button" id="scanBtn" class="backup-btn">Scan</button>
     </div>
   </div>
 
@@ -1463,12 +1464,12 @@ body{
     <p class="data-desc">Add each item by photo, barcode or a short description. One item or several, mixed freely. Enter grams for each and the totals combine. Tap ✎ on an item to correct it or ask AI a question.</p>
     <div id="multiPhotoList"></div>
     <div class="backup-actions multi-add-row scan-control-row">
-      <button type="button" id="multiPhotoAddBtn" class="backup-btn">📷 Photo</button>
-      <button type="button" id="multiBarcodeAddBtn" class="backup-btn">🏷️ Barcode</button>
+      <button type="button" id="multiPhotoAddBtn" class="backup-btn">Photo</button>
+      <button type="button" id="multiBarcodeAddBtn" class="backup-btn">Barcode</button>
     </div>
     <form class="ask-gemini-row multi-barcode-form scan-control-row" id="scanTextForm">
-      <input type="text" id="scanTextInput" placeholder="Code or food" aria-label="Barcode number or food description">
-      <button type="submit" class="backup-btn">Add / Ask AI</button>
+      <input type="text" id="scanTextInput" placeholder="Barcode or Food" aria-label="Barcode number or food description">
+      <button type="submit" class="backup-btn">Add barcode / <span class="ask-ai-label">Ask AI</span></button>
     </form>
     <div class="multi-photo-total" id="multiPhotoTotal">Add at least one item to see the combined total</div>
     <div class="data-actions scan-control-row">
@@ -3971,7 +3972,7 @@ function openMultiModal(focusText){
   multiPhotoItems = [];
   renderMultiPhotoList();
   const input = document.getElementById('scanTextInput');
-  input.placeholder = focusText ? 'Describe a food, e.g. Snickers bar' : 'Code or food';
+  input.placeholder = focusText ? 'Describe a food, e.g. Snickers bar' : 'Barcode or Food';
   document.getElementById('multiPhotoOverlay').classList.add('show');
   if(focusText) setTimeout(()=> input.focus(), 50);
 }

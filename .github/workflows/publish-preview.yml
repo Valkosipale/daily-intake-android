@@ -1,4 +1,4 @@
-name: Publish scan item layout preview
+name: Publish text-only scan controls
 
 on:
   push:
@@ -134,17 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-scan-items-debug.apk
-          sha256sum daily-intake-scan-items-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-scan-text-debug.apk
+          sha256sum daily-intake-scan-text-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Scanned items now show only the item name and editable values: removed star/barcode icons and photo thumbnails from the list. Photo data is still available for re-analysis.
+          The scan entry placeholder is now Barcode or Food, and its action button says Add barcode / Ask AI. Scan, Photo and Barcode buttons are text-only, with their icons removed.
 
-          Grams is the first field in the same two-column grid as calories, protein, carbs, fat, fiber and salt. All seven fields are 44px high with larger text and wider padding. Edit/remove actions sit beside the item name, and the popup scrolls as one panel on short screens so inputs are not clipped.
-
-          Existing Add / Ask AI controls, automatic step syncing and monthly review are preserved. Android build, eight tests and browser checks passed, including live totals, photo refinement data, editing/removal and narrow phone layouts. This preview reuses the explicitly cached signing key from the simplified Scan release.
+          Preserves the larger aligned grams/nutrition fields, thumbnail-free item list, on-demand API-key prompts, automatic steps and monthly review. Uses the same cached signing key as the previous Scan update so it can install over that version.
           NOTES
-          if gh release view scan-items-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload scan-items-preview-2026-11-04 daily-intake-scan-items-debug.apk SHA256SUMS --clobber
+          if gh release view scan-text-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload scan-text-preview-2026-11-04 daily-intake-scan-text-debug.apk SHA256SUMS --clobber
           else
-            gh release create scan-items-preview-2026-11-04 daily-intake-scan-items-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Larger scan item fields' --notes-file release-notes.md --prerelease --latest=false
+            gh release create scan-text-preview-2026-11-04 daily-intake-scan-text-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Text-only Scan controls' --notes-file release-notes.md --prerelease --latest=false
           fi
