@@ -1,4 +1,4 @@
-name: Publish monthly review preview
+name: Publish scan layout preview
 
 on:
   push:
@@ -115,19 +115,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-monthly-review-debug.apk
-          sha256sum daily-intake-monthly-review-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-scan-layout-debug.apk
+          sha256sum daily-intake-scan-layout-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Monthly review now shows each day's calories eaten, estimated TDEE, and recorded step count. TDEE uses that date's latest weigh-in, recorded steps, and gym activity. Days without food logs still show TDEE and steps. Missing step data is distinguished from a recorded zero.
+          Simplifies the standard app's Scan section to a single Scan button. Removed the separate Ask Gemini and API key buttons; AI actions still request a key when needed.
 
-          Automatic steps continue to use Health Connect's combined total and configured source priority. There is no Samsung source selector or diagnostic companion in this calculator build. For Samsung Health, enable its health-data processing consent and give it higher priority in Health Connect.
+          Inside Scan food, the text-entry button is now Add / Ask AI. Photo, Barcode, text entry, Add / Ask AI, Cancel, and Add to log use matching widths and heights. The input has a shorter placeholder and an accessible description.
 
-          Export a backup before updating from an earlier preview. Earlier runners used different debug signing keys, so Android may require uninstalling the old preview first; import your backup after installing. This workflow retains its signing key for future preview builds.
-
-          Android build, step-sync tests, and phone-sized browser checks passed. Historical step counts are the daily readings already synced or entered manually; missing dates are labelled Steps not recorded.
+          Existing monthly TDEE/steps review and nutrition behavior are preserved. Android build, eight tests, and browser checks passed, including equal control sizes at 320/390/560px, barcode scanning without a key, and on-demand AI key entry. This debug preview uses the retained standard-app signing key.
           NOTES
-          if gh release view monthly-review-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload monthly-review-preview-2026-11-04 daily-intake-monthly-review-debug.apk SHA256SUMS --clobber
+          if gh release view scan-layout-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload scan-layout-preview-2026-11-04 daily-intake-scan-layout-debug.apk SHA256SUMS --clobber
           else
-            gh release create monthly-review-preview-2026-11-04 daily-intake-monthly-review-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Monthly review — daily TDEE and steps' --notes-file release-notes.md --prerelease --latest=false
+            gh release create scan-layout-preview-2026-11-04 daily-intake-scan-layout-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Simplified scan controls' --notes-file release-notes.md --prerelease --latest=false
           fi

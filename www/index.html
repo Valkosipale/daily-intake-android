@@ -332,6 +332,21 @@ body{
 }
 .multi-add-row{margin-bottom:10px;}
 .multi-barcode-form{margin-bottom:12px;}
+#multiPhotoOverlay .scan-control-row{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+#multiPhotoOverlay .scan-control-row > input,
+#multiPhotoOverlay .scan-control-row > button{
+  width:100%;
+  min-width:0;
+  height:48px;
+  margin:0;
+  padding:8px 10px;
+  line-height:1.2;
+}
+
 .multi-photo-thumb-barcode{
   display:flex;
   align-items:center;
@@ -1432,12 +1447,10 @@ body{
 
   <div class="backup-section">
     <span class="eyebrow">Scan</span>
-    <p class="backup-desc">Scan a photo or barcode, or ask Gemini about a food. Add one item or several, mix them, and log the combined total.</p>
+    <p class="backup-desc">Scan a photo or barcode, or describe a food to ask AI. Add one item or several, mix them, and log the combined total.</p>
     <div class="backup-actions">
       <button type="button" id="scanBtn" class="backup-btn">📷 Scan</button>
     </div>
-    <button type="button" id="scanAskBtn" class="backup-btn long-btn">✨ Ask Gemini</button>
-    <button type="button" id="apiKeyBtn" class="backup-btn api-key-long-btn">API key</button>
   </div>
 
   <div class="backup-section">
@@ -1466,18 +1479,18 @@ body{
 <div class="data-overlay" id="multiPhotoOverlay">
   <div class="data-box multi-photo-box">
     <div class="data-title">Scan food</div>
-    <p class="data-desc">Add each item by photo, barcode or a short description. One item or several, mixed freely. Enter grams for each and the totals combine. Tap ✎ on an item to correct it or ask Gemini a question.</p>
+    <p class="data-desc">Add each item by photo, barcode or a short description. One item or several, mixed freely. Enter grams for each and the totals combine. Tap ✎ on an item to correct it or ask AI a question.</p>
     <div id="multiPhotoList"></div>
-    <div class="backup-actions multi-add-row">
+    <div class="backup-actions multi-add-row scan-control-row">
       <button type="button" id="multiPhotoAddBtn" class="backup-btn">📷 Photo</button>
       <button type="button" id="multiBarcodeAddBtn" class="backup-btn">🏷️ Barcode</button>
     </div>
-    <form class="ask-gemini-row multi-barcode-form" id="scanTextForm">
-      <input type="text" id="scanTextInput" placeholder="Barcode number, or describe a food">
-      <button type="submit" class="backup-btn">Add</button>
+    <form class="ask-gemini-row multi-barcode-form scan-control-row" id="scanTextForm">
+      <input type="text" id="scanTextInput" placeholder="Code or food" aria-label="Barcode number or food description">
+      <button type="submit" class="backup-btn">Add / Ask AI</button>
     </form>
     <div class="multi-photo-total" id="multiPhotoTotal">Add at least one item to see the combined total</div>
-    <div class="data-actions">
+    <div class="data-actions scan-control-row">
       <button type="button" id="multiPhotoCancelBtn" class="secondary">Cancel</button>
       <button type="button" id="multiPhotoUseBtn" class="primary">Add to log</button>
     </div>
@@ -3774,11 +3787,6 @@ function setGeminiKey(key){
   }catch(e){ console.error('Failed to save API key', e); }
 }
 
-document.getElementById('apiKeyBtn').addEventListener('click', ()=>{
-  document.getElementById('apiKeyInput').value = getGeminiKey();
-  document.getElementById('apiKeyOverlay').classList.add('show');
-});
-
 document.getElementById('apiKeyCloseBtn').addEventListener('click', ()=>{
   document.getElementById('apiKeyOverlay').classList.remove('show');
 });
@@ -3982,17 +3990,12 @@ function openMultiModal(focusText){
   multiPhotoItems = [];
   renderMultiPhotoList();
   const input = document.getElementById('scanTextInput');
-  input.placeholder = focusText ? 'Describe a food, e.g. Snickers bar' : 'Barcode number, or describe a food';
+  input.placeholder = focusText ? 'Describe a food, e.g. Snickers bar' : 'Code or food';
   document.getElementById('multiPhotoOverlay').classList.add('show');
   if(focusText) setTimeout(()=> input.focus(), 50);
 }
 
 document.getElementById('scanBtn').addEventListener('click', ()=> openMultiModal(false));
-document.getElementById('scanAskBtn').addEventListener('click', ()=>{
-  if(!requireGeminiKey()) return; // Ask Gemini is useless without the key, so ask for it up front
-  openMultiModal(true);
-});
-
 document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
   document.getElementById('multiPhotoOverlay').classList.remove('show');
   multiPhotoItems = [];
