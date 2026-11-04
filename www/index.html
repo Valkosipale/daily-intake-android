@@ -4248,7 +4248,7 @@ function renderMultiPhotoList(){
         <div class="scan-reanalyze">
           <label for="reanalyze-${item.id}">Comment or correction for AI</label>
           <input id="reanalyze-${item.id}" class="scan-reanalyze-input" data-id="${item.id}" type="text" placeholder="e.g. It is salmon, about 200g" value="${escapeHtml(item.reanalyzeComment || '')}">
-          <button type="button" class="secondary scan-reanalyze-btn" data-id="${item.id}">Re-analyze</button>
+          <button type="button" class="backup-btn scan-reanalyze-btn" data-id="${item.id}">Re-analyze</button>
           ${item.reanalyzeAnswer ? `<div class="multi-photo-hint scan-reanalyze-answer" role="status">${escapeHtml(item.reanalyzeAnswer)}</div>` : ''}
         </div>
       </div>

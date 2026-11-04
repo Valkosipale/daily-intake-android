@@ -1,4 +1,4 @@
-name: Publish inline item re-analysis
+name: Publish matching re-analyze button
 
 on:
   push:
@@ -134,15 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-reanalyze-debug.apk
-          sha256sum daily-intake-reanalyze-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-reanalyze-style-debug.apk
+          sha256sum daily-intake-reanalyze-style-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Every scanned item now has a comment box and Re-analyze button. Enter a correction or question to update that same item without adding a duplicate. Photo items reuse their own original photo; text and barcode items use their existing details and previous comments.
+          Re-analyze now uses the same dark background, gold border, gold text and font as the Photo and Barcode buttons.
 
-          Updates respect Per item or Per 100g and refresh totals immediately. Cancelling analysis ignores late results. Existing pencil/editor controls remain available. Android build, 25 tests and browser checks passed, including photo isolation, repeated corrections, quantities, totals and cancellation. Uses the same signing key as the previous update.
+          Includes all previous per-item nutrition and inline re-analysis improvements. Uses the same signing key as the previous update.
           NOTES
-          if gh release view reanalyze-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload reanalyze-preview-2026-11-04 daily-intake-reanalyze-debug.apk SHA256SUMS --clobber
+          if gh release view reanalyze-style-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload reanalyze-style-preview-2026-11-04 daily-intake-reanalyze-style-debug.apk SHA256SUMS --clobber
           else
-            gh release create reanalyze-preview-2026-11-04 daily-intake-reanalyze-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Re-analyze each food with a new comment' --notes-file release-notes.md --prerelease --latest=false
+            gh release create reanalyze-style-preview-2026-11-04 daily-intake-reanalyze-style-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Re-analyze button matches scan controls' --notes-file release-notes.md --prerelease --latest=false
           fi
