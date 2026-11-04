@@ -1,4 +1,4 @@
-name: Publish text-only scan controls
+name: Publish unified item AI question
 
 on:
   push:
@@ -134,15 +134,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-scan-text-debug.apk
-          sha256sum daily-intake-scan-text-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-one-box-ai-debug.apk
+          sha256sum daily-intake-one-box-ai-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          The scan entry placeholder is now Barcode or Food, and its action button says Add barcode / Ask AI. Scan, Photo and Barcode buttons are text-only, with their icons removed.
+          The item editor now has one text box and one Ask AI button. A message such as "Karjalanpaisti, how many grams?" can correct the food, update its nutrition and suggest serving grams in one reply.
 
-          Preserves the larger aligned grams/nutrition fields, thumbnail-free item list, on-demand API-key prompts, automatic steps and monthly review. Uses the same cached signing key as the previous Scan update so it can install over that version.
+          Removed the duplicate numeric serving-size field and separate Re-analyze action from this dialog. Grams remain editable in the main scanned-item row. AI suggestions appear for review and only apply when Update item is tapped; Cancel discards them. Ordinary questions preserve existing nutrition and serving size.
+
+          Weight suggestions are approximate; when no photo can establish weight, AI uses a typical portion estimate and states the uncertainty. Invalid or incomplete AI nutrition is rejected, and replies from a closed editor cannot change a newly opened item.
+
+          Android build, fourteen tests and browser checks passed, including combined questions, draft/apply/cancel behavior, retries and short phone layouts. Uses the same signing key as the previous Scan update.
           NOTES
-          if gh release view scan-text-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload scan-text-preview-2026-11-04 daily-intake-scan-text-debug.apk SHA256SUMS --clobber
+          if gh release view one-box-ai-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload one-box-ai-preview-2026-11-04 daily-intake-one-box-ai-debug.apk SHA256SUMS --clobber
           else
-            gh release create scan-text-preview-2026-11-04 daily-intake-scan-text-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Text-only Scan controls' --notes-file release-notes.md --prerelease --latest=false
+            gh release create one-box-ai-preview-2026-11-04 daily-intake-one-box-ai-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'One question box for food and serving size' --notes-file release-notes.md --prerelease --latest=false
           fi

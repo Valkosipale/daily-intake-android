@@ -767,25 +767,7 @@ body{
   margin-top:2px;
   word-break:break-word;
 }
-.photo-grams-field label{
-  font-family:'Space Mono',monospace;
-  font-size:10px;
-  color:var(--ink-soft);
-  text-transform:uppercase;
-  letter-spacing:0.5px;
-  display:block;
-  margin-bottom:4px;
-}
-.photo-grams-field input{
-  width:100%;
-  background:#0D0D0D;
-  color:var(--ink);
-  border:1px solid var(--hair);
-  font-family:'Inter',sans-serif;
-  font-size:15px;
-  padding:9px;
-}
-.photo-grams-field input:focus{outline:none;border-color:var(--accent);}
+#photoResultOverlay .data-box{max-height:90vh;overflow-y:auto;}
 
 .photo-refine-field{
   border-top:1px solid var(--hair);
@@ -812,8 +794,9 @@ body{
   color:var(--ink);
   border:1px solid var(--hair);
   font-family:'Inter',sans-serif;
-  font-size:13px;
-  padding:9px;
+  font-size:16px;
+  min-height:44px;
+  padding:10px;
 }
 .photo-refine-row input:focus{outline:none;border-color:var(--accent);}
 .photo-refine-actions{
@@ -1501,16 +1484,15 @@ body{
 
 <div class="data-overlay" id="photoResultOverlay">
   <div class="data-box">
-    <div class="data-title" id="photoResultTitle">Fix or ask about this item</div>
+    <div class="data-title" id="photoResultTitle">Ask about this item</div>
     <div id="photoResultBody"></div>
     <div class="photo-refine-field">
-      <label for="photoRefineInput">Correction, or a question (e.g. "it's salmon" or "how many grams is this?")</label>
+      <label for="photoRefineInput">Question or food correction</label>
       <div class="photo-refine-row">
-        <input type="text" id="photoRefineInput" placeholder="Type here">
+        <input type="text" id="photoRefineInput" placeholder="Karjalanpaisti, how many grams?">
       </div>
       <div class="photo-refine-actions">
-        <button type="button" id="photoRefineBtn">Re-analyze macros</button>
-        <button type="button" id="photoAskBtn">Ask a question</button>
+        <button type="button" id="photoAskBtn">Ask AI</button>
       </div>
       <div class="photo-ask-answer" id="photoAskAnswer" style="display:none;"></div>
     </div>
@@ -3793,12 +3775,6 @@ function mentionsWeight(text){
   return /\b(gram|grams|weigh|weighs|weight|how many grams|how much does)\b/i.test(text);
 }
 
-function extractGramsFromText(text){
-  const match = text.match(/(\d+(?:\.\d+)?)\s*(?:g\b|grams?\b)/i);
-  if(match) return Math.round(parseFloat(match[1]));
-  return null;
-}
-
 // Low-level call to Gemini's generateContent endpoint. Returns the raw text response.
 // jsonMode=true requests structured JSON output; jsonMode=false leaves it as free-form text.
 async function callGeminiRaw(parts, jsonMode){
@@ -3945,17 +3921,40 @@ async function requestMacroEstimate(baseContext, extraContext, photo){
   }, 1);
 }
 
-async function askGeminiFreeform(question){
-  let context = '';
-  if(lastPhotoBase64){
-    context = 'Look at the attached food photo. ';
-  } else if(lastTextQuery){
-    context = 'The user previously described this food: "' + lastTextQuery + '". ';
+function parseItemQuestionReply(text){
+  const clean = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  const reply = JSON.parse(clean);
+  if(!reply || typeof reply.answer !== 'string' || !reply.answer.trim()) throw new Error('AI returned no answer. Please try again.');
+  let nutrition = null;
+  if(reply.nutrition_update != null){
+    const n = reply.nutrition_update;
+    if(typeof n.food_name !== 'string' || !n.food_name.trim()) throw new Error('AI returned an invalid food name.');
+    for(const field of ['calories_per_100g','protein_per_100g','carbs_per_100g','fat_per_100g','fiber_per_100g','salt_per_100g']){
+      if(typeof n[field] !== 'number' || !Number.isFinite(n[field]) || n[field] < 0) throw new Error('AI returned incomplete nutrition values. Please try again.');
+    }
+    nutrition = parseMacroJSON(JSON.stringify(n), 'STOP');
   }
-  const prompt = context + 'Answer the user\'s question directly, concisely, and in plain text (not JSON, not markdown). Question: "' + question + '"';
+  let grams = null;
+  if(reply.estimated_grams != null){
+    if(typeof reply.estimated_grams !== 'number' || !Number.isFinite(reply.estimated_grams) || reply.estimated_grams <= 0) throw new Error('AI returned an invalid serving size.');
+    grams = reply.estimated_grams;
+  }
+  return {answer:reply.answer.trim(), nutrition, grams};
+}
+
+async function requestItemQuestion(question, item, grams, notes){
+  const prompt = 'Help the user with the currently selected food item. A single message may correct the food name, ask a question, and ask for serving weight at the same time. ' +
+    'Current item (nutrition values are per 100g): ' + JSON.stringify(item) + '. Current serving grams: ' + JSON.stringify(grams) + '. ' +
+    'Previous user context: ' + JSON.stringify(notes) + '. New user message: ' + JSON.stringify(question) + '. ' +
+    'Respond ONLY with strict JSON: {"answer": string, "nutrition_update": null or {"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number, "fiber_per_100g": number, "salt_per_100g": number}, "estimated_grams": null or number}. ' +
+    'Answer the question concisely. If the user identifies/corrects the food or asks to recalculate nutrition, supply all nutrition_update fields with realistic estimates; otherwise use null and keep existing nutrition unchanged. ' +
+    'Only provide estimated_grams when the user asks for serving weight or provides a new amount. Use the photo if attached. With only a food name, give a typical portion estimate and clearly say it is a typical estimate, not a measurement. If weight cannot reasonably be estimated, use null and explain. ' +
+    'Never confuse per-100g nutrients with whole-serving totals. Salt is grams of salt per 100g, not sodium in milligrams. The user will review and explicitly apply any proposed changes.';
   const parts = buildPromptParts(prompt);
-  const result = await withRetry(()=>callGeminiRaw(parts, false), 1);
-  return result.text.trim();
+  return withRetry(async ()=>{
+    const result = await callGeminiRaw(parts, true);
+    return parseItemQuestionReply(result.text);
+  }, 1);
 }
 
 let multiPhotoItems = [];
@@ -4358,16 +4357,17 @@ let lastPhotoBase64 = null;
 let lastPhotoMimeType = null;
 let lastTextQuery = null;
 let refinementNotes = [];
+let pendingItemGrams = null;
+let pendingGramsSuggested = false;
+let itemEditorSession = 0;
 
-function showPhotoResult(result, presetGrams){
+function showPhotoResult(result){
   lastPhotoResult = result;
   const body = document.getElementById('photoResultBody');
-  const hasTypicalWeight = result.typicalWeightG && result.typicalWeightG > 0;
-  const autoGrams = presetGrams || (hasTypicalWeight ? Math.round(result.typicalWeightG) : '');
 
   body.innerHTML = `
     <div class="photo-result-name">${escapeHtml(result.name)}</div>
-    <div class="photo-result-note">${escapeHtml(result.note || 'Values per 100g. Correct them with Re-analyze or ask a question, then tap Update item.')}</div>
+    <div class="photo-result-note">${escapeHtml(result.note || 'Values per 100g. Ask a question or correct the food below, then review and tap Update item.')}</div>
     <div class="photo-result-macros">
       <div>Cal<span>${roundNum(result.calPer100)}</span></div>
       <div>Prot<span>${roundNum(result.proteinPer100)}g</span></div>
@@ -4376,20 +4376,11 @@ function showPhotoResult(result, presetGrams){
       <div>Fiber<span>${roundNum(result.fiberPer100)}g</span></div>
       <div>Salt<span>${roundNum(result.saltPer100)}g</span></div>
     </div>
-    ${hasTypicalWeight ? `<div class="photo-typical-weight">${escapeHtml(result.weightLabel || 'Typical weight')}: ~${Math.round(result.typicalWeightG)}g — filled in below, adjust if needed</div>` : ''}
-    <div class="photo-grams-field">
-      <label for="photoGramsInput">Serving size (g) — ask "how many grams is this" below to estimate</label>
-      <input type="text" inputmode="decimal" id="photoGramsInput" placeholder="e.g. 150" value="${autoGrams ? escapeHtml(String(autoGrams)) : ''}">
-    </div>
+    <div class="photo-result-note" id="photoServingEstimate">${pendingItemGrams !== null && pendingItemGrams !== ''
+      ? `${pendingGramsSuggested ? 'Suggested serving' : 'Serving size'}: ${escapeHtml(pendingItemGrams)}g${pendingGramsSuggested ? ' — approximate; apply with Update item.' : '. Edit grams in the main item row, or ask AI below.'}`
+      : 'Enter grams in the main item row, or ask AI to estimate a serving below.'}</div>
   `;
-  document.getElementById('photoRefineInput').value = '';
-  document.getElementById('photoAskAnswer').style.display = 'none';
-  document.getElementById('photoAskAnswer').textContent = '';
   document.getElementById('photoResultOverlay').classList.add('show');
-  setTimeout(()=>{
-    const gramsInput = document.getElementById('photoGramsInput');
-    if(gramsInput && !autoGrams) gramsInput.focus();
-  }, 50);
 }
 
 function resetPhotoState(){
@@ -4398,13 +4389,24 @@ function resetPhotoState(){
   lastPhotoMimeType = null;
   lastTextQuery = null;
   refinementNotes = [];
+  pendingItemGrams = null;
+  pendingGramsSuggested = false;
 }
 
 // The result box is now the per-item "fix or ask" box, opened with the pencil on a list item.
 function openItemEditor(id){
   const item = multiPhotoItems.find(i => i.id === id);
   if(!item) return;
+  itemEditorSession++;
   resultEditTarget = id;
+  pendingItemGrams = String(item.grams ?? '');
+  pendingGramsSuggested = false;
+  document.getElementById('photoRefineInput').value = '';
+  document.getElementById('photoAskAnswer').textContent = '';
+  document.getElementById('photoAskAnswer').style.display = 'none';
+  document.getElementById('photoAskBtn').disabled = false;
+  document.getElementById('photoAskBtn').textContent = 'Ask AI';
+  document.getElementById('photoResultUseBtn').disabled = false;
   lastPhotoBase64 = item.photo ? item.photo.base64 : null;
   lastPhotoMimeType = item.photo ? item.photo.mime : null;
   lastTextQuery = item.photo ? null : (item.query || item.name);
@@ -4418,10 +4420,11 @@ function openItemEditor(id){
     fiberPer100: item.fiberPer100,
     saltPer100: item.saltPer100,
     typicalWeightG: 0
-  }, item.grams);
+  });
 }
 
 function closeItemEditor(){
+  itemEditorSession++;
   document.getElementById('photoResultOverlay').classList.remove('show');
   resultEditTarget = null;
   resetPhotoState();
@@ -4435,7 +4438,6 @@ document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
     closeItemEditor();
     return;
   }
-  const gramsInput = document.getElementById('photoGramsInput');
   item.name = lastPhotoResult.name;
   item.calPer100 = lastPhotoResult.calPer100;
   item.proteinPer100 = lastPhotoResult.proteinPer100;
@@ -4443,7 +4445,7 @@ document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
   item.fatPer100 = lastPhotoResult.fatPer100;
   item.fiberPer100 = lastPhotoResult.fiberPer100;
   item.saltPer100 = lastPhotoResult.saltPer100;
-  item.grams = gramsInput ? gramsInput.value.trim() : item.grams;
+  if(pendingItemGrams !== null) item.grams = pendingItemGrams;
   if(refinementNotes.length !== (item.notes || []).length) item.hint = '';
   item.notes = refinementNotes.slice();
   closeItemEditor();
@@ -4451,111 +4453,51 @@ document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
   showToast('Item updated');
 });
 
-document.getElementById('photoRefineBtn').addEventListener('click', async ()=>{
-  const note = document.getElementById('photoRefineInput').value.trim();
-  if(!note){
-    showToast('Type a note first');
-    return;
-  }
-  if(!lastPhotoBase64 && !lastTextQuery){
-    showToast('Nothing to re-analyze — take a photo or ask about a food first');
-    return;
-  }
-
-  const gramsInput = document.getElementById('photoGramsInput');
-  const preservedGrams = gramsInput ? gramsInput.value : '';
-
-  refinementNotes.push(note);
-  const combinedNote = refinementNotes.join('; ');
-
-  const refineBtn = document.getElementById('photoRefineBtn');
+document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
+  const input = document.getElementById('photoRefineInput');
+  const question = input.value.trim();
   const askBtn = document.getElementById('photoAskBtn');
-  refineBtn.disabled = true;
+  if(askBtn.disabled) return;
+  if(!question){ showToast('Type a question or food correction first'); return; }
+  if(!lastPhotoResult || !resultEditTarget) return;
+  if(!requireGeminiKey()) return;
+  const session = itemEditorSession;
+  const target = resultEditTarget;
+  const updateBtn = document.getElementById('photoResultUseBtn');
   askBtn.disabled = true;
-  refineBtn.textContent = '…';
-
-  document.getElementById('photoResultOverlay').classList.remove('show');
-  showLoadingOverlay('Re-analyzing…');
-
-  const baseContext = lastPhotoBase64
-    ? 'Look at this food photo and identify the food.'
-    : 'The user describes this food: "' + lastTextQuery + '". Identify it and estimate its nutrition.';
-
-  let result;
+  updateBtn.disabled = true;
+  askBtn.textContent = 'Asking AI…';
+  input.blur();
   try{
-    result = await requestMacroEstimate(baseContext, combinedNote);
-  }catch(e){
-    console.error('Gemini re-analysis failed', e);
-    hideLoadingOverlay();
-    refineBtn.disabled = false;
-    askBtn.disabled = false;
-    refineBtn.textContent = 'Re-analyze macros';
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
+    const reply = await requestItemQuestion(question, lastPhotoResult, pendingItemGrams, refinementNotes.slice());
+    if(session !== itemEditorSession || target !== resultEditTarget) return;
+    if(reply.nutrition) lastPhotoResult = reply.nutrition;
+    if(reply.grams !== null){
+      pendingItemGrams = String(reply.grams);
+      pendingGramsSuggested = true;
+    }
+    refinementNotes.push(question);
+    showPhotoResult(lastPhotoResult);
+    const answer = document.getElementById('photoAskAnswer');
+    answer.textContent = reply.answer;
+    answer.style.display = 'block';
+    if(input.value.trim() === question) input.value = '';
+  }catch(error){
+    if(session !== itemEditorSession || target !== resultEditTarget) return;
+    showErrorModal(error.message || String(error), 'AI question failed');
+  }finally{
+    if(session === itemEditorSession && target === resultEditTarget){
+      askBtn.disabled = false;
+      updateBtn.disabled = false;
+      askBtn.textContent = 'Ask AI';
+    }
   }
-
-  hideLoadingOverlay();
-  refineBtn.disabled = false;
-  askBtn.disabled = false;
-  refineBtn.textContent = 'Re-analyze macros';
-
-  if(!result){
-    showToast('Could not re-analyze that');
-    document.getElementById('photoResultOverlay').classList.add('show');
-    return;
-  }
-
-  showPhotoResult(result, preservedGrams);
-  showToast('Updated based on your note');
 });
 
-document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
-  const question = document.getElementById('photoRefineInput').value.trim();
-  if(!question){
-    showToast('Type a question first');
-    return;
-  }
-  if(!lastPhotoBase64 && !lastTextQuery){
-    showToast('Nothing to ask about yet');
-    return;
-  }
-
-  const refineBtn = document.getElementById('photoRefineBtn');
-  const askBtn = document.getElementById('photoAskBtn');
-  const originalLabel = askBtn.textContent;
-  refineBtn.disabled = true;
-  askBtn.disabled = true;
-  askBtn.textContent = '…';
-
-  let answer;
-  try{
-    answer = await askGeminiFreeform(question);
-  }catch(e){
-    console.error('Gemini question failed', e);
-    refineBtn.disabled = false;
-    askBtn.disabled = false;
-    askBtn.textContent = originalLabel;
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-
-  refineBtn.disabled = false;
-  askBtn.disabled = false;
-  askBtn.textContent = originalLabel;
-
-  const answerBox = document.getElementById('photoAskAnswer');
-  answerBox.textContent = answer;
-  answerBox.style.display = 'block';
-
-  if(mentionsWeight(question)){
-    const grams = extractGramsFromText(answer);
-    if(grams){
-      const gramsInput = document.getElementById('photoGramsInput');
-      if(gramsInput){
-        gramsInput.value = grams;
-        showToast('Serving size filled in: ' + grams + 'g');
-      }
-    }
+document.getElementById('photoRefineInput').addEventListener('keydown', event=>{
+  if(event.key === 'Enter'){
+    event.preventDefault();
+    document.getElementById('photoAskBtn').click();
   }
 });
 

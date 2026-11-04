@@ -32,3 +32,7 @@ cd android
 ## Monthly review
 
 Each day shows calories eaten, estimated TDEE, and recorded steps. TDEE uses the latest weigh-in on or before that day, daily gym activity, and the higher of saved manual and Health Connect steps. Days without food logs still show activity data. Missing body stats or step readings are labelled explicitly; a recorded zero remains zero. The review displays the daily readings already synced or saved, rather than inventing values for missing dates.
+
+## One-box item questions
+
+The pencil action opens one question/correction input with an **Ask AI** button. You can combine food identification and a weight question, for example “Karjalanpaisti, how many grams?”. The response can propose complete per-100g nutrition and serving grams together. Estimates are shown for review; **Update item** applies them, while **Cancel** preserves the item. Ordinary questions do not replace nutrition or grams. Serving grams can also be edited directly in the main scanned-item row. Weight from text or a photo is an estimate, not a measurement.
