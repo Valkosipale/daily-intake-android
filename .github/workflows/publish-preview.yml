@@ -97,8 +97,27 @@ jobs:
       - name: Retain preview signing key
         uses: actions/cache@v4
         with:
-          path: ~/.android/debug.keystore
-          key: daily-intake-calculator-debug-signing-v1
+          path: .preview-signing/debug.keystore
+          key: daily-intake-calculator-debug-signing-v2
+
+      - name: Configure explicit preview signing key
+        run: |
+          mkdir -p .preview-signing
+          if [ ! -s .preview-signing/debug.keystore ]; then
+            keytool -genkeypair -keystore .preview-signing/debug.keystore -storetype JKS -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=Android Debug,O=Android,C=US' -noprompt
+          fi
+          cat >> android/app/build.gradle <<'GRADLE'
+          android {
+              signingConfigs {
+                  debug {
+                      storeFile rootProject.file('../.preview-signing/debug.keystore')
+                      storePassword 'android'
+                      keyAlias 'androiddebugkey'
+                      keyPassword 'android'
+                  }
+              }
+          }
+          GRADLE
 
       - name: Build debug APK
         working-directory: android
@@ -122,7 +141,7 @@ jobs:
 
           Inside Scan food, the text-entry button is now Add / Ask AI. Photo, Barcode, text entry, Add / Ask AI, Cancel, and Add to log use matching widths and heights. The input has a shorter placeholder and an accessible description.
 
-          Existing monthly TDEE/steps review and nutrition behavior are preserved. Android build, eight tests, and browser checks passed, including equal control sizes at 320/390/560px, barcode scanning without a key, and on-demand AI key entry. This debug preview uses the retained standard-app signing key.
+          Existing monthly TDEE/steps review and nutrition behavior are preserved. Android build, eight tests, and browser checks passed, including equal control sizes at 320/390/560px, barcode scanning without a key, and on-demand AI key entry. This debug preview starts using an explicitly configured cached signing key for future updates. Export a backup before upgrading from the monthly-review preview; its different signing key requires uninstalling that older preview, installing this one, and importing the backup.
           NOTES
           if gh release view scan-layout-preview-2026-11-04 >/dev/null 2>&1; then
             gh release upload scan-layout-preview-2026-11-04 daily-intake-scan-layout-debug.apk SHA256SUMS --clobber
