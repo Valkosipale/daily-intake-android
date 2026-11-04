@@ -1858,7 +1858,7 @@ function openCopyToDayModal(item){
   pendingCopyItem = item;
   pendingCopyMode = 'item';
   document.getElementById('copyToDayFoodName').textContent = `Choose a date to copy "${item.name}" to.`;
-  document.getElementById('copyToDayInput').value = nextDayFromCurrent();
+  document.getElementById('copyToDayInput').value = todayStr();
   document.getElementById('copyToDayOverlay').classList.add('show');
 }
 
