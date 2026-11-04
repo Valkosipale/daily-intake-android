@@ -1,4 +1,4 @@
-name: Publish unified item AI question
+name: Publish compact scan fields
 
 on:
   push:
@@ -134,19 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-one-box-ai-debug.apk
-          sha256sum daily-intake-one-box-ai-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-compact-fields-debug.apk
+          sha256sum daily-intake-compact-fields-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          The item editor now has one text box and one Ask AI button. A message such as "Karjalanpaisti, how many grams?" can correct the food, update its nutrition and suggest serving grams in one reply.
+          Grams now spans the full width of each scanned item. The six nutrition fields fill three rows of two underneath: calories/protein, carbs/fat, and fiber/salt. No empty cell is left beside salt.
 
-          Removed the duplicate numeric serving-size field and separate Re-analyze action from this dialog. Grams remain editable in the main scanned-item row. AI suggestions appear for review and only apply when Update item is tapped; Cancel discards them. Ordinary questions preserve existing nutrition and serving size.
+          Input boxes are slightly shorter (40px instead of 44px) with reduced padding while keeping readable text. Preserves the one-box AI question/correction flow, text-only Scan controls, live totals, monthly review and automatic steps.
 
-          Weight suggestions are approximate; when no photo can establish weight, AI uses a typical portion estimate and states the uncertainty. Invalid or incomplete AI nutrition is rejected, and replies from a closed editor cannot change a newly opened item.
-
-          Android build, fourteen tests and browser checks passed, including combined questions, draft/apply/cancel behavior, retries and short phone layouts. Uses the same signing key as the previous Scan update.
+          Android build and phone-layout checks passed, including full-width alignment, paired rows, totals, editing, photo refinement data and logging. Uses the same signing key as the previous update.
           NOTES
-          if gh release view one-box-ai-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload one-box-ai-preview-2026-11-04 daily-intake-one-box-ai-debug.apk SHA256SUMS --clobber
+          if gh release view compact-fields-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload compact-fields-preview-2026-11-04 daily-intake-compact-fields-debug.apk SHA256SUMS --clobber
           else
-            gh release create one-box-ai-preview-2026-11-04 daily-intake-one-box-ai-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'One question box for food and serving size' --notes-file release-notes.md --prerelease --latest=false
+            gh release create compact-fields-preview-2026-11-04 daily-intake-compact-fields-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Full-width grams and compact nutrition fields' --notes-file release-notes.md --prerelease --latest=false
           fi
