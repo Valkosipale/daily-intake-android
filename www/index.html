@@ -21,6 +21,18 @@
 
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;overflow-x:hidden;max-width:100%;}
+html.dialog-open, html.dialog-open body{
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+.data-overlay, .confirm-overlay, .data-box, .confirm-box{
+  overscroll-behavior:contain;
+}
+.data-box, .confirm-box{
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.confirm-box{max-height:90vh;}
 body{
   background:var(--paper);
   color:var(--ink);
@@ -4515,5 +4527,6 @@ document.getElementById('photoRefineInput').addEventListener('keydown', event=>{
   refreshPhoneSteps(currentDate);
 })();
 </script>
+<script src="modal-scroll.js"></script>
 </body>
 </html>
