@@ -2973,17 +2973,19 @@ async function fetchBarcodeResult(rawCode){
     return null;
   }
 
-  showLoadingOverlay('Looking up product…');
+  const loadingRequest = showLoadingOverlay('Looking up product…');
   let product;
   try{
     product = await withRetry(() => fetchOffProduct(code), 1);
   }catch(e){
+    if(!isLoadingRequestActive(loadingRequest)) return null;
     console.error('Barcode lookup failed', e);
-    hideLoadingOverlay();
+    hideLoadingOverlay(loadingRequest);
     showErrorModal((e && e.message) ? e.message : 'Unknown error', 'Barcode lookup failed');
     return null;
   }
-  hideLoadingOverlay();
+  if(!isLoadingRequestActive(loadingRequest)) return null;
+  hideLoadingOverlay(loadingRequest);
 
   if(!product){
     showToast('Not found in Open Food Facts — add it manually or try Ask Gemini');
@@ -2992,9 +2994,10 @@ async function fetchBarcodeResult(rawCode){
   return mapOffProduct(product, code);
 }
 
-async function waitForScannerModule(Scanner, timeoutMs){
+async function waitForScannerModule(Scanner, timeoutMs, request){
   const start = Date.now();
   while(Date.now() - start < timeoutMs){
+    if(request !== undefined && !isLoadingRequestActive(request)) return false;
     try{
       const r = await Scanner.isGoogleBarcodeScannerModuleAvailable();
       if(r && r.available) return true;
@@ -3015,6 +3018,7 @@ async function scanBarcodeCode(fallbackInputId){
     return null;
   }
 
+  let preparingRequest = null;
   try{
     // Google's scanner module has to be present before scan() works; on a fresh
     // install it downloads once via Google Play services.
@@ -3025,14 +3029,15 @@ async function scanBarcodeCode(fallbackInputId){
     }catch(e){ available = false; }
 
     if(!available){
-      showLoadingOverlay('Preparing scanner (first time only)…');
+      preparingRequest = showLoadingOverlay('Preparing scanner (first time only)…');
       try{
         await Scanner.installGoogleBarcodeScannerModule();
       }catch(e){
         console.error('Scanner module install request failed', e);
       }
-      available = await waitForScannerModule(Scanner, 45000);
-      hideLoadingOverlay();
+      available = await waitForScannerModule(Scanner, 45000, preparingRequest);
+      if(!isLoadingRequestActive(preparingRequest)) return null;
+      hideLoadingOverlay(preparingRequest);
       if(!available){
         showErrorModal("Couldn't prepare the scanner. The first time, it needs Google Play services and an internet connection. You can still type the barcode number instead.", 'Scanner unavailable');
         return null;
@@ -3050,7 +3055,8 @@ async function scanBarcodeCode(fallbackInputId){
     }
     return code;
   }catch(e){
-    hideLoadingOverlay();
+    if(preparingRequest !== null && !isLoadingRequestActive(preparingRequest)) return null;
+    hideLoadingOverlay(preparingRequest === null ? undefined : preparingRequest);
     const msg = (e && e.message) ? e.message : String(e);
     if(/cancel/i.test(msg)) return null; // person backed out of the scanner
     console.error('Barcode scan failed', e);
@@ -3775,12 +3781,26 @@ document.getElementById('apiKeySaveBtn').addEventListener('click', ()=>{
   showToast(key ? 'API key saved' : 'API key cleared');
 });
 
+let loadingRequestVersion = 0;
+
 function showLoadingOverlay(text){
+  const request = ++loadingRequestVersion;
   document.getElementById('photoLoadingTitle').textContent = text || 'Analyzing…';
   document.getElementById('photoLoadingOverlay').classList.add('show');
+  return request;
 }
 
-function hideLoadingOverlay(){
+function isLoadingRequestActive(request){
+  return request === loadingRequestVersion;
+}
+
+function cancelLoadingOverlay(){
+  loadingRequestVersion++;
+  hideLoadingOverlay();
+}
+
+function hideLoadingOverlay(request){
+  if(request !== undefined && !isLoadingRequestActive(request)) return;
   document.getElementById('photoLoadingOverlay').classList.remove('show');
 }
 
@@ -4043,18 +4063,20 @@ async function addBarcodeToMulti(rawCode){
 
 async function addTextToMulti(description){
   if(!requireGeminiKey()) return false;
-  showLoadingOverlay('Getting estimate…');
+  const loadingRequest = showLoadingOverlay('Getting estimate…');
   let result;
   try{
     // null = no photo. Asking about weight ("... macros and weight") also returns a typical weight.
     result = await requestMacroEstimate('The user describes this food: "' + description + '". Identify it and estimate its nutrition.', '', null);
   }catch(e){
+    if(!isLoadingRequestActive(loadingRequest)) return false;
     console.error('Gemini query failed', e);
-    hideLoadingOverlay();
+    hideLoadingOverlay(loadingRequest);
     showErrorModal((e && e.message) ? e.message : 'Unknown error');
     return false;
   }
-  hideLoadingOverlay();
+  if(!isLoadingRequestActive(loadingRequest)) return false;
+  hideLoadingOverlay(loadingRequest);
   addItem(Object.assign(itemFromEstimate(result), {source: 'text', query: description}));
   return true;
 }
@@ -4085,17 +4107,19 @@ async function addPhotoToMulti(){
   }
 
   const mime = 'image/' + (photo.format || 'jpeg');
-  showLoadingOverlay('Analyzing photo…');
+  const loadingRequest = showLoadingOverlay('Analyzing photo…');
   let result;
   try{
     result = await requestMacroEstimate('Look at this food photo and identify the food.', '', {base64: photo.base64String, mime});
   }catch(e){
+    if(!isLoadingRequestActive(loadingRequest)) return;
     console.error('Gemini analysis failed', e);
-    hideLoadingOverlay();
+    hideLoadingOverlay(loadingRequest);
     showErrorModal((e && e.message) ? e.message : 'Unknown error');
     return;
   }
-  hideLoadingOverlay();
+  if(!isLoadingRequestActive(loadingRequest)) return;
+  hideLoadingOverlay(loadingRequest);
 
   addItem(Object.assign(itemFromEstimate(result), {
     source: 'photo',

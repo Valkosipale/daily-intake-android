@@ -1,4 +1,4 @@
-name: Publish popup scroll containment
+name: Publish popup-aware Android Back
 
 on:
   push:
@@ -134,17 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-popup-scroll-debug.apk
-          sha256sum daily-intake-popup-scroll-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-android-back-debug.apk
+          sha256sum daily-intake-android-back-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Popup scrolling no longer passes through to the page behind it. The background page stays locked while any dialog is open, including stacked dialogs, and normal scrolling resumes after the final dialog closes.
+          Android Back now closes the top popup instead of closing the app. Nested popups close one at a time using their existing Cancel/Close actions, so drafts are not accidentally applied. Back exits the app only when no popup is open.
 
-          Shared scroll containment applies across all popup windows. Dialog content remains scrollable, including longer forms and reports. Wheel/touch boundary and backdrop checks passed for all thirteen popup types, along with nested AI-editor and Scan workflows. Android build passed.
+          The shared popup stack also keeps the newest dialog above its parent and preserves the background scroll lock. Dismissing a loading dialog ignores its late results, so it cannot unexpectedly add food, reopen errors or launch the scanner afterward.
 
-          Keeps the existing food-copy-to-today default, compact fields, one-box AI editing, monthly review and automatic steps. Uses the same signing key as the previous update.
+          Uses the official Capacitor App plugin for Android Back events. Android build, fourteen tests and browser checks with simulated native events passed, including all thirteen popup types, nested dialogs, main-screen exit and late loading results. Uses the same signing key as the previous update.
           NOTES
-          if gh release view popup-scroll-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload popup-scroll-preview-2026-11-04 daily-intake-popup-scroll-debug.apk SHA256SUMS --clobber
+          if gh release view android-back-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload android-back-preview-2026-11-04 daily-intake-android-back-debug.apk SHA256SUMS --clobber
           else
-            gh release create popup-scroll-preview-2026-11-04 daily-intake-popup-scroll-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Keep scrolling inside popup windows' --notes-file release-notes.md --prerelease --latest=false
+            gh release create android-back-preview-2026-11-04 daily-intake-android-back-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Android Back closes popup windows first' --notes-file release-notes.md --prerelease --latest=false
           fi
