@@ -623,6 +623,10 @@ body{
 .multi-photo-header .multi-photo-name{flex:1;min-width:0;overflow-wrap:anywhere;}
 .multi-photo-header .multi-photo-side{flex-direction:row;}
 .multi-photo-header button{width:40px;height:40px;}
+.scan-reanalyze{display:grid;gap:8px;margin-top:12px;}
+.scan-reanalyze input{width:100%;min-width:0;height:44px;padding:8px;background:#0D0D0D;color:var(--ink);border:1px solid var(--hair);font-size:16px;}
+.scan-reanalyze button{width:100%;min-height:44px;}
+.scan-reanalyze-answer{overflow-wrap:anywhere;}
 .multi-photo-subtotal{
   display:block;
   margin-top:6px;
@@ -3984,7 +3988,7 @@ function parseItemQuestionReply(text, unit = 'g'){
   return {answer:reply.answer.trim(), nutrition, grams, quantity};
 }
 
-async function requestItemQuestion(question, item, amount, notes, unit = 'g', itemWeightG = null){
+async function requestItemQuestion(question, item, amount, notes, unit = 'g', itemWeightG = null, photo = undefined){
   const perItem = unit === 'item';
   const suffix = perItem ? 'per_item' : 'per_100g';
   const fields = ['calories','protein','carbs','fat','fiber','salt'].map(name=>`"${name}_${suffix}": number`).join(', ');
@@ -3996,7 +4000,7 @@ async function requestItemQuestion(question, item, amount, notes, unit = 'g', it
     'Answer concisely. If values are missing, the user corrects the food, or asks to recalculate nutrition, provide ALL nutrition_update fields for the SELECTED BASIS. Otherwise use null and preserve existing values. ' +
     (perItem ? 'All nutrition is for ONE item, never the total for the current item quantity. Only set estimated_quantity when the user supplies or asks for a count; do NOT put grams in this field. estimated_grams is the weight of ONE item, not the total weight of all items. ' : 'All nutrition is per 100g. estimated_grams is the serving amount and must not be used as an item count. ') +
     'Only suggest a new amount or weight when asked for it. Use the photo if attached. With only a food name, explain that weight is a typical portion estimate, not a measurement. If unknown, use null. Salt is grams of salt, not sodium milligrams. The user will explicitly review and apply changes.';
-  const parts = buildPromptParts(prompt);
+  const parts = buildPromptParts(prompt, photo);
   return withRetry(async ()=>{
     const result = await callGeminiRaw(parts, true);
     return parseItemQuestionReply(result.text,unit);
@@ -4241,6 +4245,12 @@ function renderMultiPhotoList(){
           </div>
         </div>
         <span class="multi-photo-subtotal">${amount > 0 ? subtotalCal + ' cal' : ''}</span>
+        <div class="scan-reanalyze">
+          <label for="reanalyze-${item.id}">Comment or correction for AI</label>
+          <input id="reanalyze-${item.id}" class="scan-reanalyze-input" data-id="${item.id}" type="text" placeholder="e.g. It is salmon, about 200g" value="${escapeHtml(item.reanalyzeComment || '')}">
+          <button type="button" class="secondary scan-reanalyze-btn" data-id="${item.id}">Re-analyze</button>
+          ${item.reanalyzeAnswer ? `<div class="multi-photo-hint scan-reanalyze-answer" role="status">${escapeHtml(item.reanalyzeAnswer)}</div>` : ''}
+        </div>
       </div>
     `;
     list.appendChild(row);
@@ -4297,6 +4307,22 @@ function renderMultiPhotoList(){
     });
   }
 
+  list.querySelectorAll('.scan-reanalyze-input').forEach(input=>{
+    input.addEventListener('input',()=>{
+      const item = multiPhotoItems.find(i=>i.id === input.dataset.id);
+      if(item) item.reanalyzeComment = input.value;
+    });
+    input.addEventListener('keydown',event=>{
+      if(event.key === 'Enter'){
+        event.preventDefault();
+        reanalyzeScanItem(input.dataset.id);
+      }
+    });
+  });
+  list.querySelectorAll('.scan-reanalyze-btn').forEach(button=>{
+    button.addEventListener('click',()=> reanalyzeScanItem(button.dataset.id));
+  });
+
   list.querySelectorAll('.multi-photo-edit').forEach(btn=>{
     btn.addEventListener('click', ()=> openItemEditor(btn.getAttribute('data-id')));
   });
@@ -4310,6 +4336,46 @@ function renderMultiPhotoList(){
   });
 
   updateMultiPhotoTotalDisplay();
+}
+
+async function reanalyzeScanItem(id){
+  const item = multiPhotoItems.find(i=>i.id === id);
+  if(!item || item.reanalyzing) return;
+  const comment = (item.reanalyzeComment || '').trim();
+  if(!comment){showToast('Type a comment or correction first');return;}
+  if(!requireGeminiKey()) return;
+  item.reanalyzing = true;
+  const request = showLoadingOverlay('Re-analyzing item…');
+  const unit = scanUnit(item);
+  const snapshot = {name:item.name,unit};
+  for(const field of SCAN_NUTRIENTS) snapshot[field[unit]] = item[field[unit]];
+  try{
+    const reply = await requestItemQuestion('Re-analyze this existing food and recalculate its nutrition using this comment: '+comment,
+      snapshot, unit === 'item' ? item.quantity : item.grams, (item.notes || []).slice(), unit, scanWeight(item) || null, item.photo || null);
+    if(!isLoadingRequestActive(request) || !multiPhotoItems.includes(item)) return;
+    const draft = {...item};
+    if(reply.nutrition && reply.nutrition.name !== item.name && reply.grams === null) draft.itemWeightG = '';
+    if(unit === 'item'){
+      if(reply.grams !== null) setScanItemWeight(draft,String(reply.grams));
+      if(reply.quantity !== null) draft.quantity = String(reply.quantity);
+    } else if(reply.grams !== null) draft.grams = String(reply.grams);
+    if(reply.nutrition){
+      draft.name = reply.nutrition.name;
+      applyScanNutrition(draft,reply.nutrition);
+      draft.hint = '';
+    }
+    draft.notes = [...(item.notes || []),comment];
+    draft.reanalyzeAnswer = reply.answer;
+    draft.reanalyzeComment = '';
+    Object.assign(item,draft);
+    renderMultiPhotoList();
+    showToast('Item updated');
+  }catch(error){
+    if(isLoadingRequestActive(request) && multiPhotoItems.includes(item)) showErrorModal(error.message || String(error),'Re-analysis failed');
+  }finally{
+    item.reanalyzing = false;
+    hideLoadingOverlay(request);
+  }
 }
 
 function updateMultiPhotoTotalDisplay(){

@@ -1,4 +1,4 @@
-name: Publish rounded scan nutrition
+name: Publish inline item re-analysis
 
 on:
   push:
@@ -134,15 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-two-decimals-debug.apk
-          sha256sum daily-intake-two-decimals-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-reanalyze-debug.apk
+          sha256sum daily-intake-reanalyze-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Nutrition inputs now show at most two decimal places, including converted per-item calories and salt. Unnecessary trailing zeros are omitted. Calculations retain their full precision.
+          Every scanned item now has a comment box and Re-analyze button. Enter a correction or question to update that same item without adding a duplicate. Photo items reuse their own original photo; text and barcode items use their existing details and previous comments.
 
-          Includes the per-item scan options and all previous improvements. Uses the same signing key as the previous update.
+          Updates respect Per item or Per 100g and refresh totals immediately. Cancelling analysis ignores late results. Existing pencil/editor controls remain available. Android build, 25 tests and browser checks passed, including photo isolation, repeated corrections, quantities, totals and cancellation. Uses the same signing key as the previous update.
           NOTES
-          if gh release view two-decimals-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload two-decimals-preview-2026-11-04 daily-intake-two-decimals-debug.apk SHA256SUMS --clobber
+          if gh release view reanalyze-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload reanalyze-preview-2026-11-04 daily-intake-reanalyze-debug.apk SHA256SUMS --clobber
           else
-            gh release create two-decimals-preview-2026-11-04 daily-intake-two-decimals-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Nutrition fields limited to two decimals' --notes-file release-notes.md --prerelease --latest=false
+            gh release create reanalyze-preview-2026-11-04 daily-intake-reanalyze-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Re-analyze each food with a new comment' --notes-file release-notes.md --prerelease --latest=false
           fi
