@@ -1,4 +1,4 @@
-name: Publish per-item scan nutrition
+name: Publish rounded scan nutrition
 
 on:
   push:
@@ -134,17 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-per-item-scan-debug.apk
-          sha256sum daily-intake-per-item-scan-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-two-decimals-debug.apk
+          sha256sum daily-intake-two-decimals-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Each scanned food now offers Per 100g or Per item. Per-item foods use a quantity, including fractional quantities, and accept nutrition for one piece or serving. Optional weight per item enables conversion between units; unknown weights are never assumed to be 100g.
+          Nutrition inputs now show at most two decimal places, including converted per-item calories and salt. Unnecessary trailing zeros are omitted. Calculations retain their full precision.
 
-          AI corrections and questions respect the selected unit. Single per-item foods retain their quantity when logged. Meals mixing weighed and counted foods transfer as one combined serving with the correct total nutrition.
-
-          Android build, 24 tests and browser checks passed for photo/AI entries, barcode conversion, quantities and mixed meals. Uses the same signing key as the previous update.
+          Includes the per-item scan options and all previous improvements. Uses the same signing key as the previous update.
           NOTES
-          if gh release view per-item-scan-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload per-item-scan-preview-2026-11-04 daily-intake-per-item-scan-debug.apk SHA256SUMS --clobber
+          if gh release view two-decimals-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload two-decimals-preview-2026-11-04 daily-intake-two-decimals-debug.apk SHA256SUMS --clobber
           else
-            gh release create per-item-scan-preview-2026-11-04 daily-intake-per-item-scan-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Per-item nutrition in Photo, Barcode and AI' --notes-file release-notes.md --prerelease --latest=false
+            gh release create two-decimals-preview-2026-11-04 daily-intake-two-decimals-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Nutrition fields limited to two decimals' --notes-file release-notes.md --prerelease --latest=false
           fi

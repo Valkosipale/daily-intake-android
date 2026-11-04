@@ -12,6 +12,12 @@ function scanNumber(value){
   const n = Number(String(value).trim().replace(',','.'));
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
+// Keep calculation precision while showing at most two decimal places.
+function formatScanValue(value){
+  if(value === '' || value == null) return '';
+  const number = Number(String(value).trim().replace(',','.'));
+  return Number.isFinite(number) ? String(Number(number.toFixed(2))) : String(value);
+}
 function scanQuantity(item){ return scanNumber(scanUnit(item) === 'item' ? item.quantity : item.grams); }
 function scanNutrition(item){
   const unit = scanUnit(item);
@@ -109,5 +115,5 @@ function scanValidationMessage(items){
   return '';
 }
 if(typeof module !== 'undefined' && module.exports){
-  module.exports = {SCAN_NUTRIENTS,scanUnit,scanNumber,scanQuantity,scanNutrition,scanWeight,setScanUnit,setScanItemWeight,setScanNutrient,applyScanNutrition,scanTotals,scanValidationMessage};
+  module.exports = {formatScanValue,SCAN_NUTRIENTS,scanUnit,scanNumber,scanQuantity,scanNutrition,scanWeight,setScanUnit,setScanItemWeight,setScanNutrient,applyScanNutrition,scanTotals,scanValidationMessage};
 }

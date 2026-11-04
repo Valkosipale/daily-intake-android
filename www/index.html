@@ -4217,27 +4217,27 @@ function renderMultiPhotoList(){
           </div>` : ''}
           <div>
             <label>Cal/${suffix}</label>
-            <input type="text" inputmode="decimal" class="mp-cal-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'calPerItem' : 'calPer100'] ?? ''))}">
+            <input type="text" inputmode="decimal" class="mp-cal-input" data-id="${item.id}" value="${escapeHtml(formatScanValue(item[unit === 'item' ? 'calPerItem' : 'calPer100']))}">
           </div>
           <div>
             <label>Prot/${suffix}</label>
-            <input type="text" inputmode="decimal" class="mp-protein-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'proteinPerItem' : 'proteinPer100'] ?? ''))}">
+            <input type="text" inputmode="decimal" class="mp-protein-input" data-id="${item.id}" value="${escapeHtml(formatScanValue(item[unit === 'item' ? 'proteinPerItem' : 'proteinPer100']))}">
           </div>
           <div>
             <label>Carb/${suffix}</label>
-            <input type="text" inputmode="decimal" class="mp-carbs-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'carbsPerItem' : 'carbsPer100'] ?? ''))}">
+            <input type="text" inputmode="decimal" class="mp-carbs-input" data-id="${item.id}" value="${escapeHtml(formatScanValue(item[unit === 'item' ? 'carbsPerItem' : 'carbsPer100']))}">
           </div>
           <div>
             <label>Fat/${suffix}</label>
-            <input type="text" inputmode="decimal" class="mp-fat-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'fatPerItem' : 'fatPer100'] ?? ''))}">
+            <input type="text" inputmode="decimal" class="mp-fat-input" data-id="${item.id}" value="${escapeHtml(formatScanValue(item[unit === 'item' ? 'fatPerItem' : 'fatPer100']))}">
           </div>
           <div>
             <label>Fiber/${suffix}</label>
-            <input type="text" inputmode="decimal" class="mp-fiber-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'fiberPerItem' : 'fiberPer100'] ?? ''))}">
+            <input type="text" inputmode="decimal" class="mp-fiber-input" data-id="${item.id}" value="${escapeHtml(formatScanValue(item[unit === 'item' ? 'fiberPerItem' : 'fiberPer100']))}">
           </div>
           <div>
             <label>Salt/${suffix}</label>
-            <input type="text" inputmode="decimal" class="mp-salt-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'saltPerItem' : 'saltPer100'] ?? ''))}">
+            <input type="text" inputmode="decimal" class="mp-salt-input" data-id="${item.id}" value="${escapeHtml(formatScanValue(item[unit === 'item' ? 'saltPerItem' : 'saltPer100']))}">
           </div>
         </div>
         <span class="multi-photo-subtotal">${amount > 0 ? subtotalCal + ' cal' : ''}</span>
@@ -4279,7 +4279,7 @@ function renderMultiPhotoList(){
       setScanItemWeight(item,input.value);
       const row = input.closest('.multi-photo-item');
       row.querySelector('.scan-unit-note').textContent = scanWeight(item) ? `One item uses ${scanWeight(item)}g. Check that this matches one piece or serving.` : 'Enter nutrition for one item, or ask AI. No weight is assumed.';
-      for(const field of SCAN_NUTRIENTS) row.querySelector('.mp-'+(field.key === 'calories' ? 'cal' : field.key)+'-input').value = item[field.item] ?? '';
+      for(const field of SCAN_NUTRIENTS) row.querySelector('.mp-'+(field.key === 'calories' ? 'cal' : field.key)+'-input').value = formatScanValue(item[field.item]);
       refreshRowSubtotal(item.id);
       updateMultiPhotoTotalDisplay();
     });
@@ -4293,6 +4293,7 @@ function renderMultiPhotoList(){
         refreshRowSubtotal(item.id);
         updateMultiPhotoTotalDisplay();
       });
+      input.addEventListener('blur',()=>{ input.value = formatScanValue(input.value); });
     });
   }
 

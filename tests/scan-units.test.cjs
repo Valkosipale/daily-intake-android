@@ -26,3 +26,13 @@ test('AI per-item values with no weight cannot revive stale per100g nutrition',(
 test('invalid quantities, item weights and nutrition are rejected; explicit zero calories are allowed',()=>{
  const f={unit:'item',quantity:'0',calPerItem:80};assert.match(scanValidationMessage([f]),/quantity/);f.quantity='1';f.itemWeightG='-2';assert.match(scanValidationMessage([f]),/positive item weight/);f.itemWeightG='';f.calPerItem='-1';assert.match(scanValidationMessage([f]),/zero or greater/);f.calPerItem=0;assert.equal(scanValidationMessage([f]),'');
 });
+
+test('nutrition display uses at most two decimals without changing calculation precision',()=>{
+ const {formatScanValue}=require('../www/scan-units.js');
+ assert.equal(formatScanValue(108.10000000000001),'108.1');
+ assert.equal(formatScanValue(6.815),'6.82');
+ assert.equal(formatScanValue(0.46412500000000007),'0.46');
+ assert.equal(formatScanValue(0),'0');assert.equal(formatScanValue(''),'');
+ const f=food();f.grams='235';setScanUnit(f,'item');
+ const precise=f.saltPerItem;formatScanValue(precise);assert.equal(f.saltPerItem,precise);
+});
