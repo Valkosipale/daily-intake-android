@@ -4359,6 +4359,7 @@ let lastTextQuery = null;
 let refinementNotes = [];
 let pendingItemGrams = null;
 let pendingGramsSuggested = false;
+let pendingNutritionChanged = false;
 let itemEditorSession = 0;
 
 function showPhotoResult(result){
@@ -4391,6 +4392,7 @@ function resetPhotoState(){
   refinementNotes = [];
   pendingItemGrams = null;
   pendingGramsSuggested = false;
+  pendingNutritionChanged = false;
 }
 
 // The result box is now the per-item "fix or ask" box, opened with the pencil on a list item.
@@ -4401,6 +4403,7 @@ function openItemEditor(id){
   resultEditTarget = id;
   pendingItemGrams = String(item.grams ?? '');
   pendingGramsSuggested = false;
+  pendingNutritionChanged = false;
   document.getElementById('photoRefineInput').value = '';
   document.getElementById('photoAskAnswer').textContent = '';
   document.getElementById('photoAskAnswer').style.display = 'none';
@@ -4446,7 +4449,7 @@ document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
   item.fiberPer100 = lastPhotoResult.fiberPer100;
   item.saltPer100 = lastPhotoResult.saltPer100;
   if(pendingItemGrams !== null) item.grams = pendingItemGrams;
-  if(refinementNotes.length !== (item.notes || []).length) item.hint = '';
+  if(pendingNutritionChanged) item.hint = '';
   item.notes = refinementNotes.slice();
   closeItemEditor();
   renderMultiPhotoList();
@@ -4471,7 +4474,10 @@ document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
   try{
     const reply = await requestItemQuestion(question, lastPhotoResult, pendingItemGrams, refinementNotes.slice());
     if(session !== itemEditorSession || target !== resultEditTarget) return;
-    if(reply.nutrition) lastPhotoResult = reply.nutrition;
+    if(reply.nutrition){
+      lastPhotoResult = reply.nutrition;
+      pendingNutritionChanged = true;
+    }
     if(reply.grams !== null){
       pendingItemGrams = String(reply.grams);
       pendingGramsSuggested = true;
