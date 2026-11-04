@@ -1,4 +1,4 @@
-name: Publish scan layout preview
+name: Publish scan item layout preview
 
 on:
   push:
@@ -134,17 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-scan-layout-debug.apk
-          sha256sum daily-intake-scan-layout-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-scan-items-debug.apk
+          sha256sum daily-intake-scan-items-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Simplifies the standard app's Scan section to a single Scan button. Removed the separate Ask Gemini and API key buttons; AI actions still request a key when needed.
+          Scanned items now show only the item name and editable values: removed star/barcode icons and photo thumbnails from the list. Photo data is still available for re-analysis.
 
-          Inside Scan food, the text-entry button is now Add / Ask AI. Photo, Barcode, text entry, Add / Ask AI, Cancel, and Add to log use matching widths and heights. The input has a shorter placeholder and an accessible description.
+          Grams is the first field in the same two-column grid as calories, protein, carbs, fat, fiber and salt. All seven fields are 44px high with larger text and wider padding. Edit/remove actions sit beside the item name, and the popup scrolls as one panel on short screens so inputs are not clipped.
 
-          Existing monthly TDEE/steps review and nutrition behavior are preserved. Android build, eight tests, and browser checks passed, including equal control sizes at 320/390/560px, barcode scanning without a key, and on-demand AI key entry. This debug preview starts using an explicitly configured cached signing key for future updates. Export a backup before upgrading from the monthly-review preview; its different signing key requires uninstalling that older preview, installing this one, and importing the backup.
+          Existing Add / Ask AI controls, automatic step syncing and monthly review are preserved. Android build, eight tests and browser checks passed, including live totals, photo refinement data, editing/removal and narrow phone layouts. This preview reuses the explicitly cached signing key from the simplified Scan release.
           NOTES
-          if gh release view scan-layout-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload scan-layout-preview-2026-11-04 daily-intake-scan-layout-debug.apk SHA256SUMS --clobber
+          if gh release view scan-items-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload scan-items-preview-2026-11-04 daily-intake-scan-items-debug.apk SHA256SUMS --clobber
           else
-            gh release create scan-layout-preview-2026-11-04 daily-intake-scan-layout-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Simplified scan controls' --notes-file release-notes.md --prerelease --latest=false
+            gh release create scan-items-preview-2026-11-04 daily-intake-scan-items-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Larger scan item fields' --notes-file release-notes.md --prerelease --latest=false
           fi
