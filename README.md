@@ -1,4 +1,9 @@
-# Daily Intake Calculator
+# Daily Intake — Sugars
+
+This branch builds a separate sugars version for friends who want total sugars alongside carbs. The standard version remains on `codex/health-connect-preview`. Its Android app ID is `com.dailyintake.calculator.sugars`, so both can be installed together with independent data and permissions.
+
+Sugars appear in manual entry, scaled servings, food edits, daily totals, weekly/monthly review, CSV and backup data, and barcode/AI scan results. Sugars are part of carbohydrates; they do not increase the entered carb or calorie totals. Barcode sugars come from `sugars_100g`; missing barcode values are listed as missing. AI sugars are estimates and can be corrected before logging. Older entries without sugar values contribute zero until edited, which is not a confirmed zero-sugar measurement.
+
 
 A Capacitor Android app for food logging and calorie estimates.
 

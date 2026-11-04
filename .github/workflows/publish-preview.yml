@@ -1,8 +1,8 @@
-name: Publish monthly review preview
+name: Publish sugars variant
 
 on:
   push:
-    branches: [codex/health-connect-preview]
+    branches: [codex/sugars-version]
   workflow_dispatch:
 
 permissions:
@@ -98,7 +98,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
-          key: daily-intake-calculator-debug-signing-v1
+          key: daily-intake-sugars-debug-signing-v1
 
       - name: Build debug APK
         working-directory: android
@@ -115,19 +115,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-monthly-review-debug.apk
-          sha256sum daily-intake-monthly-review-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-sugars-debug.apk
+          sha256sum daily-intake-sugars-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Monthly review now shows each day's calories eaten, estimated TDEE, and recorded step count. TDEE uses that date's latest weigh-in, recorded steps, and gym activity. Days without food logs still show TDEE and steps. Missing step data is distinguished from a recorded zero.
+          Separate Daily Intake — Sugars app for people who want total sugars alongside carbohydrates. Installs next to the standard calculator without replacing it or sharing its local data.
 
-          Automatic steps continue to use Health Connect's combined total and configured source priority. There is no Samsung source selector or diagnostic companion in this calculator build. For Samsung Health, enable its health-data processing consent and give it higher priority in Health Connect.
+          Sugars are included in manual entry, per-item/per-100g serving calculations, daily totals, entry editing, weekly/monthly reviews, CSV exports and backups. Barcode lookup reads sugars_100g from Open Food Facts. AI estimates request total sugars separately from carbs; scan values remain editable. Sugars are already part of carbohydrates and are not added to calories again.
 
-          Export a backup before updating from an earlier preview. Earlier runners used different debug signing keys, so Android may require uninstalling the old preview first; import your backup after installing. This workflow retains its signing key for future preview builds.
+          Includes the existing monthly TDEE/steps review and automatic Health Connect syncing. Sugar values missing from older entries are treated as zero until edited; missing barcode values are flagged for review.
 
-          Android build, step-sync tests, and phone-sized browser checks passed. Historical step counts are the daily readings already synced or entered manually; missing dates are labelled Steps not recorded.
+          Android build, fourteen tests and browser checks passed, including manual entry, persistence, imports/exports and mocked barcode/AI scan data. This is a debug-signed preview.
           NOTES
-          if gh release view monthly-review-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload monthly-review-preview-2026-11-04 daily-intake-monthly-review-debug.apk SHA256SUMS --clobber
+          if gh release view sugars-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload sugars-preview-2026-11-04 daily-intake-sugars-debug.apk SHA256SUMS --clobber
           else
-            gh release create monthly-review-preview-2026-11-04 daily-intake-monthly-review-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Monthly review — daily TDEE and steps' --notes-file release-notes.md --prerelease --latest=false
+            gh release create sugars-preview-2026-11-04 daily-intake-sugars-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Daily Intake — Sugars version' --notes-file release-notes.md --prerelease --latest=false
           fi

@@ -1,6 +1,6 @@
 {
-  "appId": "com.dailyintake.calculator",
-  "appName": "Daily Intake Calculator",
+  "appId": "com.dailyintake.calculator.sugars",
+  "appName": "Daily Intake \u2014 Sugars",
   "webDir": "www",
   "bundledWebRuntime": false
 }

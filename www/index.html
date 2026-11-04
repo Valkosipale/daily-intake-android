@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Daily Intake Calculator</title>
+<title>Daily Intake Calculator — Sugars</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -1314,7 +1314,7 @@ body{
 </div>
 
   <div class="masthead">
-    <h1>Daily Intake Calculator</h1>
+    <h1>Daily Intake Calculator — Sugars</h1>
   </div>
 
   <div class="datebar">
@@ -1365,8 +1365,9 @@ body{
       <div>Fat<span id="totalFat">0g</span></div>
     </div>
     <div class="macro-row-sub">
-      <div class="span-left">Fiber<span id="totalFiber">0g</span></div>
-      <div class="span-right">Salt<span id="totalSalt">0g</span></div>
+      <div>Fiber<span id="totalFiber">0g</span></div>
+      <div>Sugars<span id="totalSugars">0g</span></div>
+      <div>Salt<span id="totalSalt">0g</span></div>
     </div>
   </div>
 
@@ -1419,6 +1420,10 @@ body{
         <div class="field">
           <label for="fFiber" id="fFiberLabel">Fiber per 100g (g)</label>
           <input type="text" inputmode="decimal" id="fFiber" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="fSugars" id="fSugarsLabel">Sugars per 100g (g)</label>
+          <input type="text" inputmode="decimal" id="fSugars" placeholder="0">
         </div>
         <div class="field">
           <label for="fSalt" id="fSaltLabel">Salt per 100g (g)</label>
@@ -1769,15 +1774,17 @@ function render(){
     acc.carbs += Number(e.carbs)||0;
     acc.fat += Number(e.fat)||0;
     acc.fiber += Number(e.fiber)||0;
+    acc.sugars += Number(e.sugars)||0;
     acc.salt += Number(e.salt)||0;
     return acc;
-  }, {cal:0, protein:0, carbs:0, fat:0, fiber:0, salt:0});
+  }, {cal:0, protein:0, carbs:0, fat:0, fiber:0, sugars:0, salt:0});
 
   document.getElementById('totalCal').textContent = totals.cal.toLocaleString();
   document.getElementById('totalProtein').textContent = roundNum(totals.protein) + 'g';
   document.getElementById('totalCarbs').textContent = roundNum(totals.carbs) + 'g';
   document.getElementById('totalFat').textContent = roundNum(totals.fat) + 'g';
   document.getElementById('totalFiber').textContent = roundNum(totals.fiber) + 'g';
+  document.getElementById('totalSugars').textContent = roundNum(totals.sugars) + 'g';
   document.getElementById('totalSalt').textContent = roundNum(totals.salt) + 'g';
   updateTdeeDisplay();
 
@@ -1817,6 +1824,7 @@ function render(){
       if(item.carbs) macroBits.push('C '+item.carbs+'g');
       if(item.fat) macroBits.push('F '+item.fat+'g');
       if(item.fiber) macroBits.push('Fiber '+item.fiber+'g');
+      if(item.sugars) macroBits.push('Sugars '+item.sugars+'g');
       if(item.salt) macroBits.push('Salt '+item.salt+'g');
       row.innerHTML = `
         <div>
@@ -2061,6 +2069,7 @@ function enterEditMode(item){
   const carbsPer100 = (item.carbsPer100 !== undefined) ? item.carbsPer100 : (grams > 0 ? roundNum((item.carbs||0) / divisor) : (item.carbs||0));
   const fatPer100 = (item.fatPer100 !== undefined) ? item.fatPer100 : (grams > 0 ? roundNum((item.fat||0) / divisor) : (item.fat||0));
   const fiberPer100 = (item.fiberPer100 !== undefined) ? item.fiberPer100 : (grams > 0 ? roundNum((item.fiber||0) / divisor) : (item.fiber||0));
+  const sugarsPer100 = (item.sugarsPer100 !== undefined) ? item.sugarsPer100 : (grams > 0 ? roundNum((item.sugars||0) / divisor) : (item.sugars||0));
   const saltPer100 = (item.saltPer100 !== undefined) ? item.saltPer100 : (grams > 0 ? roundNum((item.salt||0) / divisor) : (item.salt||0));
 
   setEntryUnit(unit);
@@ -2072,6 +2081,7 @@ function enterEditMode(item){
   document.getElementById('fCarbs').value = carbsPer100 || '';
   document.getElementById('fFat').value = fatPer100 || '';
   document.getElementById('fFiber').value = fiberPer100 || '';
+  document.getElementById('fSugars').value = sugarsPer100 || '';
   document.getElementById('fSalt').value = saltPer100 || '';
   document.getElementById('formEyebrow').textContent = 'Edit food';
   document.getElementById('addBtn').textContent = 'Save changes';
@@ -2096,6 +2106,7 @@ function exitEditMode(){
   document.getElementById('fCarbs').value = '';
   document.getElementById('fFat').value = '';
   document.getElementById('fFiber').value = '';
+  document.getElementById('fSugars').value = '';
   document.getElementById('fSalt').value = '';
   setEntryUnit('g');
 }
@@ -2158,7 +2169,7 @@ function computeScale(amount, unit){
   return a > 0 ? a / 100 : 0;
 }
 
-function computeScaledTotals(amount, calPerUnit, proteinPerUnit, carbsPerUnit, fatPerUnit, fiberPerUnit, saltPerUnit, unit){
+function computeScaledTotals(amount, calPerUnit, proteinPerUnit, carbsPerUnit, fatPerUnit, fiberPerUnit, sugarsPerUnit, saltPerUnit, unit){
   const scale = computeScale(amount, unit || entryUnit);
   return {
     calories: Math.round(parseLocaleNumber(calPerUnit) * scale),
@@ -2166,6 +2177,7 @@ function computeScaledTotals(amount, calPerUnit, proteinPerUnit, carbsPerUnit, f
     carbs: roundNum(parseLocaleNumber(carbsPerUnit) * scale),
     fat: roundNum(parseLocaleNumber(fatPerUnit) * scale),
     fiber: roundNum(parseLocaleNumber(fiberPerUnit) * scale),
+    sugars: roundNum(parseLocaleNumber(sugarsPerUnit) * scale),
     salt: roundNum(parseLocaleNumber(saltPerUnit) * scale)
   };
 }
@@ -2183,6 +2195,7 @@ function setEntryUnit(unit){
     document.getElementById('fCarbsLabel').textContent = 'Carbs per item (g)';
     document.getElementById('fFatLabel').textContent = 'Fat per item (g)';
     document.getElementById('fFiberLabel').textContent = 'Fiber per item (g)';
+    document.getElementById('fSugarsLabel').textContent = 'Sugars per item (g)';
     document.getElementById('fSaltLabel').textContent = 'Salt per item (g)';
   } else {
     document.getElementById('fGramsLabel').textContent = 'Serving size (g)';
@@ -2192,6 +2205,7 @@ function setEntryUnit(unit){
     document.getElementById('fCarbsLabel').textContent = 'Carbs per 100g (g)';
     document.getElementById('fFatLabel').textContent = 'Fat per 100g (g)';
     document.getElementById('fFiberLabel').textContent = 'Fiber per 100g (g)';
+    document.getElementById('fSugarsLabel').textContent = 'Sugars per 100g (g)';
     document.getElementById('fSaltLabel').textContent = 'Salt per 100g (g)';
   }
   updateServingPreview();
@@ -2208,6 +2222,7 @@ function updateServingPreview(){
   const carbs = document.getElementById('fCarbs').value;
   const fat = document.getElementById('fFat').value;
   const fiber = document.getElementById('fFiber').value;
+  const sugars = document.getElementById('fSugars').value;
   const salt = document.getElementById('fSalt').value;
 
   if(cal === ''){
@@ -2223,18 +2238,19 @@ function updateServingPreview(){
     const cb = roundNum(parseLocaleNumber(carbs));
     const f = roundNum(parseLocaleNumber(fat));
     const fb = roundNum(parseLocaleNumber(fiber));
+    const su = roundNum(parseLocaleNumber(sugars));
     const s = roundNum(parseLocaleNumber(salt));
     const label = entryUnit === 'item' ? 'No quantity' : 'No serving size';
-    preview.innerHTML = `${label} — will save as entered: <span class="total-cal">${c} cal</span> · <span class="total-macros">P ${p}g · C ${cb}g · F ${f}g · Fiber ${fb}g · Salt ${s}g</span>`;
+    preview.innerHTML = `${label} — will save as entered: <span class="total-cal">${c} cal</span> · <span class="total-macros">P ${p}g · C ${cb}g · F ${f}g · Fiber ${fb}g · Sugars ${su}g · Salt ${s}g</span>`;
     return;
   }
 
-  const totals = computeScaledTotals(amount, cal, protein, carbs, fat, fiber, salt, entryUnit);
+  const totals = computeScaledTotals(amount, cal, protein, carbs, fat, fiber, sugars, salt, entryUnit);
   const amountLabel = entryUnit === 'item' ? (amount + (amount === 1 ? ' item' : ' items')) : (amount + 'g');
-  preview.innerHTML = `Total for ${amountLabel}: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span>`;
+  preview.innerHTML = `Total for ${amountLabel}: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Sugars ${totals.sugars}g · Salt ${totals.salt}g</span>`;
 }
 
-['fGrams','fCal','fProtein','fCarbs','fFat','fFiber','fSalt'].forEach(id=>{
+['fGrams','fCal','fProtein','fCarbs','fFat','fFiber','fSugars','fSalt'].forEach(id=>{
   document.getElementById(id).addEventListener('input', updateServingPreview);
 });
 
@@ -2248,6 +2264,7 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
     const carbs = document.getElementById('fCarbs').value;
     const fat = document.getElementById('fFat').value;
     const fiber = document.getElementById('fFiber').value;
+    const sugars = document.getElementById('fSugars').value;
     const salt = document.getElementById('fSalt').value;
     const unit = entryUnit;
 
@@ -2259,13 +2276,14 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
     // With a quantity/serving size, the entered values are treated as per-unit and scaled.
     // Without one, whatever was typed is saved directly as the total — no scaling.
     const totals = amount > 0
-      ? computeScaledTotals(amount, cal, protein, carbs, fat, fiber, salt, unit)
+      ? computeScaledTotals(amount, cal, protein, carbs, fat, fiber, sugars, salt, unit)
       : {
           calories: Math.round(parseLocaleNumber(cal)),
           protein: roundNum(parseLocaleNumber(protein)),
           carbs: roundNum(parseLocaleNumber(carbs)),
           fat: roundNum(parseLocaleNumber(fat)),
           fiber: roundNum(parseLocaleNumber(fiber)),
+          sugars: roundNum(parseLocaleNumber(sugars)),
           salt: roundNum(parseLocaleNumber(salt))
         };
 
@@ -2276,6 +2294,7 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
           carbsPer100: parseLocaleNumber(carbs),
           fatPer100: parseLocaleNumber(fat),
           fiberPer100: parseLocaleNumber(fiber),
+          sugarsPer100: parseLocaleNumber(sugars),
           saltPer100: parseLocaleNumber(salt),
           servingUnit: unit
         }
@@ -2285,6 +2304,7 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
           carbsPer100: undefined,
           fatPer100: undefined,
           fiberPer100: undefined,
+          sugarsPer100: undefined,
           saltPer100: undefined,
           servingUnit: unit
         };
@@ -2302,6 +2322,7 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
           carbs: totals.carbs,
           fat: totals.fat,
           fiber: totals.fiber,
+          sugars: totals.sugars,
           salt: totals.salt
         };
       }
@@ -2321,6 +2342,7 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
       carbs: totals.carbs,
       fat: totals.fat,
       fiber: totals.fiber,
+      sugars: totals.sugars,
       salt: totals.salt
     };
 
@@ -2336,6 +2358,7 @@ document.getElementById('addFoodForm').addEventListener('submit', function(e){
     document.getElementById('fCarbs').value = '';
     document.getElementById('fFat').value = '';
     document.getElementById('fFiber').value = '';
+    document.getElementById('fSugars').value = '';
     document.getElementById('fSalt').value = '';
     document.getElementById('fName').focus();
     updateServingPreview();
@@ -2626,7 +2649,7 @@ function shiftDate(dateStr, deltaDays){
 }
 
 function getDayTotalsFromStorage(dateStr){
-  const totals = {count:0, cal:0, protein:0, carbs:0, fat:0, fiber:0, salt:0};
+  const totals = {count:0, cal:0, protein:0, carbs:0, fat:0, fiber:0, sugars:0, salt:0};
   if(!hasStorage()) return totals;
   try{
     const raw = window.localStorage.getItem('dic:log:' + dateStr);
@@ -2639,6 +2662,7 @@ function getDayTotalsFromStorage(dateStr){
       totals.carbs += Number(e.carbs) || 0;
       totals.fat += Number(e.fat) || 0;
       totals.fiber += Number(e.fiber) || 0;
+      totals.sugars += Number(e.sugars) || 0;
       totals.salt += Number(e.salt) || 0;
     });
   }catch(err){ /* treat as empty day */ }
@@ -2724,7 +2748,7 @@ function renderWeekly(){
         <div class="weekly-bar-track"><div class="weekly-bar-fill ${over ? 'over' : ''}" style="width:${pct}%"></div></div>
         <div class="weekly-cal">${Math.round(t.cal).toLocaleString()}${periodMode === 'month' ? '<small>kcal eaten</small>' : ''}</div>
         ${dailyStats}
-        <div class="weekly-macros">P ${roundNum(t.protein)}g · C ${roundNum(t.carbs)}g · F ${roundNum(t.fat)}g · Fiber ${roundNum(t.fiber)}g · Salt ${roundNum(t.salt)}g</div>
+        <div class="weekly-macros">P ${roundNum(t.protein)}g · C ${roundNum(t.carbs)}g · F ${roundNum(t.fat)}g · Fiber ${roundNum(t.fiber)}g · Sugars ${roundNum(t.sugars)}g · Salt ${roundNum(t.salt)}g</div>
       </button>`;
   }).join('');
 
@@ -2805,7 +2829,7 @@ function csvEscape(value){
 }
 
 function buildCsv(){
-  const header = ['Date','Food','Amount','Unit','Calories','Protein (g)','Carbs (g)','Fat (g)','Fiber (g)','Salt (g)'];
+  const header = ['Date','Food','Amount','Unit','Calories','Protein (g)','Carbs (g)','Fat (g)','Fiber (g)','Sugars (g)','Salt (g)'];
   const rows = [header];
 
   if(hasStorage()){
@@ -2833,6 +2857,7 @@ function buildCsv(){
           item.carbs || 0,
           item.fat || 0,
           item.fiber || 0,
+          item.sugars || 0,
           item.salt || 0
         ]);
       });
@@ -2891,6 +2916,7 @@ function mapOffProduct(product, code){
   const carbs = pick('carbohydrates_100g');
   const fat = pick('fat_100g');
   const fiber = pick('fiber_100g');
+  const sugars = pick('sugars_100g');
   let salt = pick('salt_100g');
   if(salt === undefined){
     const sodium = pick('sodium_100g'); // grams of sodium; salt = sodium x 2.5
@@ -2903,6 +2929,7 @@ function mapOffProduct(product, code){
   if(carbs === undefined) missing.push('carbs');
   if(fat === undefined) missing.push('fat');
   if(fiber === undefined) missing.push('fiber');
+  if(sugars === undefined) missing.push('sugars');
   if(salt === undefined) missing.push('salt');
 
   let name = (product.product_name || '').trim();
@@ -2924,6 +2951,7 @@ function mapOffProduct(product, code){
     carbsPer100: carbs || 0,
     fatPer100: fat || 0,
     fiberPer100: fiber || 0,
+    sugarsPer100: sugars || 0,
     saltPer100: salt || 0,
     typicalWeightG: servingOk ? serving : 0,
     weightLabel: 'Label serving size',
@@ -3888,6 +3916,7 @@ function parseMacroJSON(text, finishReason){
     carbsPer100: Number(parsed.carbs_per_100g) || 0,
     fatPer100: Number(parsed.fat_per_100g) || 0,
     fiberPer100: Number(parsed.fiber_per_100g) || 0,
+    sugarsPer100: Number(parsed.sugars_per_100g) || 0,
     saltPer100: Number(parsed.salt_per_100g) || 0,
     typicalWeightG: Number(parsed.typical_weight_g) || 0
   };
@@ -3929,7 +3958,7 @@ async function withRetry(fn, retries){
 async function requestMacroEstimate(baseContext, extraContext, photo){
   const wantsWeight = mentionsWeight(baseContext) || mentionsWeight(extraContext || '');
 
-  let schema = '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number, "fiber_per_100g": number, "salt_per_100g": number';
+  let schema = '{"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number, "fiber_per_100g": number, "sugars_per_100g": number, "salt_per_100g": number';
   if(wantsWeight){
     schema += ', "typical_weight_g": number';
   }
@@ -3937,6 +3966,7 @@ async function requestMacroEstimate(baseContext, extraContext, photo){
 
   let prompt = 'You are a nutrition estimation assistant. ' + baseContext + ' ' +
     'Respond ONLY with strict JSON, no extra text, matching exactly this shape: ' + schema + '. ' +
+    'sugars_per_100g is total sugars in grams per 100g, not just added sugars. Sugars are already part of carbs; do not add them to carbs or calories again. ' +
     'salt_per_100g is the salt content in grams per 100g (not sodium in mg) — typical foods range roughly 0 to 2g salt per 100g. ' +
     'Give your best realistic estimate even if you are not fully certain.';
 
@@ -4030,6 +4060,7 @@ function itemFromEstimate(result){
     carbsPer100: result.carbsPer100,
     fatPer100: result.fatPer100,
     fiberPer100: result.fiberPer100,
+    sugarsPer100: result.sugarsPer100,
     saltPer100: result.saltPer100,
     grams: typical > 0 ? String(typical) : '',
     hint: hints.join(' ')
@@ -4140,7 +4171,7 @@ function tdeeForDate(dateStr){
 }
 
 function computeMultiPhotoTotals(){
-  let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFiber = 0, totalSalt = 0, totalGrams = 0;
+  let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFiber = 0, totalSugars = 0, totalSalt = 0, totalGrams = 0;
   multiPhotoItems.forEach(item=>{
     const g = parseLocaleNumber(item.grams);
     const scale = g / 100;
@@ -4150,6 +4181,7 @@ function computeMultiPhotoTotals(){
     totalCarbs += item.carbsPer100 * scale;
     totalFat += item.fatPer100 * scale;
     totalFiber += (item.fiberPer100 || 0) * scale;
+    totalSugars += (item.sugarsPer100 || 0) * scale;
     totalSalt += (item.saltPer100 || 0) * scale;
   });
   return {
@@ -4158,6 +4190,7 @@ function computeMultiPhotoTotals(){
     carbs: roundNum(totalCarbs),
     fat: roundNum(totalFat),
     fiber: roundNum(totalFiber),
+    sugars: roundNum(totalSugars),
     salt: roundNum(totalSalt),
     grams: totalGrams
   };
@@ -4197,6 +4230,10 @@ function renderMultiPhotoList(){
           <div>
             <label>Fiber/100g</label>
             <input type="text" inputmode="decimal" class="mp-fiber-input" data-id="${item.id}" value="${roundNum(item.fiberPer100)}">
+          </div>
+          <div>
+            <label>Sugars/100g</label>
+            <input type="text" inputmode="decimal" class="mp-sugars-input" data-id="${item.id}" value="${roundNum(item.sugarsPer100)}">
           </div>
           <div>
             <label>Salt/100g</label>
@@ -4285,6 +4322,15 @@ function renderMultiPhotoList(){
     });
   });
 
+  list.querySelectorAll('.mp-sugars-input').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const id = input.getAttribute('data-id');
+      const item = multiPhotoItems.find(i=>i.id === id);
+      if(item) item.sugarsPer100 = parseLocaleNumber(input.value);
+      updateMultiPhotoTotalDisplay();
+    });
+  });
+
   list.querySelectorAll('.mp-salt-input').forEach(input=>{
     input.addEventListener('input', ()=>{
       const id = input.getAttribute('data-id');
@@ -4316,7 +4362,7 @@ function updateMultiPhotoTotalDisplay(){
     return;
   }
   const totals = computeMultiPhotoTotals();
-  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span> (${totals.grams}g total)`;
+  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Sugars ${totals.sugars}g · Salt ${totals.salt}g</span> (${totals.grams}g total)`;
 }
 
 document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
@@ -4336,6 +4382,7 @@ document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
   const blendedCarbsPer100 = roundNum(totals.carbs / scale);
   const blendedFatPer100 = roundNum(totals.fat / scale);
   const blendedFiberPer100 = roundNum(totals.fiber / scale);
+  const blendedSugarsPer100 = roundNum(totals.sugars / scale);
   const blendedSaltPer100 = roundNum(totals.salt / scale);
 
   const names = multiPhotoItems.map(i=>i.name);
@@ -4353,6 +4400,7 @@ document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
   document.getElementById('fCarbs').value = blendedCarbsPer100;
   document.getElementById('fFat').value = blendedFatPer100;
   document.getElementById('fFiber').value = blendedFiberPer100;
+  document.getElementById('fSugars').value = blendedSugarsPer100;
   document.getElementById('fSalt').value = blendedSaltPer100;
   updateServingPreview();
 
@@ -4387,6 +4435,7 @@ function showPhotoResult(result, presetGrams){
       <div>Carbs<span>${roundNum(result.carbsPer100)}g</span></div>
       <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
       <div>Fiber<span>${roundNum(result.fiberPer100)}g</span></div>
+      <div>Sugars<span>${roundNum(result.sugarsPer100)}g</span></div>
       <div>Salt<span>${roundNum(result.saltPer100)}g</span></div>
     </div>
     ${hasTypicalWeight ? `<div class="photo-typical-weight">${escapeHtml(result.weightLabel || 'Typical weight')}: ~${Math.round(result.typicalWeightG)}g — filled in below, adjust if needed</div>` : ''}
@@ -4429,6 +4478,7 @@ function openItemEditor(id){
     carbsPer100: item.carbsPer100,
     fatPer100: item.fatPer100,
     fiberPer100: item.fiberPer100,
+    sugarsPer100: item.sugarsPer100,
     saltPer100: item.saltPer100,
     typicalWeightG: 0
   }, item.grams);
@@ -4455,6 +4505,7 @@ document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
   item.carbsPer100 = lastPhotoResult.carbsPer100;
   item.fatPer100 = lastPhotoResult.fatPer100;
   item.fiberPer100 = lastPhotoResult.fiberPer100;
+  item.sugarsPer100 = lastPhotoResult.sugarsPer100;
   item.saltPer100 = lastPhotoResult.saltPer100;
   item.grams = gramsInput ? gramsInput.value.trim() : item.grams;
   if(refinementNotes.length !== (item.notes || []).length) item.hint = '';
