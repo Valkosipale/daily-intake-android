@@ -1,4 +1,4 @@
-name: Publish matching re-analyze button
+name: Publish previous items search
 
 on:
   push:
@@ -134,15 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-reanalyze-style-debug.apk
-          sha256sum daily-intake-reanalyze-style-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-previous-search-debug.apk
+          sha256sum daily-intake-previous-search-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Re-analyze now uses the same dark background, gold border, gold text and font as the Photo and Barcode buttons.
+          Previous items now includes a search bar. Results filter instantly by food name, ignoring case and accents, with support for multiple search words. The title shows matching and total counts. Clearing the search restores the list, and reopening starts with all previous items.
 
-          Includes all previous per-item nutrition and inline re-analysis improvements. Uses the same signing key as the previous update.
+          Includes all previous updates, including the matching Re-analyze button style. Uses the same signing key as the previous update.
           NOTES
-          if gh release view reanalyze-style-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload reanalyze-style-preview-2026-11-04 daily-intake-reanalyze-style-debug.apk SHA256SUMS --clobber
+          if gh release view previous-search-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload previous-search-preview-2026-11-04 daily-intake-previous-search-debug.apk SHA256SUMS --clobber
           else
-            gh release create reanalyze-style-preview-2026-11-04 daily-intake-reanalyze-style-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Re-analyze button matches scan controls' --notes-file release-notes.md --prerelease --latest=false
+            gh release create previous-search-preview-2026-11-04 daily-intake-previous-search-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Search previous items' --notes-file release-notes.md --prerelease --latest=false
           fi

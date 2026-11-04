@@ -488,6 +488,8 @@ body{
 }
 
 .previous-items-box{ max-width:440px; max-height:86vh; }
+#previousItemsSearch{width:100%;min-width:0;min-height:44px;margin-bottom:12px;padding:10px;background:#0D0D0D;color:var(--ink);border:1px solid var(--hair);font-size:16px;}
+#previousItemsSearch:focus{outline:none;border-color:var(--accent);}
 #previousItemsList{
   max-height:60vh;
   overflow-y:auto;
@@ -1550,6 +1552,7 @@ body{
   <div class="data-box previous-items-box">
     <div class="data-title" id="previousItemsTitle">Previous items</div>
     <p class="data-desc">Tap an item to add it to this day, using the amount you last logged it with. Scroll for more.</p>
+    <input type="search" id="previousItemsSearch" placeholder="Search previous items" aria-label="Search previous items" autocomplete="off">
     <div id="previousItemsList"></div>
     <div class="data-actions">
       <button type="button" id="previousItemsCloseBtn" class="secondary">Close</button>
@@ -2427,13 +2430,17 @@ function buildPreviousItemsList(){
 
 function renderPreviousItemsList(){
   const list = document.getElementById('previousItemsList');
-  const items = buildPreviousItemsList();
-  document.getElementById('previousItemsTitle').textContent = items.length > 0
-    ? `Previous items (${items.length})`
+  const allItems = buildPreviousItemsList();
+  const normalize = text => text.toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const terms = normalize(document.getElementById('previousItemsSearch').value.trim()).split(/\s+/).filter(Boolean);
+  const items = allItems.filter(entry => terms.every(term => normalize(entry.name).includes(term)));
+  list.scrollTop = 0;
+  document.getElementById('previousItemsTitle').textContent = allItems.length > 0
+    ? (terms.length ? `Previous items (${items.length} / ${allItems.length})` : `Previous items (${allItems.length})`)
     : 'Previous items';
 
   if(items.length === 0){
-    list.innerHTML = '<div class="previous-items-empty">Nothing logged yet — items you add will show up here.</div>';
+    list.innerHTML = allItems.length ? '<div class="previous-items-empty">No matching items. Try another search.</div>' : '<div class="previous-items-empty">Nothing logged yet — items you add will show up here.</div>';
     return;
   }
 
@@ -2487,7 +2494,10 @@ async function addPreviousItemToToday(entry){
   showToast(`Added "${entry.name}"`);
 }
 
+document.getElementById('previousItemsSearch').addEventListener('input', renderPreviousItemsList);
+
 document.getElementById('previousItemsBtn').addEventListener('click', ()=>{
+  document.getElementById('previousItemsSearch').value = '';
   renderPreviousItemsList();
   document.getElementById('previousItemsOverlay').classList.add('show');
 });
