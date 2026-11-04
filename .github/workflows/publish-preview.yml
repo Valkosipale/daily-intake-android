@@ -1,4 +1,4 @@
-name: Publish popup-aware Android Back
+name: Publish per-item scan nutrition
 
 on:
   push:
@@ -134,17 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-android-back-debug.apk
-          sha256sum daily-intake-android-back-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-per-item-scan-debug.apk
+          sha256sum daily-intake-per-item-scan-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Android Back now closes the top popup instead of closing the app. Nested popups close one at a time using their existing Cancel/Close actions, so drafts are not accidentally applied. Back exits the app only when no popup is open.
+          Each scanned food now offers Per 100g or Per item. Per-item foods use a quantity, including fractional quantities, and accept nutrition for one piece or serving. Optional weight per item enables conversion between units; unknown weights are never assumed to be 100g.
 
-          The shared popup stack also keeps the newest dialog above its parent and preserves the background scroll lock. Dismissing a loading dialog ignores its late results, so it cannot unexpectedly add food, reopen errors or launch the scanner afterward.
+          AI corrections and questions respect the selected unit. Single per-item foods retain their quantity when logged. Meals mixing weighed and counted foods transfer as one combined serving with the correct total nutrition.
 
-          Uses the official Capacitor App plugin for Android Back events. Android build, fourteen tests and browser checks with simulated native events passed, including all thirteen popup types, nested dialogs, main-screen exit and late loading results. Uses the same signing key as the previous update.
+          Android build, 24 tests and browser checks passed for photo/AI entries, barcode conversion, quantities and mixed meals. Uses the same signing key as the previous update.
           NOTES
-          if gh release view android-back-preview-2026-11-04 >/dev/null 2>&1; then
-            gh release upload android-back-preview-2026-11-04 daily-intake-android-back-debug.apk SHA256SUMS --clobber
+          if gh release view per-item-scan-preview-2026-11-04 >/dev/null 2>&1; then
+            gh release upload per-item-scan-preview-2026-11-04 daily-intake-per-item-scan-debug.apk SHA256SUMS --clobber
           else
-            gh release create android-back-preview-2026-11-04 daily-intake-android-back-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Android Back closes popup windows first' --notes-file release-notes.md --prerelease --latest=false
+            gh release create per-item-scan-preview-2026-11-04 daily-intake-per-item-scan-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Per-item nutrition in Photo, Barcode and AI' --notes-file release-notes.md --prerelease --latest=false
           fi

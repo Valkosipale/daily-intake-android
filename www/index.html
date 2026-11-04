@@ -583,6 +583,8 @@ body{
   color:var(--ink);
   margin-bottom:2px;
 }
+.scan-unit-toggle{margin:0 0 10px;}
+.scan-unit-toggle button{min-height:40px;}
 .multi-photo-macro-grid{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -1457,7 +1459,7 @@ body{
 <div class="data-overlay" id="multiPhotoOverlay">
   <div class="data-box multi-photo-box">
     <div class="data-title">Scan food</div>
-    <p class="data-desc">Add each item by photo, barcode or a short description. One item or several, mixed freely. Enter grams for each and the totals combine. Tap ✎ on an item to correct it or ask AI a question.</p>
+    <p class="data-desc">Add each item by photo, barcode or a short description. One item or several, mixed freely. Choose Per 100g or Per item for each food, then enter grams or quantity. Tap ✎ on an item to correct it or ask AI a question.</p>
     <div id="multiPhotoList"></div>
     <div class="backup-actions multi-add-row scan-control-row">
       <button type="button" id="multiPhotoAddBtn" class="backup-btn">Photo</button>
@@ -1663,6 +1665,7 @@ body{
   </div>
 </div>
 
+<script src="scan-units.js"></script>
 <script>
 const DEFAULT_GOAL = 1600;
 
@@ -3954,7 +3957,7 @@ async function requestMacroEstimate(baseContext, extraContext, photo){
   }, 1);
 }
 
-function parseItemQuestionReply(text){
+function parseItemQuestionReply(text, unit = 'g'){
   const clean = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
   const reply = JSON.parse(clean);
   if(!reply || typeof reply.answer !== 'string' || !reply.answer.trim()) throw new Error('AI returned no answer. Please try again.');
@@ -3962,31 +3965,41 @@ function parseItemQuestionReply(text){
   if(reply.nutrition_update != null){
     const n = reply.nutrition_update;
     if(typeof n.food_name !== 'string' || !n.food_name.trim()) throw new Error('AI returned an invalid food name.');
-    for(const field of ['calories_per_100g','protein_per_100g','carbs_per_100g','fat_per_100g','fiber_per_100g','salt_per_100g']){
+    const suffix = unit === 'item' ? 'per_item' : 'per_100g';
+    for(const field of ['calories','protein','carbs','fat','fiber','salt'].map(name=>name+'_'+suffix)){
       if(typeof n[field] !== 'number' || !Number.isFinite(n[field]) || n[field] < 0) throw new Error('AI returned incomplete nutrition values. Please try again.');
     }
-    nutrition = parseMacroJSON(JSON.stringify(n), 'STOP');
+    nutrition = unit === 'item' ? {unit:'item',name:n.food_name,calPerItem:n.calories_per_item,proteinPerItem:n.protein_per_item,carbsPerItem:n.carbs_per_item,fatPerItem:n.fat_per_item,fiberPerItem:n.fiber_per_item,saltPerItem:n.salt_per_item} : {...parseMacroJSON(JSON.stringify(n), 'STOP'),unit:'g'};
   }
   let grams = null;
   if(reply.estimated_grams != null){
     if(typeof reply.estimated_grams !== 'number' || !Number.isFinite(reply.estimated_grams) || reply.estimated_grams <= 0) throw new Error('AI returned an invalid serving size.');
     grams = reply.estimated_grams;
   }
-  return {answer:reply.answer.trim(), nutrition, grams};
+  let quantity = null;
+  if(reply.estimated_quantity != null){
+    if(typeof reply.estimated_quantity !== 'number' || !Number.isFinite(reply.estimated_quantity) || reply.estimated_quantity <= 0) throw new Error('AI returned an invalid item quantity.');
+    quantity = reply.estimated_quantity;
+  }
+  return {answer:reply.answer.trim(), nutrition, grams, quantity};
 }
 
-async function requestItemQuestion(question, item, grams, notes){
-  const prompt = 'Help the user with the currently selected food item. A single message may correct the food name, ask a question, and ask for serving weight at the same time. ' +
-    'Current item (nutrition values are per 100g): ' + JSON.stringify(item) + '. Current serving grams: ' + JSON.stringify(grams) + '. ' +
-    'Previous user context: ' + JSON.stringify(notes) + '. New user message: ' + JSON.stringify(question) + '. ' +
-    'Respond ONLY with strict JSON: {"answer": string, "nutrition_update": null or {"food_name": string, "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number, "fiber_per_100g": number, "salt_per_100g": number}, "estimated_grams": null or number}. ' +
-    'Answer the question concisely. If the user identifies/corrects the food or asks to recalculate nutrition, supply all nutrition_update fields with realistic estimates; otherwise use null and keep existing nutrition unchanged. ' +
-    'Only provide estimated_grams when the user asks for serving weight or provides a new amount. Use the photo if attached. With only a food name, give a typical portion estimate and clearly say it is a typical estimate, not a measurement. If weight cannot reasonably be estimated, use null and explain. ' +
-    'Never confuse per-100g nutrients with whole-serving totals. Salt is grams of salt per 100g, not sodium in milligrams. The user will review and explicitly apply any proposed changes.';
+async function requestItemQuestion(question, item, amount, notes, unit = 'g', itemWeightG = null){
+  const perItem = unit === 'item';
+  const suffix = perItem ? 'per_item' : 'per_100g';
+  const fields = ['calories','protein','carbs','fat','fiber','salt'].map(name=>`"${name}_${suffix}": number`).join(', ');
+  const prompt = 'Help with the selected food. One message may correct its name, ask a question, and ask for serving amount. ' +
+    'Selected nutrition basis: '+(perItem ? 'PER ITEM (one piece/serving), NOT per 100g' : 'PER 100 GRAMS')+'. Current item: '+JSON.stringify(item)+'. ' +
+    'Current '+(perItem ? 'quantity of items' : 'serving grams')+': '+JSON.stringify(amount)+'. Weight of ONE item in grams, if known: '+JSON.stringify(itemWeightG)+'. ' +
+    'Previous context: '+JSON.stringify(notes)+'. User message: '+JSON.stringify(question)+'. ' +
+    'Respond ONLY with strict JSON: {"answer": string, "nutrition_update": null or {"food_name": string, '+fields+'}, "estimated_grams": null or number, "estimated_quantity": null or number}. ' +
+    'Answer concisely. If values are missing, the user corrects the food, or asks to recalculate nutrition, provide ALL nutrition_update fields for the SELECTED BASIS. Otherwise use null and preserve existing values. ' +
+    (perItem ? 'All nutrition is for ONE item, never the total for the current item quantity. Only set estimated_quantity when the user supplies or asks for a count; do NOT put grams in this field. estimated_grams is the weight of ONE item, not the total weight of all items. ' : 'All nutrition is per 100g. estimated_grams is the serving amount and must not be used as an item count. ') +
+    'Only suggest a new amount or weight when asked for it. Use the photo if attached. With only a food name, explain that weight is a typical portion estimate, not a measurement. If unknown, use null. Salt is grams of salt, not sodium milligrams. The user will explicitly review and apply changes.';
   const parts = buildPromptParts(prompt);
   return withRetry(async ()=>{
     const result = await callGeminiRaw(parts, true);
-    return parseItemQuestionReply(result.text);
+    return parseItemQuestionReply(result.text,unit);
   }, 1);
 }
 
@@ -4026,7 +4039,7 @@ function requireGeminiKey(){
 
 function addItem(fields){
   multiPhotoItems.push(Object.assign({
-    id: newItemId(), grams: '', thumbnail: null, source: 'text', photo: null, query: null, notes: []
+    id: newItemId(), unit:'g', grams:'', quantity:'1', itemWeightG:'', thumbnail: null, source: 'text', photo: null, query: null, notes: []
   }, fields));
   renderMultiPhotoList();
 }
@@ -4161,27 +4174,10 @@ function tdeeForDate(dateStr){
 }
 
 function computeMultiPhotoTotals(){
-  let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFiber = 0, totalSalt = 0, totalGrams = 0;
-  multiPhotoItems.forEach(item=>{
-    const g = parseLocaleNumber(item.grams);
-    const scale = g / 100;
-    totalGrams += g;
-    totalCal += item.calPer100 * scale;
-    totalProtein += item.proteinPer100 * scale;
-    totalCarbs += item.carbsPer100 * scale;
-    totalFat += item.fatPer100 * scale;
-    totalFiber += (item.fiberPer100 || 0) * scale;
-    totalSalt += (item.saltPer100 || 0) * scale;
-  });
-  return {
-    calories: Math.round(totalCal),
-    protein: roundNum(totalProtein),
-    carbs: roundNum(totalCarbs),
-    fat: roundNum(totalFat),
-    fiber: roundNum(totalFiber),
-    salt: roundNum(totalSalt),
-    grams: totalGrams
-  };
+  const totals = scanTotals(multiPhotoItems);
+  totals.calories = Math.round(totals.calories);
+  for(const key of ['protein','carbs','fat','fiber','salt']) totals[key] = roundNum(totals[key]);
+  return totals;
 }
 
 function renderMultiPhotoList(){
@@ -4189,8 +4185,10 @@ function renderMultiPhotoList(){
   list.innerHTML = '';
 
   multiPhotoItems.forEach(item=>{
-    const g = parseLocaleNumber(item.grams);
-    const subtotalCal = Math.round(item.calPer100 * (g/100));
+    const unit = scanUnit(item);
+    const amount = scanQuantity(item);
+    const subtotalCal = Math.round(scanTotals([item]).calories);
+    const suffix = unit === 'item' ? 'item' : '100g';
     const row = document.createElement('div');
     row.className = 'multi-photo-item';
     row.innerHTML = `
@@ -4202,38 +4200,47 @@ function renderMultiPhotoList(){
             <button type="button" class="multi-photo-remove" data-id="${item.id}" aria-label="Remove">×</button>
           </div>
         </div>
+        <div class="unit-toggle scan-unit-toggle">
+          <button type="button" class="unit-btn scan-unit-btn ${unit === 'g' ? 'active' : ''}" data-id="${item.id}" data-unit="g">Per 100g</button>
+          <button type="button" class="unit-btn scan-unit-btn ${unit === 'item' ? 'active' : ''}" data-id="${item.id}" data-unit="item">Per item</button>
+        </div>
         ${item.hint ? `<div class="multi-photo-hint">${escapeHtml(item.hint)}</div>` : ''}
+        ${unit === 'item' ? `<div class="multi-photo-hint scan-unit-note">${scanWeight(item) ? `One item uses ${scanWeight(item)}g. Check that this matches one piece or serving.` : 'Enter nutrition for one item, or ask AI. Per-100g values are kept separately; no weight is assumed.'}</div>` : ''}
         <div class="multi-photo-macro-grid">
           <div class="multi-photo-grams-field">
-            <label for="scan-grams-${item.id}">Grams</label>
-            <input id="scan-grams-${item.id}" type="text" inputmode="decimal" class="multi-photo-grams-input" data-id="${item.id}" placeholder="grams" value="${item.grams || ''}">
+            <label for="scan-grams-${item.id}">${unit === 'item' ? 'Quantity (items)' : 'Grams'}</label>
+            <input id="scan-grams-${item.id}" type="text" inputmode="decimal" class="multi-photo-grams-input" data-id="${item.id}" placeholder="${unit === 'item' ? 'e.g. 2' : 'grams'}" value="${escapeHtml(String((unit === 'item' ? item.quantity : item.grams) ?? ''))}">
+          </div>
+          ${unit === 'item' ? `<div class="multi-photo-grams-field">
+            <label for="scan-weight-${item.id}">Weight per item (g, optional)</label>
+            <input id="scan-weight-${item.id}" type="text" inputmode="decimal" class="scan-item-weight-input" data-id="${item.id}" placeholder="Optional — for unit conversion" value="${escapeHtml(String(item.itemWeightG ?? ''))}">
+          </div>` : ''}
+          <div>
+            <label>Cal/${suffix}</label>
+            <input type="text" inputmode="decimal" class="mp-cal-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'calPerItem' : 'calPer100'] ?? ''))}">
           </div>
           <div>
-            <label>Cal/100g</label>
-            <input type="text" inputmode="decimal" class="mp-cal-input" data-id="${item.id}" value="${roundNum(item.calPer100)}">
+            <label>Prot/${suffix}</label>
+            <input type="text" inputmode="decimal" class="mp-protein-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'proteinPerItem' : 'proteinPer100'] ?? ''))}">
           </div>
           <div>
-            <label>Prot/100g</label>
-            <input type="text" inputmode="decimal" class="mp-protein-input" data-id="${item.id}" value="${roundNum(item.proteinPer100)}">
+            <label>Carb/${suffix}</label>
+            <input type="text" inputmode="decimal" class="mp-carbs-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'carbsPerItem' : 'carbsPer100'] ?? ''))}">
           </div>
           <div>
-            <label>Carb/100g</label>
-            <input type="text" inputmode="decimal" class="mp-carbs-input" data-id="${item.id}" value="${roundNum(item.carbsPer100)}">
+            <label>Fat/${suffix}</label>
+            <input type="text" inputmode="decimal" class="mp-fat-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'fatPerItem' : 'fatPer100'] ?? ''))}">
           </div>
           <div>
-            <label>Fat/100g</label>
-            <input type="text" inputmode="decimal" class="mp-fat-input" data-id="${item.id}" value="${roundNum(item.fatPer100)}">
+            <label>Fiber/${suffix}</label>
+            <input type="text" inputmode="decimal" class="mp-fiber-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'fiberPerItem' : 'fiberPer100'] ?? ''))}">
           </div>
           <div>
-            <label>Fiber/100g</label>
-            <input type="text" inputmode="decimal" class="mp-fiber-input" data-id="${item.id}" value="${roundNum(item.fiberPer100)}">
-          </div>
-          <div>
-            <label>Salt/100g</label>
-            <input type="text" inputmode="decimal" class="mp-salt-input" data-id="${item.id}" value="${roundNum(item.saltPer100)}">
+            <label>Salt/${suffix}</label>
+            <input type="text" inputmode="decimal" class="mp-salt-input" data-id="${item.id}" value="${escapeHtml(String(item[unit === 'item' ? 'saltPerItem' : 'saltPer100'] ?? ''))}">
           </div>
         </div>
-        <span class="multi-photo-subtotal">${g > 0 ? subtotalCal + ' cal' : ''}</span>
+        <span class="multi-photo-subtotal">${amount > 0 ? subtotalCal + ' cal' : ''}</span>
       </div>
     `;
     list.appendChild(row);
@@ -4242,80 +4249,52 @@ function renderMultiPhotoList(){
   function refreshRowSubtotal(id){
     const item = multiPhotoItems.find(i=>i.id === id);
     if(!item) return;
-    const g = parseLocaleNumber(item.grams);
-    const subtotalCal = Math.round(item.calPer100 * (g/100));
+    const amount = scanQuantity(item);
+    const subtotalCal = Math.round(scanTotals([item]).calories);
     const row = list.querySelector(`.multi-photo-item .multi-photo-grams-input[data-id="${id}"]`).closest('.multi-photo-item');
-    row.querySelector('.multi-photo-subtotal').textContent = g > 0 ? subtotalCal + ' cal' : '';
+    row.querySelector('.multi-photo-subtotal').textContent = amount > 0 ? subtotalCal + ' cal' : '';
   }
 
+  list.querySelectorAll('.scan-unit-btn').forEach(button=>{
+    button.addEventListener('click',()=>{
+      const item = multiPhotoItems.find(i=>i.id === button.dataset.id);
+      if(!item) return;
+      setScanUnit(item,button.dataset.unit);
+      renderMultiPhotoList();
+    });
+  });
   list.querySelectorAll('.multi-photo-grams-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item){
-        item.grams = input.value;
-        refreshRowSubtotal(id);
-      }
+    input.addEventListener('input',()=>{
+      const item = multiPhotoItems.find(i=>i.id === input.dataset.id);
+      if(!item) return;
+      item[scanUnit(item) === 'item' ? 'quantity' : 'grams'] = input.value;
+      refreshRowSubtotal(item.id);
       updateMultiPhotoTotalDisplay();
     });
   });
-
-  list.querySelectorAll('.mp-cal-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item){
-        item.calPer100 = parseLocaleNumber(input.value);
-        refreshRowSubtotal(id);
-      }
+  list.querySelectorAll('.scan-item-weight-input').forEach(input=>{
+    input.addEventListener('input',()=>{
+      const item = multiPhotoItems.find(i=>i.id === input.dataset.id);
+      if(!item) return;
+      setScanItemWeight(item,input.value);
+      const row = input.closest('.multi-photo-item');
+      row.querySelector('.scan-unit-note').textContent = scanWeight(item) ? `One item uses ${scanWeight(item)}g. Check that this matches one piece or serving.` : 'Enter nutrition for one item, or ask AI. No weight is assumed.';
+      for(const field of SCAN_NUTRIENTS) row.querySelector('.mp-'+(field.key === 'calories' ? 'cal' : field.key)+'-input').value = item[field.item] ?? '';
+      refreshRowSubtotal(item.id);
       updateMultiPhotoTotalDisplay();
     });
   });
-
-  list.querySelectorAll('.mp-protein-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.proteinPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
+  for(const field of SCAN_NUTRIENTS){
+    list.querySelectorAll('.mp-'+(field.key === 'calories' ? 'cal' : field.key)+'-input').forEach(input=>{
+      input.addEventListener('input',()=>{
+        const item = multiPhotoItems.find(i=>i.id === input.dataset.id);
+        if(!item) return;
+        setScanNutrient(item,field,input.value);
+        refreshRowSubtotal(item.id);
+        updateMultiPhotoTotalDisplay();
+      });
     });
-  });
-
-  list.querySelectorAll('.mp-carbs-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.carbsPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-fat-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.fatPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-fiber-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.fiberPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
-
-  list.querySelectorAll('.mp-salt-input').forEach(input=>{
-    input.addEventListener('input', ()=>{
-      const id = input.getAttribute('data-id');
-      const item = multiPhotoItems.find(i=>i.id === id);
-      if(item) item.saltPer100 = parseLocaleNumber(input.value);
-      updateMultiPhotoTotalDisplay();
-    });
-  });
+  }
 
   list.querySelectorAll('.multi-photo-edit').forEach(btn=>{
     btn.addEventListener('click', ()=> openItemEditor(btn.getAttribute('data-id')));
@@ -4339,7 +4318,8 @@ function updateMultiPhotoTotalDisplay(){
     return;
   }
   const totals = computeMultiPhotoTotals();
-  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span> (${totals.grams}g total)`;
+  const amounts = [totals.grams > 0 ? `${roundNum(totals.grams)}g` : '', totals.hasPerItem ? `${roundNum(totals.items)} items` : ''].filter(Boolean).join(' + ');
+  totalBox.innerHTML = `Combined total: <span class="total-cal">${totals.calories} cal</span> · <span class="total-macros">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g · Fiber ${totals.fiber}g · Salt ${totals.salt}g</span> (${amounts || 'no amount entered'} total)`;
 }
 
 document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
@@ -4347,13 +4327,13 @@ document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
     showToast('Add at least one item first');
     return;
   }
+  const validation = scanValidationMessage(multiPhotoItems);
+  if(validation){ showToast(validation); return; }
   const totals = computeMultiPhotoTotals();
-  if(totals.grams <= 0){
-    showToast('Enter grams for at least one item');
-    return;
-  }
-
-  const scale = totals.grams / 100;
+  const singleItem = multiPhotoItems.length === 1 && scanUnit(multiPhotoItems[0]) === 'item';
+  const useItems = totals.hasPerItem;
+  const selected = singleItem ? multiPhotoItems[0] : null;
+  const scale = useItems ? 1 : totals.grams / 100;
   const blendedCalPer100 = Math.round(totals.calories / scale);
   const blendedProteinPer100 = roundNum(totals.protein / scale);
   const blendedCarbsPer100 = roundNum(totals.carbs / scale);
@@ -4361,28 +4341,28 @@ document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
   const blendedFiberPer100 = roundNum(totals.fiber / scale);
   const blendedSaltPer100 = roundNum(totals.salt / scale);
 
-  const names = multiPhotoItems.map(i=>i.name);
+  const names = multiPhotoItems.map(i=>useItems && !singleItem ? `${i.name} (${scanQuantity(i)}${scanUnit(i) === 'item' ? ' items' : 'g'})` : i.name);
   const combinedName = names.length > 3
     ? names.slice(0,3).join(', ') + ' + ' + (names.length - 3) + ' more'
     : names.join(', ');
 
-  // The blended values are per-100g, so force the form back to that mode
-  setEntryUnit('g');
+  // A mixed-unit meal is one combined serving; never invent a gram weight.
+  setEntryUnit(useItems ? 'item' : 'g');
 
   document.getElementById('fName').value = combinedName;
-  document.getElementById('fGrams').value = totals.grams;
-  document.getElementById('fCal').value = blendedCalPer100;
-  document.getElementById('fProtein').value = blendedProteinPer100;
-  document.getElementById('fCarbs').value = blendedCarbsPer100;
-  document.getElementById('fFat').value = blendedFatPer100;
-  document.getElementById('fFiber').value = blendedFiberPer100;
-  document.getElementById('fSalt').value = blendedSaltPer100;
+  document.getElementById('fGrams').value = singleItem ? selected.quantity : (useItems ? 1 : totals.grams);
+  document.getElementById('fCal').value = singleItem ? selected.calPerItem : blendedCalPer100;
+  document.getElementById('fProtein').value = singleItem ? selected.proteinPerItem : blendedProteinPer100;
+  document.getElementById('fCarbs').value = singleItem ? selected.carbsPerItem : blendedCarbsPer100;
+  document.getElementById('fFat').value = singleItem ? selected.fatPerItem : blendedFatPer100;
+  document.getElementById('fFiber').value = singleItem ? selected.fiberPerItem : blendedFiberPer100;
+  document.getElementById('fSalt').value = singleItem ? selected.saltPerItem : blendedSaltPer100;
   updateServingPreview();
 
   document.getElementById('multiPhotoOverlay').classList.remove('show');
   multiPhotoItems = [];
 
-  showToast('Combined total filled in — review and tap Add to log');
+  showToast(useItems && !singleItem ? 'Combined meal filled as 1 serving — review and Add to log' : 'Food filled in — review and tap Add to log');
   const nameField = document.getElementById('fName');
   if(typeof nameField.scrollIntoView === 'function'){
     nameField.scrollIntoView({behavior:'smooth', block:'center'});
@@ -4394,29 +4374,35 @@ let lastPhotoBase64 = null;
 let lastPhotoMimeType = null;
 let lastTextQuery = null;
 let refinementNotes = [];
-let pendingItemGrams = null;
-let pendingGramsSuggested = false;
+let pendingItemAmount = null;
+let pendingItemUnit = 'g';
+let pendingItemWeightG = null;
+let pendingWeightSuggested = false;
+let pendingAmountSuggested = false;
 let pendingNutritionChanged = false;
 let itemEditorSession = 0;
 
 function showPhotoResult(result){
   lastPhotoResult = result;
   const body = document.getElementById('photoResultBody');
+  const values = scanNutrition(result);
 
   body.innerHTML = `
     <div class="photo-result-name">${escapeHtml(result.name)}</div>
-    <div class="photo-result-note">${escapeHtml(result.note || 'Values per 100g. Ask a question or correct the food below, then review and tap Update item.')}</div>
+    <div class="photo-result-note">${escapeHtml(result.note || 'Ask a question or correct the food below, then review and tap Update item.')}</div>
+    <div class="photo-result-note">Values per ${pendingItemUnit === 'item' ? 'item' : '100g'}</div>
     <div class="photo-result-macros">
-      <div>Cal<span>${roundNum(result.calPer100)}</span></div>
-      <div>Prot<span>${roundNum(result.proteinPer100)}g</span></div>
-      <div>Carbs<span>${roundNum(result.carbsPer100)}g</span></div>
-      <div>Fat<span>${roundNum(result.fatPer100)}g</span></div>
-      <div>Fiber<span>${roundNum(result.fiberPer100)}g</span></div>
-      <div>Salt<span>${roundNum(result.saltPer100)}g</span></div>
+      <div>Cal<span>${roundNum(values.calories)}</span></div>
+      <div>Prot<span>${roundNum(values.protein)}g</span></div>
+      <div>Carbs<span>${roundNum(values.carbs)}g</span></div>
+      <div>Fat<span>${roundNum(values.fat)}g</span></div>
+      <div>Fiber<span>${roundNum(values.fiber)}g</span></div>
+      <div>Salt<span>${roundNum(values.salt)}g</span></div>
     </div>
-    <div class="photo-result-note" id="photoServingEstimate">${pendingItemGrams !== null && pendingItemGrams !== ''
-      ? `${pendingGramsSuggested ? 'Suggested serving' : 'Serving size'}: ${escapeHtml(pendingItemGrams)}g${pendingGramsSuggested ? ' — approximate; apply with Update item.' : '. Edit grams in the main item row, or ask AI below.'}`
-      : 'Enter grams in the main item row, or ask AI to estimate a serving below.'}</div>
+    <div class="photo-result-note" id="photoServingEstimate">${pendingItemAmount !== null && pendingItemAmount !== ''
+      ? `${pendingAmountSuggested ? 'Suggested amount' : (pendingItemUnit === 'item' ? 'Quantity' : 'Serving size')}: ${escapeHtml(pendingItemAmount)}${pendingItemUnit === 'item' ? ' items' : 'g'}. ${pendingAmountSuggested ? 'Review and apply with Update item.' : 'Edit the amount in the main item row, or ask AI below.'}`
+      : 'Enter an amount in the main item row, or ask AI below.'}
+      ${pendingItemUnit === 'item' && pendingItemWeightG ? ` Weight per item: ${escapeHtml(String(pendingItemWeightG))}g${pendingWeightSuggested ? ' (AI estimate)' : ''}.` : ''}</div>
   `;
   document.getElementById('photoResultOverlay').classList.add('show');
 }
@@ -4427,8 +4413,11 @@ function resetPhotoState(){
   lastPhotoMimeType = null;
   lastTextQuery = null;
   refinementNotes = [];
-  pendingItemGrams = null;
-  pendingGramsSuggested = false;
+  pendingItemAmount = null;
+  pendingItemUnit = 'g';
+  pendingItemWeightG = null;
+  pendingWeightSuggested = false;
+  pendingAmountSuggested = false;
   pendingNutritionChanged = false;
 }
 
@@ -4438,8 +4427,11 @@ function openItemEditor(id){
   if(!item) return;
   itemEditorSession++;
   resultEditTarget = id;
-  pendingItemGrams = String(item.grams ?? '');
-  pendingGramsSuggested = false;
+  pendingItemUnit = scanUnit(item);
+  pendingItemAmount = String((pendingItemUnit === 'item' ? item.quantity : item.grams) ?? '');
+  pendingItemWeightG = scanWeight(item) || null;
+  pendingWeightSuggested = false;
+  pendingAmountSuggested = false;
   pendingNutritionChanged = false;
   document.getElementById('photoRefineInput').value = '';
   document.getElementById('photoAskAnswer').textContent = '';
@@ -4451,16 +4443,9 @@ function openItemEditor(id){
   lastPhotoMimeType = item.photo ? item.photo.mime : null;
   lastTextQuery = item.photo ? null : (item.query || item.name);
   refinementNotes = (item.notes || []).slice();
-  showPhotoResult({
-    name: item.name,
-    calPer100: item.calPer100,
-    proteinPer100: item.proteinPer100,
-    carbsPer100: item.carbsPer100,
-    fatPer100: item.fatPer100,
-    fiberPer100: item.fiberPer100,
-    saltPer100: item.saltPer100,
-    typicalWeightG: 0
-  });
+  const snapshot = {name:item.name,unit:pendingItemUnit};
+  for(const field of SCAN_NUTRIENTS) snapshot[field[pendingItemUnit]] = item[field[pendingItemUnit]];
+  showPhotoResult(snapshot);
 }
 
 function closeItemEditor(){
@@ -4478,14 +4463,12 @@ document.getElementById('photoResultUseBtn').addEventListener('click', ()=>{
     closeItemEditor();
     return;
   }
+  const nameChanged = item.name !== lastPhotoResult.name;
   item.name = lastPhotoResult.name;
-  item.calPer100 = lastPhotoResult.calPer100;
-  item.proteinPer100 = lastPhotoResult.proteinPer100;
-  item.carbsPer100 = lastPhotoResult.carbsPer100;
-  item.fatPer100 = lastPhotoResult.fatPer100;
-  item.fiberPer100 = lastPhotoResult.fiberPer100;
-  item.saltPer100 = lastPhotoResult.saltPer100;
-  if(pendingItemGrams !== null) item.grams = pendingItemGrams;
+  if(nameChanged && !pendingWeightSuggested) item.itemWeightG = '';
+  if(pendingWeightSuggested && pendingItemWeightG !== null) setScanItemWeight(item,String(pendingItemWeightG));
+  if(pendingNutritionChanged) applyScanNutrition(item,lastPhotoResult);
+  if(pendingItemAmount !== null) item[pendingItemUnit === 'item' ? 'quantity' : 'grams'] = pendingItemAmount;
   if(pendingNutritionChanged) item.hint = '';
   item.notes = refinementNotes.slice();
   closeItemEditor();
@@ -4509,15 +4492,29 @@ document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
   askBtn.textContent = 'Asking AI…';
   input.blur();
   try{
-    const reply = await requestItemQuestion(question, lastPhotoResult, pendingItemGrams, refinementNotes.slice());
+    const reply = await requestItemQuestion(question, lastPhotoResult, pendingItemAmount, refinementNotes.slice(), pendingItemUnit, pendingItemWeightG);
     if(session !== itemEditorSession || target !== resultEditTarget) return;
     if(reply.nutrition){
+      if(reply.nutrition.name !== lastPhotoResult.name && reply.grams === null){pendingItemWeightG = null;pendingWeightSuggested = false;}
       lastPhotoResult = reply.nutrition;
       pendingNutritionChanged = true;
     }
-    if(reply.grams !== null){
-      pendingItemGrams = String(reply.grams);
-      pendingGramsSuggested = true;
+    if(pendingItemUnit === 'item'){
+      if(reply.quantity !== null){pendingItemAmount = String(reply.quantity);pendingAmountSuggested = true;}
+      if(reply.grams !== null){
+        pendingItemWeightG = reply.grams;
+        pendingWeightSuggested = true;
+        const original = multiPhotoItems.find(i=>i.id === target);
+        if(!pendingNutritionChanged && original?.perItemOrigin === 'converted'){
+          const draft = {...original};
+          setScanItemWeight(draft,String(reply.grams));
+          lastPhotoResult = {name:original.name,unit:'item'};
+          for(const field of SCAN_NUTRIENTS) lastPhotoResult[field.item] = draft[field.item];
+        }
+      }
+    } else if(reply.grams !== null){
+      pendingItemAmount = String(reply.grams);
+      pendingAmountSuggested = true;
     }
     refinementNotes.push(question);
     showPhotoResult(lastPhotoResult);

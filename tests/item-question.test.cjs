@@ -22,3 +22,10 @@ test('invalid weight, missing answers and malformed JSON are rejected',()=>{
  for(const value of [-1,0,'250'])assert.throws(()=>context().parseItemQuestionReply(JSON.stringify({answer:'Weight',estimated_grams:value})));
  assert.throws(()=>context().parseItemQuestionReply('{bad}'));assert.throws(()=>context().parseItemQuestionReply('{}'));
 });
+test('per-item AI replies use per-item fields and separate count from gram weight',()=>{
+ const r=context().parseItemQuestionReply(JSON.stringify({answer:'One egg is around 60g.',nutrition_update:{food_name:'Egg',calories_per_item:80,protein_per_item:6,carbs_per_item:1,fat_per_item:5,fiber_per_item:0,salt_per_item:0.1},estimated_grams:60,estimated_quantity:null}),'item');
+ assert.equal(r.nutrition.calPerItem,80);assert.equal(r.nutrition.unit,'item');assert.equal(r.grams,60);assert.equal(r.quantity,null);
+});
+test('per100g replies cannot silently satisfy a per-item request',()=>{
+ assert.throws(()=>context().parseItemQuestionReply(JSON.stringify({answer:'Food',nutrition_update:nutrition}),'item'));
+});
