@@ -360,22 +360,26 @@ body{
   line-height:1.2;
 }
 
-.tdee-row{cursor:pointer;align-items:center;}
+.facts-row.tdee-row{cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;row-gap:2px;align-items:baseline;}
+.tdee-row > .value{text-align:right;}
 .tdee-row:hover{background:var(--hair);}
-.tdee-row .label .tdee-hint{
+.tdee-row .tdee-hint{
   display:block;
   font-family:'Space Mono',monospace;
   font-size:10px;
   font-weight:400;
   color:var(--ink-soft);
-  margin-top:1px;
+  margin:0;
+  line-height:1.4;
 }
-.tdee-right{text-align:right;min-width:0;max-width:64%;}
 .tdee-sub{
   font-family:'Space Mono',monospace;
   font-size:10px;
   color:var(--ink-soft);
-  margin-top:2px;
+  margin:0;
+  line-height:1.4;
+  text-align:right;
+  min-width:0;
   overflow-wrap:anywhere;
 }
 .body-box{ max-width:440px; max-height:90vh; overflow-y:auto; }
@@ -1346,11 +1350,10 @@ body{
     </div>
 
     <div class="facts-row tdee-row" id="tdeeRow" role="button" tabindex="0" aria-label="TDEE, tap to edit body stats">
-      <div class="label">TDEE<span class="tdee-hint">estimated daily burn</span></div>
-      <div class="tdee-right">
-        <div class="value" id="tdeeValue">—</div>
-        <div class="tdee-sub" id="tdeeSub">tap to add your body stats</div>
-      </div>
+      <div class="label">TDEE</div>
+      <div class="value" id="tdeeValue">—</div>
+      <div class="tdee-hint">estimated daily burn</div>
+      <div class="tdee-sub" id="tdeeSub">tap to add your body stats</div>
     </div>
 
     <div class="facts-row remaining" id="remainingRow">
