@@ -1,4 +1,4 @@
-name: Publish compact review summary
+name: Publish API key settings button
 
 on:
   push:
@@ -134,15 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-compact-review-debug.apk
-          sha256sum daily-intake-compact-review-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-api-key-button-debug.apk
+          sha256sum daily-intake-api-key-button-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Removed the extra 8px above the Month/Week vs your TDEE summary text, making the box slightly shorter from the top. All wording and bottom padding are unchanged.
+          Restored an API key button below Scan. It opens the existing Gemini key settings with the current key masked, allowing you to replace or clear it. Cancel leaves the saved key unchanged.
 
           Includes all previous updates. Uses the same signing key as the previous update.
           NOTES
-          if gh release view compact-review-preview-2026-11-05 >/dev/null 2>&1; then
-            gh release upload compact-review-preview-2026-11-05 daily-intake-compact-review-debug.apk SHA256SUMS --clobber
+          if gh release view api-key-button-preview-2026-11-05 >/dev/null 2>&1; then
+            gh release upload api-key-button-preview-2026-11-05 daily-intake-api-key-button-debug.apk SHA256SUMS --clobber
           else
-            gh release create compact-review-preview-2026-11-05 daily-intake-compact-review-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Reduce space above review summary text' --notes-file release-notes.md --prerelease --latest=false
+            gh release create api-key-button-preview-2026-11-05 daily-intake-api-key-button-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Restore API key button below Scan' --notes-file release-notes.md --prerelease --latest=false
           fi

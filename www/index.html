@@ -1441,6 +1441,7 @@ body{
     <div class="backup-actions">
       <button type="button" id="scanBtn" class="backup-btn">Scan</button>
     </div>
+    <button type="button" id="changeApiKeyBtn" class="backup-btn api-key-long-btn">API key</button>
   </div>
 
   <div class="backup-section">
@@ -3790,6 +3791,11 @@ function setGeminiKey(key){
     window.localStorage.setItem('dic:geminiKey', key);
   }catch(e){ console.error('Failed to save API key', e); }
 }
+
+document.getElementById('changeApiKeyBtn').addEventListener('click', ()=>{
+  document.getElementById('apiKeyInput').value = getGeminiKey();
+  document.getElementById('apiKeyOverlay').classList.add('show');
+});
 
 document.getElementById('apiKeyCloseBtn').addEventListener('click', ()=>{
   document.getElementById('apiKeyOverlay').classList.remove('show');
