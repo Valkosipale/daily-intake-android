@@ -2071,13 +2071,13 @@ function enterEditMode(item){
   setEntryUnit(unit);
 
   document.getElementById('fName').value = item.name;
-  document.getElementById('fGrams').value = grams || '';
-  document.getElementById('fCal').value = calPer100 || '';
-  document.getElementById('fProtein').value = proteinPer100 || '';
-  document.getElementById('fCarbs').value = carbsPer100 || '';
-  document.getElementById('fFat').value = fatPer100 || '';
-  document.getElementById('fFiber').value = fiberPer100 || '';
-  document.getElementById('fSalt').value = saltPer100 || '';
+  document.getElementById('fGrams').value = formatScanValue(grams || '');
+  document.getElementById('fCal').value = formatScanValue(calPer100);
+  document.getElementById('fProtein').value = formatScanValue(proteinPer100);
+  document.getElementById('fCarbs').value = formatScanValue(carbsPer100);
+  document.getElementById('fFat').value = formatScanValue(fatPer100);
+  document.getElementById('fFiber').value = formatScanValue(fiberPer100);
+  document.getElementById('fSalt').value = formatScanValue(saltPer100);
   document.getElementById('formEyebrow').textContent = 'Edit food';
   document.getElementById('addBtn').textContent = 'Save changes';
   document.getElementById('cancelEditBtn').style.display = 'inline';
@@ -2241,6 +2241,10 @@ function updateServingPreview(){
 
 ['fGrams','fCal','fProtein','fCarbs','fFat','fFiber','fSalt'].forEach(id=>{
   document.getElementById(id).addEventListener('input', updateServingPreview);
+  document.getElementById(id).addEventListener('blur', event=>{
+    event.target.value = formatScanValue(event.target.value);
+    updateServingPreview();
+  });
 });
 
 document.getElementById('addFoodForm').addEventListener('submit', function(e){
@@ -4416,44 +4420,30 @@ document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
   }
   const validation = scanValidationMessage(multiPhotoItems);
   if(validation){ showToast(validation); return; }
-  const totals = computeMultiPhotoTotals();
+  const totals = scanTotals(multiPhotoItems);
   const singleItem = multiPhotoItems.length === 1 && scanUnit(multiPhotoItems[0]) === 'item';
   const useItems = totals.hasPerItem;
   const selected = singleItem ? multiPhotoItems[0] : null;
-  const scale = useItems ? 1 : totals.grams / 100;
-  const blendedCalPer100 = Math.round(totals.calories / scale);
-  const blendedProteinPer100 = roundNum(totals.protein / scale);
-  const blendedCarbsPer100 = roundNum(totals.carbs / scale);
-  const blendedFatPer100 = roundNum(totals.fat / scale);
-  const blendedFiberPer100 = roundNum(totals.fiber / scale);
-  const blendedSaltPer100 = roundNum(totals.salt / scale);
-
-  const names = multiPhotoItems.map(i=>useItems && !singleItem ? `${i.name} (${scanQuantity(i)}${scanUnit(i) === 'item' ? ' items' : 'g'})` : i.name);
-  const combinedName = names.length > 3
+  const amount = singleItem ? scanQuantity(selected) : (useItems ? 1 : totals.grams);
+  const scale = useItems ? amount : amount/100;
+  const names = multiPhotoItems.map(i=>useItems && !singleItem ? `${i.name} (${formatScanValue(scanQuantity(i))}${scanUnit(i) === 'item' ? ' items' : 'g'})` : i.name);
+  const name = names.length > 3
     ? names.slice(0,3).join(', ') + ' + ' + (names.length - 3) + ' more'
     : names.join(', ');
-
-  // A mixed-unit meal is one combined serving; never invent a gram weight.
-  setEntryUnit(useItems ? 'item' : 'g');
-
-  document.getElementById('fName').value = combinedName;
-  document.getElementById('fGrams').value = singleItem ? selected.quantity : (useItems ? 1 : totals.grams);
-  document.getElementById('fCal').value = singleItem ? selected.calPerItem : blendedCalPer100;
-  document.getElementById('fProtein').value = singleItem ? selected.proteinPerItem : blendedProteinPer100;
-  document.getElementById('fCarbs').value = singleItem ? selected.carbsPerItem : blendedCarbsPer100;
-  document.getElementById('fFat').value = singleItem ? selected.fatPerItem : blendedFatPer100;
-  document.getElementById('fFiber').value = singleItem ? selected.fiberPerItem : blendedFiberPer100;
-  document.getElementById('fSalt').value = singleItem ? selected.saltPerItem : blendedSaltPer100;
-  updateServingPreview();
-
-  document.getElementById('multiPhotoOverlay').classList.remove('show');
-  multiPhotoItems = [];
-
-  showToast(useItems && !singleItem ? 'Combined meal filled as 1 serving — review and Add to log' : 'Food filled in — review and tap Add to log');
-  const nameField = document.getElementById('fName');
-  if(typeof nameField.scrollIntoView === 'function'){
-    nameField.scrollIntoView({behavior:'smooth', block:'center'});
+  const entry = {id:newItemId(),name,grams:amount,servingUnit:useItems ? 'item' : 'g'};
+  // Save directly without changing an unfinished manual entry or an item being edited.
+  // Keep precise per-unit nutrition; round only the displayed/saved serving totals.
+  for(const field of SCAN_NUTRIENTS){
+    entry[field.g] = totals[field.key]/scale;
+    entry[field.key] = field.key === 'calories' ? Math.round(totals[field.key]) : roundNum(totals[field.key]);
   }
+  currentEntries.push(entry);
+  saveEntries();
+  maybeUnhidePreviousItem(name);
+  multiPhotoItems = [];
+  document.getElementById('multiPhotoOverlay').classList.remove('show');
+  render();
+  showToast('Added to log');
 });
 
 let lastPhotoResult = null;

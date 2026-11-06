@@ -1,4 +1,4 @@
-name: Publish API key settings button
+name: Publish direct scan logging
 
 on:
   push:
@@ -134,15 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-api-key-button-debug.apk
-          sha256sum daily-intake-api-key-button-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-direct-scan-debug.apk
+          sha256sum daily-intake-direct-scan-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Restored an API key button below Scan. It opens the existing Gemini key settings with the current key masked, allowing you to replace or clear it. Cancel leaves the saved key unchanged.
+          Add to log in the scan window now saves the food directly to the selected day, without filling the manual form or requiring a second tap. Existing manual drafts and edits are preserved. Counted foods retain their quantities; mixed meals remain one combined serving.
 
-          Includes all previous updates. Uses the same signing key as the previous update.
+          Log food edit fields now show at most two decimal places, including stored and converted barcode nutrition. Calculations retain precise values until explicitly edited. Includes all previous updates and uses the same signing key.
           NOTES
-          if gh release view api-key-button-preview-2026-11-05 >/dev/null 2>&1; then
-            gh release upload api-key-button-preview-2026-11-05 daily-intake-api-key-button-debug.apk SHA256SUMS --clobber
+          if gh release view direct-scan-preview-2026-11-06 >/dev/null 2>&1; then
+            gh release upload direct-scan-preview-2026-11-06 daily-intake-direct-scan-debug.apk SHA256SUMS --clobber
           else
-            gh release create api-key-button-preview-2026-11-05 daily-intake-api-key-button-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Restore API key button below Scan' --notes-file release-notes.md --prerelease --latest=false
+            gh release create direct-scan-preview-2026-11-06 daily-intake-direct-scan-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Log scanned food in one tap and tidy decimals' --notes-file release-notes.md --prerelease --latest=false
           fi
