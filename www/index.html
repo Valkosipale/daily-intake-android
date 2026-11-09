@@ -3406,7 +3406,6 @@ async function connectPhoneSteps(){
       r = await refreshPhoneSteps(currentDate,{force:true,restart:true});
     }
     if(r.status==='ok'){
-      showToast(`Steps refreshed: ${r.steps.toLocaleString()} steps`);
       setStepsStatus(describePhoneSteps());
     }else if(r.status==='unavailable'){
       const open = await showConfirmModal("Health Connect isn't available on this phone. Open the Play Store to install it?",'Open Play Store');

@@ -1,4 +1,4 @@
-name: Publish stable step refresh layout
+name: Publish quiet step refresh
 
 on:
   push:
@@ -134,15 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-refresh-no-flash-debug.apk
-          sha256sum daily-intake-refresh-no-flash-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-quiet-refresh-debug.apk
+          sha256sum daily-intake-quiet-refresh-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Refresh steps no longer replaces the existing multi-line step status with a short temporary message. This prevents the button and surrounding content from jumping up and down while the read runs. Unchanged status and button labels are not rewritten. The button remains protected from duplicate taps and reports its busy state to accessibility tools.
+          Removed the Steps refreshed success popup. The refreshed step count remains visible in the Body stats and steps window. Error messages, connection handling, automatic refresh and stuck-request recovery are preserved.
 
-          Browser checks verified stable button bounds before, during and after a delayed refresh, with the new count still displayed correctly. Includes all previous refresh recovery fixes and uses the same signing key.
+          Includes all previous updates and uses the same signing key.
           NOTES
-          if gh release view refresh-no-flash-preview-2026-11-09 >/dev/null 2>&1; then
-            gh release upload refresh-no-flash-preview-2026-11-09 daily-intake-refresh-no-flash-debug.apk SHA256SUMS --clobber
+          if gh release view quiet-refresh-preview-2026-11-09 >/dev/null 2>&1; then
+            gh release upload quiet-refresh-preview-2026-11-09 daily-intake-quiet-refresh-debug.apk SHA256SUMS --clobber
           else
-            gh release create refresh-no-flash-preview-2026-11-09 daily-intake-refresh-no-flash-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Prevent layout flash when refreshing steps' --notes-file release-notes.md --prerelease --latest=false
+            gh release create quiet-refresh-preview-2026-11-09 daily-intake-quiet-refresh-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Remove steps refreshed popup' --notes-file release-notes.md --prerelease --latest=false
           fi
