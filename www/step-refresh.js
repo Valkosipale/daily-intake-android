@@ -2,31 +2,36 @@
 // Coalesce native/browser foreground events, then retry after Health Connect syncs.
 (() => {
   let active = document.visibilityState === 'visible';
+  let nativeActive = null;
   let pending = null;
   let followup = null;
+  let later = null;
   const clearPending = () => {
     clearTimeout(pending);
     clearTimeout(followup);
-    pending = followup = null;
+    clearTimeout(later);
+    pending = followup = later = null;
   };
-  const refresh = () => {
-    if(active) return refreshPhoneSteps(currentDate, {force:true});
+  const refresh = (restart = false) => {
+    if(active) return refreshPhoneSteps(currentDate, {force:true, restart});
   };
   const foreground = () => {
     active = true;
     clearPending();
     pending = setTimeout(() => {
       pending = null;
-      refresh();
+      refresh(true);
+      later = setTimeout(() => { later = null; refresh(); }, 15000);
       followup = setTimeout(() => { followup = null; refresh(); }, 3000);
     }, 150);
   };
   const background = () => { active = false; clearPending(); };
   document.addEventListener('visibilitychange', () => {
+    if(nativeActive !== null) return; // Native app state is authoritative on Android.
     if(document.visibilityState === 'visible') foreground();
     else background();
   });
-  window.addEventListener('focus', foreground);
+  window.addEventListener('focus', () => { if(nativeActive !== false) foreground(); });
   setInterval(() => {
     if(active) refreshPhoneSteps(currentDate);
   }, 60000);
@@ -35,8 +40,8 @@
   if(capacitor?.getPlatform?.() === 'android'){
     const App = capacitor.Plugins?.App || capacitor.registerPlugin('App');
     for(const [event, listener] of [
-      ['appStateChange', state => state.isActive ? foreground() : background()],
-      ['resume', foreground]
+      ['appStateChange', state => {nativeActive = state.isActive;state.isActive ? foreground() : background();}],
+      ['resume', () => {nativeActive = true;foreground();}]
     ]){
       try{
         Promise.resolve(App.addListener(event, listener))

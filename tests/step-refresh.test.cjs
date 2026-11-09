@@ -23,8 +23,13 @@ test('resume and visibility events coalesce and follow-up reads the selected day
 });
 test('background cancels deferred refreshes and pauses periodic queries',()=>{
  const s=setup();s.events.resume();s.events.appStateChange({isActive:false});s.tick(150);s.tick(3000);s.interval();assert.equal(s.calls.length,0);
- s.events.resume();s.tick(150);s.document.visibilityState='hidden';s.events.visibilitychange();s.tick(3000);s.interval();assert.equal(s.calls.length,1);
+ s.events.resume();s.tick(150);s.events.appStateChange({isActive:false});s.tick(3000);s.tick(15000);s.interval();assert.equal(s.calls.length,1);
 });
 test('browser-only foreground fallback and visible minute refresh remain available',()=>{
  const s=setup(false);s.document.visibilityState='hidden';s.events.visibilitychange();s.interval();assert.equal(s.calls.length,0);s.document.visibilityState='visible';s.events.visibilitychange();s.tick(150);assert.equal(s.calls.length,1);s.interval();assert.equal(s.calls.length,2);assert.equal(s.calls[1][1],undefined);
+});
+
+test('stale WebView hidden events do not override a native foreground state',()=>{
+ const s=setup();s.events.appStateChange({isActive:true});s.document.visibilityState='hidden';s.events.visibilitychange();s.tick(150);
+ assert.equal(s.calls.length,1);assert.equal(s.calls[0][1].restart,true);s.tick(15000);assert.equal(s.calls.length,2);s.interval();assert.equal(s.calls.length,3);
 });

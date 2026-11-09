@@ -1,4 +1,4 @@
-name: Publish automatic steps on resume
+name: Publish refresh steps and stuck-read recovery
 
 on:
   push:
@@ -134,15 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-resume-steps-debug.apk
-          sha256sum daily-intake-resume-steps-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-refresh-steps-debug.apk
+          sha256sum daily-intake-refresh-steps-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Automatic steps now refresh on native Android appStateChange and resume events as well as browser visibility/focus events. Foreground events coalesce into one forced refresh, followed by another read after three seconds to pick up delayed Health Connect updates.
+          The existing automatic-steps button now says Connect automatic steps until Health Connect grants access, then changes to Refresh steps. Refresh starts a new read without asking for permission again while access is granted.
 
-          Backgrounding cancels pending refreshes and pauses the minute timer. No permission prompts are added, saved totals survive failed reads, and the existing permission button remains available. Unit tests and browser checks with simulated Android lifecycle events passed. Includes all previous updates and uses the same signing key.
+          Native step reads now time out after 12 seconds instead of blocking every later refresh. Explicit refresh and app return can replace an unfinished read; late results cannot overwrite newer data. Android native lifecycle state takes precedence over conflicting WebView events, with follow-up reads after 3 and 15 seconds. Saved steps are preserved on errors. Unit tests and browser checks with simulated stalled native queries and permissions passed. Includes all previous updates and uses the same signing key.
           NOTES
-          if gh release view resume-steps-preview-2026-11-09 >/dev/null 2>&1; then
-            gh release upload resume-steps-preview-2026-11-09 daily-intake-resume-steps-debug.apk SHA256SUMS --clobber
+          if gh release view refresh-steps-preview-2026-11-09 >/dev/null 2>&1; then
+            gh release upload refresh-steps-preview-2026-11-09 daily-intake-refresh-steps-debug.apk SHA256SUMS --clobber
           else
-            gh release create resume-steps-preview-2026-11-09 daily-intake-resume-steps-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Refresh automatic steps when returning to the app' --notes-file release-notes.md --prerelease --latest=false
+            gh release create refresh-steps-preview-2026-11-09 daily-intake-refresh-steps-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Refresh steps button and recover stalled step reads' --notes-file release-notes.md --prerelease --latest=false
           fi

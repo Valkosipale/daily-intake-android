@@ -20,7 +20,7 @@ function setup(overrides = {}) {
   };
   const ctx = vm.createContext({
     window: {Capacitor: {Plugins: {HealthPlugin: plugin}}},
-    console: {error() {}}, currentDate: '2026-11-04',
+    setTimeout,clearTimeout,console: {error() {}}, currentDate: '2026-11-04',
     document: {getElementById: id => id === 'readStepsBtn' ? button : status},
     getStepsMap: () => entries,
     setStepsField: (date, field, value) => { entries[date] = {...entries[date], [field]: value}; },
@@ -104,5 +104,23 @@ test('explicit connect requests permission and always re-enables button after er
   s.plugin.isHealthAvailable = async () => { throw Error('unavailable'); };
   await s.ctx.connectPhoneSteps();
   assert.equal(s.button.disabled, false);
-  assert.match(s.status.textContent, /Could not connect/);
+  assert.match(s.status.textContent, /Could not refresh/);
+});
+
+test('explicit refresh replaces a stuck read and ignores its late result',async()=>{
+ let resolveOld;let calls=0;
+ const s=setup({queryAggregated:()=>++calls===1?new Promise(resolve=>resolveOld=resolve):Promise.resolve({aggregatedData:[{value:9000}]})});
+ const old=s.ctx.refreshPhoneSteps('2026-11-04');
+ while(!resolveOld) await new Promise(resolve=>setImmediate(resolve));
+ await s.ctx.connectPhoneSteps();
+ assert.equal(s.entries['2026-11-04'].phone,9000);assert.equal(s.button.textContent,'Refresh steps');assert.equal(s.requests(),0);
+ resolveOld({aggregatedData:[{value:100}]});await old;await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(s.entries['2026-11-04'].phone,9000);assert.equal(s.button.disabled,false);
+});
+test('a stalled native query times out and releases the next refresh',async()=>{
+ const s=setup({queryAggregated:()=>new Promise(()=>{})});let timeout;
+ s.ctx.setTimeout=fn=>{timeout=fn;return 1};s.ctx.clearTimeout=()=>{};
+ const read=s.ctx.refreshPhoneSteps('2026-11-04');timeout();assert.equal((await read).status,'error');
+ s.plugin.queryAggregated=async()=>({aggregatedData:[{value:7000}]});
+ assert.equal((await s.ctx.refreshPhoneSteps('2026-11-04',{force:true})).steps,7000);
 });

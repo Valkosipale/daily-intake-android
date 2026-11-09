@@ -3291,59 +3291,78 @@ const stepsRefreshInFlight = {};
 
 // Reads the day's step total. Only ever READS - asking for permission is left to the button,
 // so nothing pops up at startup. Returns {status, steps?, message?}.
+function updateStepsButton(connected){
+  const button = document.getElementById('readStepsBtn');
+  if(button) button.textContent = connected ? 'Refresh steps' : 'Connect automatic steps';
+}
+
 async function refreshPhoneSteps(dateStr, opts){
   const Health = getHealthPlugin();
-  if(!Health) return {status: 'no-plugin'};
-  if(stepsRefreshInFlight[dateStr]) return stepsRefreshInFlight[dateStr];
-  const force = !!(opts && opts.force);
-  const now = Date.now();
-  if(!force && lastStepsRefresh[dateStr] && now - lastStepsRefresh[dateStr] < 20000) return {status: 'throttled'};
-
+  if(!Health) return {status:'no-plugin'};
+  const previous = stepsRefreshInFlight[dateStr];
+  if(previous){
+    if(!opts?.restart) return previous.promise;
+    previous.cancel();
+  }
+  if(!opts?.force && lastStepsRefresh[dateStr] && Date.now()-lastStepsRefresh[dateStr]<20000) return {status:'throttled'};
+  let active = true;
+  let timer;
+  let cancel;
+  const stopped = {status:'cancelled'};
+  const deadline = new Promise(resolve=>{
+    cancel = () => {active=false;clearTimeout(timer);resolve(stopped);};
+    timer = setTimeout(()=>{
+      active=false;
+      resolve({status:'error',message:'Health Connect took too long to respond. Tap Refresh steps to try again. Saved steps are unchanged.'});
+    },12000);
+  });
   const read = async () => {
     try{
       const avail = await Health.isHealthAvailable();
-      if(!(avail && avail.available)) return {status: 'unavailable'};
-      const perm = await Health.checkHealthPermissions({permissions: ['READ_STEPS']});
-      if(!healthPermissionGranted(perm, 'READ_STEPS')) return {status: 'no-permission'};
-
-      const res = await Health.queryAggregated({
-        startDate: localMidnightIso(dateStr),
-        endDate: localMidnightIso(shiftDate(dateStr, 1)),
-        dataType: 'steps',
-        bucket: 'day'
-      });
+      if(!active) return stopped;
+      if(!avail?.available) return {status:'unavailable'};
+      const perm = await Health.checkHealthPermissions({permissions:['READ_STEPS']});
+      if(!active) return stopped;
+      const granted = healthPermissionGranted(perm,'READ_STEPS');
+      updateStepsButton(granted);
+      if(!granted) return {status:'no-permission'};
+      const res = await Health.queryAggregated({startDate:localMidnightIso(dateStr),endDate:localMidnightIso(shiftDate(dateStr,1)),dataType:'steps',bucket:'day'});
+      if(!active) return stopped;
       const rows = res && res.aggregatedData;
       if(!Array.isArray(rows)) throw new Error('The phone returned an invalid step reading.');
-      // Empty/null buckets mean no data, rather than a measured zero.
-      const values = rows.filter(r => r && r.value !== null && r.value !== undefined).map(r => Number(r.value));
-      if(values.some(n => !Number.isFinite(n) || n < 0)) throw new Error('The phone returned an invalid step count.');
-      if(!values.length) return {status: 'no-data'};
-      const steps = Math.round(values.reduce((sum, n) => sum + n, 0));
+      const values = rows.filter(r=>r && r.value!==null && r.value!==undefined).map(r=>Number(r.value));
+      if(values.some(n=>!Number.isFinite(n)||n<0)) throw new Error('The phone returned an invalid step count.');
+      if(!values.length) return {status:'no-data'};
+      const steps = Math.round(values.reduce((sum,n)=>sum+n,0));
       if(!Number.isSafeInteger(steps)) throw new Error('The phone returned an invalid step count.');
-      setStepsField(dateStr, 'phone', steps);
+      setStepsField(dateStr,'phone',steps);
       lastStepsRefresh[dateStr] = Date.now();
       updateTdeeDisplay();
-      if(dateStr === currentDate){
-        setStepsStatus(describePhoneSteps());
-        updateBodyPreview();
-      }
-      return {status: 'ok', steps};
+      if(dateStr===currentDate){setStepsStatus(describePhoneSteps());updateBodyPreview();}
+      return {status:'ok',steps};
     }catch(e){
-      console.error('Reading phone steps failed', e);
-      return {status: 'error', message: (e && e.message) ? e.message : String(e)};
+      if(!active) return stopped;
+      console.error('Reading phone steps failed',e);
+      return {status:'error',message:e?.message || String(e)};
     }
   };
-  stepsRefreshInFlight[dateStr] = read();
+  const task = {cancel,promise:null};
+  task.promise = Promise.race([read(),deadline]);
+  stepsRefreshInFlight[dateStr] = task;
   try{
-    const result = await stepsRefreshInFlight[dateStr];
-    if(dateStr === currentDate){
-      if(result.status === 'no-permission') setStepsStatus('Step access is off. Connect automatic steps to grant access in Health Connect.');
-      if(result.status === 'unavailable') setStepsStatus('Health Connect is unavailable. Install or update it, then connect automatic steps.');
-      if(result.status === 'no-data') setStepsStatus('Connected, but no new step data is available for this day. Check that your recording app shares steps with Health Connect. Saved totals are kept.');
-      if(result.status === 'error') setStepsStatus('Could not refresh steps. Saved totals are kept; the app will try again.');
+    const result = await task.promise;
+    if(dateStr===currentDate && stepsRefreshInFlight[dateStr]===task && (active || result.status==='error')){
+      if(result.status==='no-permission') setStepsStatus('Step access is off. Connect automatic steps to grant access in Health Connect.');
+      if(result.status==='unavailable') setStepsStatus('Health Connect is unavailable. Install or update it, then connect automatic steps.');
+      if(result.status==='no-data') setStepsStatus('Connected, but Health Connect has no new data for this day. Saved steps are kept. Sync your recording app, then tap Refresh steps.');
+      if(result.status==='error') setStepsStatus('Could not refresh steps. Saved steps are kept. Tap Refresh steps to retry.');
     }
     return result;
-  }finally{ delete stepsRefreshInFlight[dateStr]; }
+  }finally{
+    active=false;
+    clearTimeout(timer);
+    if(stepsRefreshInFlight[dateStr]===task) delete stepsRefreshInFlight[dateStr];
+  }
 }
 
 function setStepsStatus(text){
@@ -3365,54 +3384,37 @@ function describePhoneSteps(){
 
 async function connectPhoneSteps(){
   const Health = getHealthPlugin();
-  if(!Health){
-    showToast("Automatic steps aren't available in this build — type them in");
-    return;
-  }
+  if(!Health){showToast("Automatic steps aren't available in this build — type them in");return;}
   const button = document.getElementById('readStepsBtn');
   if(button.disabled) return;
   button.disabled = true;
-  setStepsStatus('Connecting to Health Connect…');
+  setStepsStatus('Refreshing steps from Health Connect…');
   try{
-    const avail = await Health.isHealthAvailable();
-    if(!(avail && avail.available)){
-      const open = await showConfirmModal("Health Connect isn't available on this phone. Open the Play Store to install it?", 'Open Play Store');
-      if(open){
-        try{ await Health.showHealthConnectInPlayStore(); }catch(e){ /* nothing more to do */ }
-      }
-      setStepsStatus('Install or update Health Connect, then connect again.');
-      return;
-    }
-
-    let perm = await Health.checkHealthPermissions({permissions: ['READ_STEPS']});
-    if(!healthPermissionGranted(perm, 'READ_STEPS')){
-      perm = await Health.requestHealthPermissions({permissions: ['READ_STEPS']});
-      if(!healthPermissionGranted(perm, 'READ_STEPS')){
-        showToast("Steps permission wasn't granted");
-        setStepsStatus("Steps permission wasn't granted, so the phone can't share your steps.");
+    let r = await refreshPhoneSteps(currentDate,{force:true,restart:true});
+    if(r.status==='no-permission'){
+      const perm = await Health.requestHealthPermissions({permissions:['READ_STEPS']});
+      if(!healthPermissionGranted(perm,'READ_STEPS')){
+        updateStepsButton(false);
+        setStepsStatus("Steps permission wasn't granted. Connect automatic steps to try again.");
         return;
       }
+      updateStepsButton(true);
+      r = await refreshPhoneSteps(currentDate,{force:true,restart:true});
     }
-
-    const r = await refreshPhoneSteps(currentDate, {force: true});
-    if(r.status === 'ok'){
-      showToast(`Automatic steps connected: ${r.steps.toLocaleString()} steps`);
+    if(r.status==='ok'){
+      showToast(`Steps refreshed: ${r.steps.toLocaleString()} steps`);
       setStepsStatus(describePhoneSteps());
-    } else if(r.status === 'no-data'){
-      setStepsStatus('Connected, but Health Connect has no steps for this day. It only has steps if an app like Google Fit or Samsung Health records them.');
-    } else if(r.status === 'error'){
-      showErrorModal(r.message, 'Reading steps failed');
-    } else {
-      setStepsStatus('Could not read steps right now. Try again in a moment.');
+    }else if(r.status==='unavailable'){
+      const open = await showConfirmModal("Health Connect isn't available on this phone. Open the Play Store to install it?",'Open Play Store');
+      if(open) await Health.showHealthConnectInPlayStore();
+    }else if(r.status==='error'){
+      showErrorModal(r.message,'Reading steps failed');
     }
     updateBodyPreview();
   }catch(e){
-    console.error('Connecting steps failed', e);
-    setStepsStatus('Could not connect. Your saved and manual steps are unchanged. Try again.');
-    showErrorModal((e && e.message) ? e.message : String(e), 'Steps connection failed');
-  }finally{
-    button.disabled = false;
-  }
+    setStepsStatus('Could not refresh steps. Saved steps are unchanged. Try again.');
+    showErrorModal(e?.message || String(e),'Steps refresh failed');
+  }finally{button.disabled=false;}
 }
 
 // ---- Body stats dialog ----
@@ -3491,6 +3493,8 @@ function openBodyDialog(){
   document.getElementById('bodySteps').value = (st && st.manual !== undefined) ? String(st.manual) : '';
 
   document.getElementById('readStepsBtn').style.display = getHealthPlugin() ? '' : 'none';
+  const savedSteps = getStepsMap()[currentDate];
+  updateStepsButton(savedSteps && savedSteps.phone !== undefined);
   setStepsStatus(describePhoneSteps());
   setBodySex(p ? p.sex : null);
   document.getElementById('bodyOverlay').classList.add('show');
