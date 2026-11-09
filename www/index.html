@@ -3557,16 +3557,6 @@ document.getElementById('bodyOverlay').addEventListener('click', (e)=>{
   if(e.target.id === 'bodyOverlay') closeBodyDialog();
 });
 
-// Coming back to the app is when new steps have usually piled up
-document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible') refreshPhoneSteps(currentDate, {force: true});
-});
-
-// Health Connect records in the background; read only while our UI is visible.
-setInterval(()=>{
-  if(document.visibilityState === 'visible') refreshPhoneSteps(currentDate);
-}, 60000);
-
 function collectAllData(){
   const data = {app:'daily-intake-calculator', exportedAt:new Date().toISOString(), version:1, settings:null, logs:{}};
   if(!hasStorage()) return data;
@@ -4630,6 +4620,7 @@ document.getElementById('photoRefineInput').addEventListener('keydown', event=>{
   refreshPhoneSteps(currentDate);
 })();
 </script>
+<script src="step-refresh.js"></script>
 <script src="modal-scroll.js"></script>
 </body>
 </html>
