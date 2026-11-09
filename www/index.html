@@ -3293,7 +3293,10 @@ const stepsRefreshInFlight = {};
 // so nothing pops up at startup. Returns {status, steps?, message?}.
 function updateStepsButton(connected){
   const button = document.getElementById('readStepsBtn');
-  if(button) button.textContent = connected ? 'Refresh steps' : 'Connect automatic steps';
+  if(button){
+    const text = connected ? 'Refresh steps' : 'Connect automatic steps';
+    if(button.textContent !== text) button.textContent = text;
+  }
 }
 
 async function refreshPhoneSteps(dateStr, opts){
@@ -3367,7 +3370,7 @@ async function refreshPhoneSteps(dateStr, opts){
 
 function setStepsStatus(text){
   const el = document.getElementById('stepsStatus');
-  if(el) el.textContent = text;
+  if(el && el.textContent !== text) el.textContent = text;
 }
 
 function describePhoneSteps(){
@@ -3388,7 +3391,8 @@ async function connectPhoneSteps(){
   const button = document.getElementById('readStepsBtn');
   if(button.disabled) return;
   button.disabled = true;
-  setStepsStatus('Refreshing steps from Health Connect…');
+  // Keep the existing multi-line status in place to avoid moving the button.
+  button.ariaBusy = 'true';
   try{
     let r = await refreshPhoneSteps(currentDate,{force:true,restart:true});
     if(r.status==='no-permission'){
@@ -3414,7 +3418,7 @@ async function connectPhoneSteps(){
   }catch(e){
     setStepsStatus('Could not refresh steps. Saved steps are unchanged. Try again.');
     showErrorModal(e?.message || String(e),'Steps refresh failed');
-  }finally{button.disabled=false;}
+  }finally{button.disabled=false;button.ariaBusy='false';}
 }
 
 // ---- Body stats dialog ----

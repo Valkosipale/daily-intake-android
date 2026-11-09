@@ -1,4 +1,4 @@
-name: Publish refresh steps and stuck-read recovery
+name: Publish stable step refresh layout
 
 on:
   push:
@@ -134,15 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-refresh-steps-debug.apk
-          sha256sum daily-intake-refresh-steps-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-refresh-no-flash-debug.apk
+          sha256sum daily-intake-refresh-no-flash-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          The existing automatic-steps button now says Connect automatic steps until Health Connect grants access, then changes to Refresh steps. Refresh starts a new read without asking for permission again while access is granted.
+          Refresh steps no longer replaces the existing multi-line step status with a short temporary message. This prevents the button and surrounding content from jumping up and down while the read runs. Unchanged status and button labels are not rewritten. The button remains protected from duplicate taps and reports its busy state to accessibility tools.
 
-          Native step reads now time out after 12 seconds instead of blocking every later refresh. Explicit refresh and app return can replace an unfinished read; late results cannot overwrite newer data. Android native lifecycle state takes precedence over conflicting WebView events, with follow-up reads after 3 and 15 seconds. Saved steps are preserved on errors. Unit tests and browser checks with simulated stalled native queries and permissions passed. Includes all previous updates and uses the same signing key.
+          Browser checks verified stable button bounds before, during and after a delayed refresh, with the new count still displayed correctly. Includes all previous refresh recovery fixes and uses the same signing key.
           NOTES
-          if gh release view refresh-steps-preview-2026-11-09 >/dev/null 2>&1; then
-            gh release upload refresh-steps-preview-2026-11-09 daily-intake-refresh-steps-debug.apk SHA256SUMS --clobber
+          if gh release view refresh-no-flash-preview-2026-11-09 >/dev/null 2>&1; then
+            gh release upload refresh-no-flash-preview-2026-11-09 daily-intake-refresh-no-flash-debug.apk SHA256SUMS --clobber
           else
-            gh release create refresh-steps-preview-2026-11-09 daily-intake-refresh-steps-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Refresh steps button and recover stalled step reads' --notes-file release-notes.md --prerelease --latest=false
+            gh release create refresh-no-flash-preview-2026-11-09 daily-intake-refresh-no-flash-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Prevent layout flash when refreshing steps' --notes-file release-notes.md --prerelease --latest=false
           fi
