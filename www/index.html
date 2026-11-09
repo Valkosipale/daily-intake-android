@@ -1589,7 +1589,7 @@ body{
       </div>
       <div class="field full">
         <label for="bodyWeight">Weight (kg)</label>
-        <input type="text" inputmode="decimal" id="bodyWeight" placeholder="e.g. 82,4">
+        <input type="text" inputmode="decimal" id="bodyWeight" placeholder="e.g. 82,35">
       </div>
     </div>
     <p class="body-note" id="bodyWeightNote"></p>
@@ -2556,7 +2556,12 @@ function logWeighIn(dateStr, kg){
   saveWeightLog(log);
 }
 
-const signedKg = d => (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d);
+function roundWeight(kg){ return Number(Number(kg).toFixed(2)); }
+function formatWeight(kg){ return Number(kg).toFixed(2); }
+const signedKg = delta => {
+  const d = roundWeight(delta);
+  return (d > 0 ? '+' : d < 0 ? '−' : '±') + formatWeight(Math.abs(d));
+};
 
 // Weight trend for the 7 days the weekly view is showing (startDate..endDate, inclusive)
 function renderWeeklyWeight(startDate, endDate, period){
@@ -2592,25 +2597,25 @@ function renderWeeklyWeight(startDate, endDate, period){
   }
 
   const latest = inWeek[inWeek.length - 1];
-  const avg = roundNum(inWeek.reduce((sum, w) => sum + w.kg, 0) / inWeek.length);
+  const avg = inWeek.reduce((sum, w) => sum + w.kg, 0) / inWeek.length;
   let change = '';
   if(inWeek.length >= 2){
-    change = `${signedKg(roundNum(latest.kg - inWeek[0].kg))} kg over this ${period}`;
+    change = `${signedKg(latest.kg - inWeek[0].kg)} kg over this ${period}`;
   } else if(before){
-    change = `${signedKg(roundNum(latest.kg - before.kg))} kg since ${formatDateShort(before.date)}`;
+    change = `${signedKg(latest.kg - before.kg)} kg since ${formatDateShort(before.date)}`;
   }
-  const stats = `<div class="weight-stats">Latest ${latest.kg} kg · ${period} average ${avg} kg${change ? '<br>' + change : ''}</div>`;
+  const stats = `<div class="weight-stats">Latest ${formatWeight(latest.kg)} kg · ${period} average ${formatWeight(avg)} kg${change ? '<br>' + change : ''}</div>`;
 
   // Newest first, each with its change since the weigh-in before it
   let rowsHtml = '';
   for(let i = inWeek.length - 1; i >= 0; i--){
     const w = inWeek[i];
     const prev = i > 0 ? inWeek[i - 1] : before;
-    const delta = prev ? signedKg(roundNum(w.kg - prev.kg)) : '';
+    const delta = prev ? signedKg(w.kg - prev.kg) : '';
     rowsHtml += `
       <div class="weight-row">
         <div class="weight-row-date">${formatDateShort(w.date)}</div>
-        <div class="weight-row-kg">${w.kg} kg</div>
+        <div class="weight-row-kg">${formatWeight(w.kg)} kg</div>
         <div class="weight-row-delta">${delta}</div>
         <button type="button" class="weight-row-del" data-date="${w.date}" aria-label="Delete weigh-in">×</button>
       </div>`;
@@ -2623,7 +2628,7 @@ function renderWeeklyWeight(startDate, endDate, period){
       const date = btn.getAttribute('data-date');
       const entry = getWeightLog().find(w => w.date === date);
       if(!entry) return;
-      const confirmed = await showConfirmModal(`Delete the ${formatDateShort(date)} weigh-in (${entry.kg} kg)?`);
+      const confirmed = await showConfirmModal(`Delete the ${formatDateShort(date)} weigh-in (${formatWeight(entry.kg)} kg)?`);
       if(!confirmed) return;
       saveWeightLog(getWeightLog().filter(w => w.date !== date));
       renderWeekly();
@@ -3472,10 +3477,10 @@ function openBodyDialog(){
   document.getElementById('bodyAge').value = p ? String(p.age) : '';
   document.getElementById('bodyHeight').value = p ? String(p.heightCm) : '';
   const wi = weighInOnOrBefore(currentDate);
-  document.getElementById('bodyWeight').value = wi ? String(wi.kg) : (p ? String(p.weightKg) : '');
+  document.getElementById('bodyWeight').value = wi ? formatWeight(wi.kg) : (p ? formatWeight(p.weightKg) : '');
   bodyWeightTouched = false;
   document.getElementById('bodyWeightNote').textContent = wi
-    ? `Your weight for ${formatDateShort(currentDate)} (latest weigh-in: ${wi.kg} kg on ${formatDateShort(wi.date)}). Changing it logs a weigh-in for this day and feeds the trend in the weekly view.`
+    ? `Your weight for ${formatDateShort(currentDate)} (latest weigh-in: ${formatWeight(wi.kg)} kg on ${formatDateShort(wi.date)}). Changing it logs a weigh-in for this day and feeds the trend in the weekly view.`
     : `Entering a weight also logs a weigh-in for ${formatDateShort(currentDate)}, which feeds the trend in the weekly view.`;
 
   const savedGym = getGymWorkout(currentDate);
@@ -3523,9 +3528,9 @@ function saveBodyDialog(){
     }
   }
 
-  saveProfile({sex: v.sex, age: Math.round(v.age), heightCm: roundNum(v.heightCm), weightKg: roundNum(v.weightKg)});
+  saveProfile({sex: v.sex, age: Math.round(v.age), heightCm: roundNum(v.heightCm), weightKg: roundWeight(v.weightKg)});
   // Only when a weight was actually typed, so saving something else (like steps) doesn't add a phantom point
-  if(bodyWeightTouched) logWeighIn(currentDate, roundNum(v.weightKg));
+  if(bodyWeightTouched) logWeighIn(currentDate, roundWeight(v.weightKg));
   setStepsField(currentDate, 'manual', manual);
   saveGymWorkout(currentDate, gymInput.minutes, gymInput.intensity);
   closeBodyDialog();

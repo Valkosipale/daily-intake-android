@@ -1,4 +1,4 @@
-name: Publish direct scan logging
+name: Publish two-decimal body weight
 
 on:
   push:
@@ -134,15 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-direct-scan-debug.apk
-          sha256sum daily-intake-direct-scan-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-weight-decimals-debug.apk
+          sha256sum daily-intake-weight-decimals-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Add to log in the scan window now saves the food directly to the selected day, without filling the manual form or requiring a second tap. Existing manual drafts and edits are preserved. Counted foods retain their quantities; mixed meals remain one combined serving.
+          Body weight now saves two decimal places instead of rounding to one. Weekly/monthly trend entries, latest weight, averages and changes display two decimal places, as do Body stats and the delete confirmation.
 
-          Log food edit fields now show at most two decimal places, including stored and converted barcode nutrition. Calculations retain precise values until explicitly edited. Includes all previous updates and uses the same signing key.
+          Previously rounded weights cannot recover their original second decimal automatically; correct an old weigh-in by selecting its day and entering the intended weight in Body stats. Includes all previous updates and uses the same signing key.
           NOTES
-          if gh release view direct-scan-preview-2026-11-06 >/dev/null 2>&1; then
-            gh release upload direct-scan-preview-2026-11-06 daily-intake-direct-scan-debug.apk SHA256SUMS --clobber
+          if gh release view weight-decimals-preview-2026-11-09 >/dev/null 2>&1; then
+            gh release upload weight-decimals-preview-2026-11-09 daily-intake-weight-decimals-debug.apk SHA256SUMS --clobber
           else
-            gh release create direct-scan-preview-2026-11-06 daily-intake-direct-scan-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Log scanned food in one tap and tidy decimals' --notes-file release-notes.md --prerelease --latest=false
+            gh release create weight-decimals-preview-2026-11-09 daily-intake-weight-decimals-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Keep body weight to two decimal places' --notes-file release-notes.md --prerelease --latest=false
           fi
