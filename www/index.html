@@ -3413,6 +3413,7 @@ async function connectPhoneSteps(){
     }else if(r.status==='error'){
       showErrorModal(r.message,'Reading steps failed');
     }
+    if(r.status==='ok' || r.status==='no-data') window.queueStepRefreshFollowups?.();
     updateBodyPreview();
   }catch(e){
     setStepsStatus('Could not refresh steps. Saved steps are unchanged. Try again.');

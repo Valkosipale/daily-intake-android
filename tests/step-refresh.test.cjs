@@ -33,3 +33,12 @@ test('stale WebView hidden events do not override a native foreground state',()=
  const s=setup();s.events.appStateChange({isActive:true});s.document.visibilityState='hidden';s.events.visibilitychange();s.tick(150);
  assert.equal(s.calls.length,1);assert.equal(s.calls[0][1].restart,true);s.tick(15000);assert.equal(s.calls.length,2);s.interval();assert.equal(s.calls.length,3);
 });
+
+test('manual refresh queues bounded follow-up reads without more taps, and background cancels them',()=>{
+ const s=setup();s.ctx.window.queueStepRefreshFollowups();
+ for(const ms of [2000,4000,6000,10000,15000])s.tick(ms);
+ assert.equal(s.calls.length,5);assert.ok(s.calls.every(call=>call[1].force && !call[1].restart));
+ s.ctx.window.queueStepRefreshFollowups();s.events.appStateChange({isActive:false});
+ for(const ms of [2000,4000,6000,10000,15000])s.tick(ms);
+ assert.equal(s.calls.length,5);
+});

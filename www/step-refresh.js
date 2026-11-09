@@ -4,16 +4,25 @@
   let active = document.visibilityState === 'visible';
   let nativeActive = null;
   let pending = null;
-  let followup = null;
-  let later = null;
+  let retries = [];
   const clearPending = () => {
     clearTimeout(pending);
-    clearTimeout(followup);
-    clearTimeout(later);
-    pending = followup = later = null;
+    retries.forEach(clearTimeout);
+    retries = [];
+    pending = null;
   };
   const refresh = (restart = false) => {
     if(active) return refreshPhoneSteps(currentDate, {force:true, restart});
+  };
+  const scheduleFollowups = delays => {
+    retries.forEach(clearTimeout);
+    retries = delays.map(delay => setTimeout(() => refresh(), delay));
+  };
+  // A manual refresh reads immediately; briefly keep checking for source-app sync.
+  window.queueStepRefreshFollowups = () => {
+    if(!active) return;
+    clearPending();
+    scheduleFollowups([2000,4000,6000,10000,15000]);
   };
   const foreground = () => {
     active = true;
@@ -21,8 +30,7 @@
     pending = setTimeout(() => {
       pending = null;
       refresh(true);
-      later = setTimeout(() => { later = null; refresh(); }, 15000);
-      followup = setTimeout(() => { followup = null; refresh(); }, 3000);
+      scheduleFollowups([3000,15000]);
     }, 150);
   };
   const background = () => { active = false; clearPending(); };
