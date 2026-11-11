@@ -329,6 +329,16 @@ body{
   text-align:center;
   line-height:1.5;
 }
+/* Keep the TDEE comparison visible above the scrolling review rows. */
+.weekly-box > .weekly-summary{
+  position:sticky;
+  top:-18px; /* Cover the scroll container's top padding while pinned. */
+  flex-shrink:0;
+  z-index:2;
+  background:var(--panel);
+  margin:0 0 12px;
+}
+.weekly-summary .wb-row{flex-wrap:wrap;}
 .weekly-summary .avg-cal{
   font-family:'Archivo Black',sans-serif;
   font-size:22px;
@@ -1632,8 +1642,8 @@ body{
   <div class="data-box weekly-box">
     <div class="data-title" id="weeklyTitle">Weekly view</div>
     <p class="data-desc" id="weeklyRange"></p>
-    <div id="weeklyList"></div>
     <div class="weekly-summary" id="weeklySummary"></div>
+    <div id="weeklyList"></div>
     <div class="weekly-weight" id="weeklyWeight"></div>
     <div class="data-actions">
       <button type="button" id="weeklyPrevBtn" class="secondary">‹ Earlier</button>

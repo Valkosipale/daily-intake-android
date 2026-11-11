@@ -1,4 +1,4 @@
-name: Publish fasting button visibility
+name: Publish pinned TDEE comparison
 
 on:
   push:
@@ -134,13 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-fasting-button-debug.apk
-          sha256sum daily-intake-fasting-button-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-pinned-tdee-debug.apk
+          sha256sum daily-intake-pinned-tdee-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          The entire fasting button area is now hidden when the selected day has food logged, instead of showing a disabled grey button. It reappears when the day has no food entries. Existing fasting-day tracking and all previous improvements are preserved. Uses the same signing key.
+          Moved the Month/Week vs your TDEE comparison above the day list and pinned it within the review window. It stays visible while scrolling through days and the weight section, using an opaque background so rows do not show through. The wording and calculations are unchanged.
+
+          Browser checks passed at 320px, 390px and 800px widths, including top/middle/bottom scrolling, horizontal overflow and closing the window. Includes all previous fasting, step, weight and scanning improvements. Uses the same signing key.
           NOTES
-          if gh release view fasting-button-preview-2026-11-11 >/dev/null 2>&1; then
-            gh release upload fasting-button-preview-2026-11-11 daily-intake-fasting-button-debug.apk SHA256SUMS --clobber
+          if gh release view pinned-tdee-preview-2026-11-11 >/dev/null 2>&1; then
+            gh release upload pinned-tdee-preview-2026-11-11 daily-intake-pinned-tdee-debug.apk SHA256SUMS --clobber
           else
-            gh release create fasting-button-preview-2026-11-11 daily-intake-fasting-button-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Hide fasting button on days with food' --notes-file release-notes.md --prerelease --latest=false
+            gh release create pinned-tdee-preview-2026-11-11 daily-intake-pinned-tdee-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Keep TDEE comparison visible while scrolling reviews' --notes-file release-notes.md --prerelease --latest=false
           fi
