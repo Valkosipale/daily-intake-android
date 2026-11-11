@@ -1,4 +1,4 @@
-name: Publish fasting day tracking
+name: Publish fasting button visibility
 
 on:
   push:
@@ -134,15 +134,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-fasting-day-debug.apk
-          sha256sum daily-intake-fasting-day-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-fasting-button-debug.apk
+          sha256sum daily-intake-fasting-button-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Added Mark fasting day below the selected day's log. Empty days can explicitly record zero intake, and the weekly/monthly comparison includes their estimated TDEE. Fasting days are clearly labeled, can be unmarked, and stay distinct from unlogged days.
-
-          Adding or copying food removes the fasting marker. Fasting days are included in backups and restore without creating fake food entries. Existing food logs, step syncing, weight precision and scan improvements are preserved. Logic tests and browser checks passed for marking, removal, TDEE totals, persistence, food/copy clearing and backup round trips. Uses the same signing key as previous previews.
+          The entire fasting button area is now hidden when the selected day has food logged, instead of showing a disabled grey button. It reappears when the day has no food entries. Existing fasting-day tracking and all previous improvements are preserved. Uses the same signing key.
           NOTES
-          if gh release view fasting-day-preview-2026-11-11 >/dev/null 2>&1; then
-            gh release upload fasting-day-preview-2026-11-11 daily-intake-fasting-day-debug.apk SHA256SUMS --clobber
+          if gh release view fasting-button-preview-2026-11-11 >/dev/null 2>&1; then
+            gh release upload fasting-button-preview-2026-11-11 daily-intake-fasting-button-debug.apk SHA256SUMS --clobber
           else
-            gh release create fasting-day-preview-2026-11-11 daily-intake-fasting-day-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Mark fasting days in weekly and monthly reviews' --notes-file release-notes.md --prerelease --latest=false
+            gh release create fasting-button-preview-2026-11-11 daily-intake-fasting-button-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Hide fasting button on days with food' --notes-file release-notes.md --prerelease --latest=false
           fi

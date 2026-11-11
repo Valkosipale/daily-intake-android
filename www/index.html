@@ -1381,7 +1381,7 @@ body{
     <button type="button" class="copy-day-btn" id="copyDayBtn">Copy day</button>
   </div>
   <div class="entries" id="entriesContainer"></div>
-  <div style="margin:12px 0 24px;">
+  <div id="fastingDayActions" style="margin:12px 0 24px;">
     <button type="button" id="fastingDayBtn" class="backup-btn" style="width:100%;" aria-pressed="false">Mark fasting day</button>
   </div>
 
@@ -1802,6 +1802,7 @@ function render(){
   if(currentEntries.length) setFastingDay(currentDate,false);
   const fasting = currentEntries.length===0 && isFastingDay(currentDate);
   const fastingButton = document.getElementById('fastingDayBtn');
+  document.getElementById('fastingDayActions').hidden = currentEntries.length>0;
   fastingButton.textContent = fasting ? 'Remove fasting day' : 'Mark fasting day';
   fastingButton.disabled = currentEntries.length>0 || (!fasting && currentDate>todayStr());
   fastingButton.title = currentEntries.length ? 'A fasting day must have no food logged.' : '';
