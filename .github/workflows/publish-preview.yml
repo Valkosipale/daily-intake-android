@@ -1,4 +1,4 @@
-name: Publish quiet step refresh with follow-ups
+name: Publish fasting day tracking
 
 on:
   push:
@@ -134,15 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-quiet-followup-debug.apk
-          sha256sum daily-intake-quiet-followup-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-fasting-day-debug.apk
+          sha256sum daily-intake-fasting-day-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Removed the Steps refreshed success popup. The count updates in the active Body stats and steps window without a toast below it.
+          Added Mark fasting day below the selected day's log. Empty days can explicitly record zero intake, and the weekly/monthly comparison includes their estimated TDEE. Fasting days are clearly labeled, can be unmarked, and stay distinct from unlogged days.
 
-          One manual Refresh steps tap reads immediately, then checks at 2, 4, 6, 10 and 15 seconds for delayed Health Connect updates. Checks are coalesced, do not prompt for permission, and stop in the background. This cannot force Samsung Health or another recorder to publish data sooner, but removes the need for repeated manual taps while new data arrives. Tests include delayed source updates and no success popup. Includes all previous fixes and uses the same signing key.
+          Adding or copying food removes the fasting marker. Fasting days are included in backups and restore without creating fake food entries. Existing food logs, step syncing, weight precision and scan improvements are preserved. Logic tests and browser checks passed for marking, removal, TDEE totals, persistence, food/copy clearing and backup round trips. Uses the same signing key as previous previews.
           NOTES
-          if gh release view quiet-followup-preview-2026-11-09 >/dev/null 2>&1; then
-            gh release upload quiet-followup-preview-2026-11-09 daily-intake-quiet-followup-debug.apk SHA256SUMS --clobber
+          if gh release view fasting-day-preview-2026-11-11 >/dev/null 2>&1; then
+            gh release upload fasting-day-preview-2026-11-11 daily-intake-fasting-day-debug.apk SHA256SUMS --clobber
           else
-            gh release create quiet-followup-preview-2026-11-09 daily-intake-quiet-followup-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Quiet step refresh with automatic follow-up reads' --notes-file release-notes.md --prerelease --latest=false
+            gh release create fasting-day-preview-2026-11-11 daily-intake-fasting-day-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Mark fasting days in weekly and monthly reviews' --notes-file release-notes.md --prerelease --latest=false
           fi

@@ -1103,6 +1103,7 @@ body{
   padding:4px 8px;
   cursor:pointer;
 }
+#fastingDayBtn:disabled{opacity:0.45;cursor:not-allowed;}
 .copy-day-btn:hover{background:#141210;color:var(--accent);}
 .entries{
   border-left:1px solid var(--hair);
@@ -1380,6 +1381,9 @@ body{
     <button type="button" class="copy-day-btn" id="copyDayBtn">Copy day</button>
   </div>
   <div class="entries" id="entriesContainer"></div>
+  <div style="margin:12px 0 24px;">
+    <button type="button" id="fastingDayBtn" class="backup-btn" style="width:100%;" aria-pressed="false">Mark fasting day</button>
+  </div>
 
   <div class="add-form">
     <div class="form-head">
@@ -1755,14 +1759,53 @@ async function loadEntries(dateStr){
   }
 }
 
+// Explicit fasting days distinguish a confirmed zero intake from missing food logs.
+function isFastingDay(dateStr){
+  if(!hasStorage()) return false;
+  return window.localStorage.getItem('dic:fasting:'+dateStr) === 'true';
+}
+function setFastingDay(dateStr, enabled){
+  if(!hasStorage() || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  try{
+    if(enabled) window.localStorage.setItem('dic:fasting:'+dateStr,'true');
+    else window.localStorage.removeItem('dic:fasting:'+dateStr);
+    return true;
+  }catch(error){console.error('Could not save fasting day',error);return false;}
+}
+function getFastingDays(){
+  if(!hasStorage()) return [];
+  const dates = [];
+  for(let i=0;i<window.localStorage.length;i++){
+    const key = window.localStorage.key(i);
+    if(key && /^dic:fasting:\d{4}-\d{2}-\d{2}$/.test(key) && window.localStorage.getItem(key)==='true') dates.push(key.slice(12));
+  }
+  return dates.sort();
+}
+document.getElementById('fastingDayBtn').addEventListener('click',()=>{
+  if(currentEntries.length) return;
+  const enabled = !isFastingDay(currentDate);
+  if(enabled && currentDate > todayStr()) return;
+  saveEntries();
+  if(!setFastingDay(currentDate,enabled)){showToast('Could not save fasting day');return;}
+  render();
+});
+
 async function saveEntries(){
   if(!hasStorage()) return;
+  if(currentEntries.length) setFastingDay(currentDate,false);
   try{
     window.localStorage.setItem('dic:log:'+currentDate, JSON.stringify(currentEntries));
   }catch(e){ console.error('Failed to save entries', e); }
 }
 
 function render(){
+  if(currentEntries.length) setFastingDay(currentDate,false);
+  const fasting = currentEntries.length===0 && isFastingDay(currentDate);
+  const fastingButton = document.getElementById('fastingDayBtn');
+  fastingButton.textContent = fasting ? 'Remove fasting day' : 'Mark fasting day';
+  fastingButton.disabled = currentEntries.length>0 || (!fasting && currentDate>todayStr());
+  fastingButton.title = currentEntries.length ? 'A fasting day must have no food logged.' : '';
+  fastingButton.setAttribute('aria-pressed',String(fasting));
   document.getElementById('dateInput').value = currentDate;
   document.getElementById('dateDisplay').textContent = formatDateShort(currentDate);
   document.getElementById('factsDate').textContent = formatDateLabel(currentDate);
@@ -1811,7 +1854,7 @@ function render(){
   if(currentEntries.length === 0){
     const empty = document.createElement('div');
     empty.className = 'empty-row';
-    empty.textContent = 'Nothing logged yet. Add your first food below.';
+    empty.textContent = fasting ? 'Fasting day · 0 calories eaten. Included in your TDEE comparison.' : 'Nothing logged yet. Add your first food below.';
     container.appendChild(empty);
   } else {
     currentEntries.forEach(item=>{
@@ -1960,6 +2003,7 @@ async function copyEntryToDate(item, targetDateStr){
     };
     arr.push(copy);
     window.localStorage.setItem('dic:log:'+targetDateStr, JSON.stringify(arr));
+    if(arr.length) setFastingDay(targetDateStr,false);
     if(targetDateStr === currentDate){
       currentEntries = arr;
       render();
@@ -1983,6 +2027,7 @@ async function copyDayToDate(entries, targetDateStr){
       });
     });
     window.localStorage.setItem('dic:log:'+targetDateStr, JSON.stringify(arr));
+    if(arr.length) setFastingDay(targetDateStr,false);
     return entries.length;
   }catch(e){
     console.error('Failed to copy day to ' + targetDateStr, e);
@@ -2647,7 +2692,7 @@ function shiftDate(dateStr, deltaDays){
 }
 
 function getDayTotalsFromStorage(dateStr){
-  const totals = {count:0, cal:0, protein:0, carbs:0, fat:0, fiber:0, salt:0};
+  const totals = {count:0, cal:0, protein:0, carbs:0, fat:0, fiber:0, salt:0, fasting:false};
   if(!hasStorage()) return totals;
   try{
     const raw = window.localStorage.getItem('dic:log:' + dateStr);
@@ -2663,6 +2708,7 @@ function getDayTotalsFromStorage(dateStr){
       totals.salt += Number(e.salt) || 0;
     });
   }catch(err){ /* treat as empty day */ }
+  totals.fasting = totals.count===0 && isFastingDay(dateStr);
   return totals;
 }
 
@@ -2727,7 +2773,7 @@ function renderWeekly(){
       </div>`;
     }
 
-    if(t.count === 0){
+    if(t.count === 0 && !t.fasting){
       return `
         <button type="button" class="weekly-row empty" data-date="${day.date}">
           <div class="weekly-day ${isToday ? 'is-today' : ''}">${escapeHtml(weekday)}<br>${shortDate}</div>
@@ -2743,9 +2789,9 @@ function renderWeekly(){
       <button type="button" class="weekly-row" data-date="${day.date}">
         <div class="weekly-day ${isToday ? 'is-today' : ''}">${escapeHtml(weekday)}<br>${shortDate}</div>
         <div class="weekly-bar-track"><div class="weekly-bar-fill ${over ? 'over' : ''}" style="width:${pct}%"></div></div>
-        <div class="weekly-cal">${Math.round(t.cal).toLocaleString()}${periodMode === 'month' ? '<small>kcal eaten</small>' : ''}</div>
+        <div class="weekly-cal">${Math.round(t.cal).toLocaleString()}${t.fasting ? '<small>fasting day</small>' : (periodMode === 'month' ? '<small>kcal eaten</small>' : '')}</div>
         ${dailyStats}
-        <div class="weekly-macros">P ${roundNum(t.protein)}g · C ${roundNum(t.carbs)}g · F ${roundNum(t.fat)}g · Fiber ${roundNum(t.fiber)}g · Salt ${roundNum(t.salt)}g</div>
+        <div class="weekly-macros">${t.fasting ? 'Fasting day · 0 calories eaten' : `P ${roundNum(t.protein)}g · C ${roundNum(t.carbs)}g · F ${roundNum(t.fat)}g · Fiber ${roundNum(t.fiber)}g · Salt ${roundNum(t.salt)}g`}</div>
       </button>`;
   }).join('');
 
@@ -2761,7 +2807,7 @@ function renderWeekly(){
   renderWeeklyWeight(start, end, noun);
 
   const summary = document.getElementById('weeklySummary');
-  const logged = days.filter(d => d.totals.count > 0);
+  const logged = days.filter(d => d.totals.count > 0 || d.totals.fasting);
   if(logged.length === 0){
     summary.textContent = 'Nothing logged in this range yet.';
     return;
@@ -3584,6 +3630,7 @@ function collectAllData(){
     data.profile = getProfile();
     data.steps = getStepsMap();
     data.gym = getGymMap();
+    data.fastingDays = getFastingDays();
   }catch(e){ console.error('Failed to collect data', e); }
   return data;
 }
@@ -3598,6 +3645,16 @@ function restoreAllData(data){
     if(data.logs && typeof data.logs === 'object'){
       Object.keys(data.logs).forEach(dateStr=>{
         window.localStorage.setItem('dic:log:'+dateStr, JSON.stringify(data.logs[dateStr]));
+        setFastingDay(dateStr,false);
+      });
+    }
+    if(Array.isArray(data.fastingDays)){
+      data.fastingDays.forEach(dateStr=>{
+        if(typeof dateStr!=='string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
+        const raw = window.localStorage.getItem('dic:log:'+dateStr);
+        let entries;
+        try{entries = raw ? JSON.parse(raw) : [];}catch(error){return;}
+        if(Array.isArray(entries) && entries.length===0) setFastingDay(dateStr,true);
       });
     }
     // Weigh-ins merge by date (the backup wins on a clash), like logs overwrite per day
