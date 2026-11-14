@@ -1,4 +1,4 @@
-name: Publish pinned TDEE comparison
+name: Publish yearly TDEE review
 
 on:
   push:
@@ -134,15 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-pinned-tdee-debug.apk
-          sha256sum daily-intake-pinned-tdee-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-yearly-review-debug.apk
+          sha256sum daily-intake-yearly-review-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Moved the Month/Week vs your TDEE comparison above the day list and pinned it within the review window. It stays visible while scrolling through days and the weight section, using an opaque background so rows do not show through. The wording and calculations are unchanged.
+          Added View year beside View month. The yearly review groups logged food and fasting days by completed calendar month, showing intake, estimated TDEE, recorded steps and logging coverage. Its TDEE comparison stays pinned while scrolling. Current and future months are excluded, and missing days are never assumed to be fasting.
 
-          Browser checks passed at 320px, 390px and 800px widths, including top/middle/bottom scrolling, horizontal overflow and closing the window. Includes all previous fasting, step, weight and scanning improvements. Uses the same signing key.
+          Each view contains one calendar year. Opening it defaults to the current year, including after New Year, and Earlier/Later browses other years without combining totals. January starts empty until its first month is complete; the previous year remains accessible. Tap a month for its daily review. Completed-month weight trends are included.
+
+          Logic and browser checks passed for month-end/year boundaries, leap years, fasting, missing data, yearly isolation, navigation, rollover, month drill-down and phone layouts. Includes all previous improvements and uses the same signing key.
           NOTES
-          if gh release view pinned-tdee-preview-2026-11-11 >/dev/null 2>&1; then
-            gh release upload pinned-tdee-preview-2026-11-11 daily-intake-pinned-tdee-debug.apk SHA256SUMS --clobber
+          if gh release view yearly-review-preview-2026-11-14 >/dev/null 2>&1; then
+            gh release upload yearly-review-preview-2026-11-14 daily-intake-yearly-review-debug.apk SHA256SUMS --clobber
           else
-            gh release create pinned-tdee-preview-2026-11-11 daily-intake-pinned-tdee-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Keep TDEE comparison visible while scrolling reviews' --notes-file release-notes.md --prerelease --latest=false
+            gh release create yearly-review-preview-2026-11-14 daily-intake-yearly-review-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Yearly review for completed months' --notes-file release-notes.md --prerelease --latest=false
           fi
