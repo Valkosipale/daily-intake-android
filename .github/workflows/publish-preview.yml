@@ -1,4 +1,4 @@
-name: Publish yearly TDEE review
+name: Publish yearly month removal
 
 on:
   push:
@@ -134,17 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-yearly-review-debug.apk
-          sha256sum daily-intake-yearly-review-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-year-month-controls-debug.apk
+          sha256sum daily-intake-year-month-controls-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Added View year beside View month. The yearly review groups logged food and fasting days by completed calendar month, showing intake, estimated TDEE, recorded steps and logging coverage. Its TDEE comparison stays pinned while scrolling. Current and future months are excluded, and missing days are never assumed to be fasting.
+          Yearly rows now show food-day and explicitly marked fasting-day counts separately, state that unlogged days are excluded, and omit months with no logged food or fasting. Only explicit fasting markers count as fasting; missing days add no intake or TDEE.
 
-          Each view contains one calendar year. Opening it defaults to the current year, including after New Year, and Earlier/Later browses other years without combining totals. January starts empty until its first month is complete; the previous year remains accessible. Tap a month for its daily review. Completed-month weight trends are included.
+          Added a remove button beside each recorded month. Confirming removes that month from the yearly rows, totals and weight trend without deleting its underlying daily data. Restore removed months brings the selected year's months back. Exclusions persist and are included in backups. Other years and monthly reviews retain their records.
 
-          Logic and browser checks passed for month-end/year boundaries, leap years, fasting, missing data, yearly isolation, navigation, rollover, month drill-down and phone layouts. Includes all previous improvements and uses the same signing key.
+          42 logic tests and browser checks passed, including missing-day handling, explicit fasting, cancel/remove/restore, recalculated totals, preserved data, backups and phone layouts. Includes all previous improvements and uses the same signing key.
           NOTES
-          if gh release view yearly-review-preview-2026-11-14 >/dev/null 2>&1; then
-            gh release upload yearly-review-preview-2026-11-14 daily-intake-yearly-review-debug.apk SHA256SUMS --clobber
+          if gh release view year-month-controls-preview-2026-11-14 >/dev/null 2>&1; then
+            gh release upload year-month-controls-preview-2026-11-14 daily-intake-year-month-controls-debug.apk SHA256SUMS --clobber
           else
-            gh release create yearly-review-preview-2026-11-14 daily-intake-yearly-review-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Yearly review for completed months' --notes-file release-notes.md --prerelease --latest=false
+            gh release create year-month-controls-preview-2026-11-14 daily-intake-year-month-controls-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Exclude unlogged days and remove yearly months' --notes-file release-notes.md --prerelease --latest=false
           fi

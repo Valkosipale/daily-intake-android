@@ -24,3 +24,15 @@ test('new year starts empty and the previous year remains available in isolation
  assert.equal(buildYearReview(2027,'2027-01-01',read,()=>2200,()=>null).calories,0);
  assert.equal(buildYearReview(2026,'2027-01-01',read,()=>2200,()=>null).calories,2000);
 });
+test('unlogged days never become fasting days; only explicit true markers count',()=>{
+ const read=d=>d.endsWith('-01')?{count:1,cal:1000}:d.endsWith('-02')?{count:0,fasting:true}:d.endsWith('-03')?{count:0,fasting:'false'}:{count:0};
+ const r=buildYearReview(2026,'2026-02-01',read,()=>2000,()=>null);
+ assert.equal(r.foodDays,1);assert.equal(r.fastingDays,1);assert.equal(r.loggedDays,2);assert.equal(r.tdee,4000);
+});
+test('removed months are excluded from annual totals without affecting other years',()=>{
+ const read=d=>d.endsWith('-01')?{count:1,cal:1000}:{count:0};
+ const r=buildYearReview(2026,'2026-03-01',read,()=>2000,()=>({steps:5000}),['2026-01','2025-02']);
+ assert.equal(r.months.length,1);assert.equal(r.months[0].start,'2026-02-01');assert.equal(r.excludedCount,1);assert.equal(r.calories,1000);assert.equal(r.tdee,2000);assert.equal(r.months[0].steps,5000);
+ const restored=buildYearReview(2026,'2026-03-01',read,()=>2000,()=>null);
+ assert.equal(restored.calories,2000);assert.equal(restored.tdee,4000);
+});
