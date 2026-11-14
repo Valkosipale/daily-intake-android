@@ -36,3 +36,17 @@ test('removed months are excluded from annual totals without affecting other yea
  const restored=buildYearReview(2026,'2026-03-01',read,()=>2000,()=>null);
  assert.equal(restored.calories,2000);assert.equal(restored.tdee,4000);
 });
+test('yearly weight chart averages readings per included month, skipping missing/excluded months',()=>{
+ const {monthlyWeightAverages}=require('../www/year-review.js');
+ const weights=[{date:'2026-01-02',kg:84},{date:'2026-01-20',kg:82},{date:'2026-02-01',kg:80},{date:'2026-03-15',kg:81.35},{date:'2025-01-01',kg:100},{date:'2026-11-01',kg:90}];
+ const months=completedYearMonths(2026,'2026-11-14').filter(m=>m.start!=='2026-02-01');
+ const avg=monthlyWeightAverages(weights,months);
+ assert.deepEqual(avg,[{month:'2026-01-01',kg:83,count:2},{month:'2026-03-01',kg:81.35,count:1}]);
+ assert.equal(weights.length,6);
+ assert.deepEqual(monthlyWeightAverages([],months),[]);
+});
+test('monthly weight averages retain precision and do not substitute zeros for missing months',()=>{
+ const {monthlyWeightAverages}=require('../www/year-review.js');
+ const avg=monthlyWeightAverages([{date:'2026-01-01',kg:82.35},{date:'2026-01-02',kg:82.36}],completedYearMonths(2026,'2026-03-01'));
+ assert.equal(avg.length,1);assert.ok(Math.abs(avg[0].kg-82.355)<0.000001);assert.equal(avg[0].count,2);
+});

@@ -1,4 +1,4 @@
-name: Publish yearly month removal
+name: Publish yearly monthly weight averages
 
 on:
   push:
@@ -134,17 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-year-month-controls-debug.apk
-          sha256sum daily-intake-year-month-controls-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-year-weight-averages-debug.apk
+          sha256sum daily-intake-year-weight-averages-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Yearly rows now show food-day and explicitly marked fasting-day counts separately, state that unlogged days are excluded, and omit months with no logged food or fasting. Only explicit fasting markers count as fasting; missing days add no intake or TDEE.
+          The yearly weight chart now uses one average per included completed month instead of individual daily weigh-ins. Rows show monthly averages, weigh-in counts and the change from the previous recorded month's average. The summary compares the first and latest monthly averages, displayed to two decimals.
 
-          Added a remove button beside each recorded month. Confirming removes that month from the yearly rows, totals and weight trend without deleting its underlying daily data. Restore removed months brings the selected year's months back. Exclusions persist and are included in backups. Other years and monthly reviews retain their records.
-
-          42 logic tests and browser checks passed, including missing-day handling, explicit fasting, cancel/remove/restore, recalculated totals, preserved data, backups and phone layouts. Includes all previous improvements and uses the same signing key.
+          Months with no weigh-ins are skipped, and removed/current months remain excluded. A single recorded month displays one chart point. Individual weigh-ins and their monthly-view editing/deletion controls are unchanged. Logic and browser checks passed for averaging, month changes, missing/excluded months, retained precision, monthly-view regression and phone layouts. Includes all previous improvements and uses the same signing key.
           NOTES
-          if gh release view year-month-controls-preview-2026-11-14 >/dev/null 2>&1; then
-            gh release upload year-month-controls-preview-2026-11-14 daily-intake-year-month-controls-debug.apk SHA256SUMS --clobber
+          if gh release view year-weight-averages-preview-2026-11-14 >/dev/null 2>&1; then
+            gh release upload year-weight-averages-preview-2026-11-14 daily-intake-year-weight-averages-debug.apk SHA256SUMS --clobber
           else
-            gh release create year-month-controls-preview-2026-11-14 daily-intake-year-month-controls-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Exclude unlogged days and remove yearly months' --notes-file release-notes.md --prerelease --latest=false
+            gh release create year-weight-averages-preview-2026-11-14 daily-intake-year-weight-averages-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Compare monthly average weights in the yearly chart' --notes-file release-notes.md --prerelease --latest=false
           fi

@@ -37,4 +37,11 @@ function buildYearReview(year,today,readDay,readTdee,readSteps,excludedMonths=[]
     calories:logged.reduce((n,m)=>n+m.totals.cal,0),
     tdee:logged.some(m=>m.tdee===null)?null:logged.reduce((n,m)=>n+m.tdee,0)};
 }
-if(typeof module!=='undefined'&&module.exports) module.exports={completedYearMonths,buildYearReview};
+// One point per included month; averages retain precision until displayed.
+function monthlyWeightAverages(weights,months){
+  return months.map(month=>{
+    const readings=weights.filter(w=>w && typeof w.date==='string' && w.date.slice(0,7)===month.start.slice(0,7) && Number.isFinite(w.kg) && w.kg>0);
+    return readings.length ? {month:month.start,kg:readings.reduce((sum,w)=>sum+w.kg,0)/readings.length,count:readings.length}:null;
+  }).filter(Boolean).sort((a,b)=>a.month.localeCompare(b.month));
+}
+if(typeof module!=='undefined'&&module.exports) module.exports={completedYearMonths,buildYearReview,monthlyWeightAverages};

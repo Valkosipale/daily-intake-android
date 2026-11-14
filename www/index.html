@@ -224,6 +224,8 @@ body{
   padding:8px 2px;
   border-bottom:1px solid var(--hair);
 }
+.year-weight-row{grid-template-columns:1fr auto auto;}
+.year-weight-count{display:block;font-size:9px;margin-top:2px;}
 .weight-row-date{
   font-family:'Space Mono',monospace;
   font-size:12px;
@@ -2779,6 +2781,34 @@ document.getElementById('restoreYearMonthsBtn').addEventListener('click',()=>{
   if(saveHiddenYearMonths(getHiddenYearMonths().filter(month=>!month.startsWith(year+'-')))) renderYearly();
 });
 
+function renderYearlyWeight(months){
+  const box=document.getElementById('weeklyWeight');
+  const title='<div class="weekly-weight-title">Weight trend · monthly averages</div>';
+  const averages=monthlyWeightAverages(getWeightLog(),months);
+  if(!averages.length){box.innerHTML=title+'<div class="weight-empty">No weigh-ins in the included completed months.</div>';return;}
+  const label=date=>new Date(date+'T12:00:00').toLocaleDateString(undefined,{month:'short',year:'numeric'});
+  const W=300,H=100,padX=14,padY=16;
+  const values=averages.map(row=>row.kg),min=Math.min(...values),max=Math.max(...values);
+  const monthIndex=date=>Number(date.slice(5,7));
+  const first=monthIndex(averages[0].month),last=monthIndex(averages[averages.length-1].month);
+  const points=averages.map(row=>{
+    const x=first===last?W/2:padX+(monthIndex(row.month)-first)/(last-first)*(W-2*padX);
+    const y=max===min?H/2:padY+(1-(row.kg-min)/(max-min))*(H-2*padY);
+    return {x:x.toFixed(1),y:y.toFixed(1),row};
+  });
+  const line=points.length>1?`<polyline points="${points.map(p=>p.x+','+p.y).join(' ')}"/>`:'';
+  const dots=points.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3"><title>${escapeHtml(label(p.row.month))}: ${formatWeight(p.row.kg)} kg monthly average</title></circle>`).join('');
+  const chart=`<div class="weight-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Monthly average weight">${line}${dots}</svg></div>`;
+  const latest=averages[averages.length-1];
+  const change=averages.length>1?`<br>${signedKg(latest.kg-averages[0].kg)} kg between ${escapeHtml(label(averages[0].month))} and ${escapeHtml(label(latest.month))} averages`:'';
+  const stats=`<div class="weight-stats">Latest monthly average ${formatWeight(latest.kg)} kg${change}<br>One average per month. Months without weigh-ins are skipped.</div>`;
+  const rows=averages.slice().reverse().map((row,index)=>{
+    const previous=averages[averages.length-2-index];
+    return `<div class="weight-row year-weight-row"><div class="weight-row-date">${escapeHtml(label(row.month))}<span class="year-weight-count">${row.count} weigh-in${row.count===1?'':'s'}</span></div><div class="weight-row-kg">${formatWeight(row.kg)} kg</div><div class="weight-row-delta">${previous?signedKg(row.kg-previous.kg):''}</div></div>`;
+  }).join('');
+  box.innerHTML=title+chart+stats+rows;
+}
+
 function renderYearly(){
   const year=Number(weeklyAnchor.slice(0,4));
   const review=buildYearReview(year,todayStr(),getDayTotalsFromStorage,tdeeForDate,effectiveSteps,getHiddenYearMonths());
@@ -2823,8 +2853,7 @@ function renderYearly(){
     summary.textContent='Year vs your TDEE · '+year+' — All completed months removed. Restore months to include them again.';
     document.getElementById('weeklyWeight').innerHTML='';return;
   }
-  const includedMonths=new Set(months.map(month=>month.start.slice(0,7)));
-  renderWeeklyWeight(year+'-01-01',months[months.length-1].end,'year',date=>includedMonths.has(date.slice(0,7)));
+  renderYearlyWeight(months);
   if(!review.loggedDays){summary.textContent='Year vs your TDEE · '+year+' — No food or fasting days logged in completed months.';return;}
   if(review.tdee===null){summary.textContent='Year vs your TDEE · '+year+' — Add body stats to calculate your TDEE.';return;}
   const eaten=Math.round(review.calories),difference=eaten-review.tdee;
