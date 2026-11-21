@@ -361,6 +361,8 @@ body{
 }
 .multi-add-row{margin-bottom:10px;}
 .multi-barcode-form{margin-bottom:12px;}
+#manualScanItemBtn{grid-column:1 / -1;}
+#manualScanItemBtn[hidden]{display:none;}
 #multiPhotoOverlay .ask-ai-label{white-space:nowrap;}
 #multiPhotoOverlay .scan-control-row{
   display:grid;
@@ -647,7 +649,7 @@ body{
 .multi-photo-header .multi-photo-name{flex:1;min-width:0;overflow-wrap:anywhere;}
 .multi-photo-header .multi-photo-side{flex-direction:row;}
 .multi-photo-header button{width:40px;height:40px;}
-.manual-food-name{width:100%;min-width:0;height:44px;padding:8px;border:1px solid var(--hair);background:#0D0D0D;color:var(--ink);font-size:16px;}
+.manual-food-name{width:100%;min-width:0;height:40px;padding:8px;border:1px solid var(--hair);background:#0D0D0D;color:var(--ink);font-size:16px;}
 .scan-reanalyze{display:grid;gap:8px;margin-top:12px;}
 .scan-reanalyze input{width:100%;min-width:0;height:44px;padding:8px;background:#0D0D0D;color:var(--ink);border:1px solid var(--hair);font-size:16px;}
 .scan-reanalyze button{width:100%;min-height:44px;}
@@ -1507,8 +1509,8 @@ body{
     <div class="backup-actions multi-add-row scan-control-row">
       <button type="button" id="multiPhotoAddBtn" class="backup-btn">Photo</button>
       <button type="button" id="multiBarcodeAddBtn" class="backup-btn">Barcode</button>
+      <button type="button" id="manualScanItemBtn" class="backup-btn" hidden>Add manual item</button>
     </div>
-    <button type="button" id="manualScanItemBtn" class="backup-btn api-key-long-btn">Manual item</button>
     <input type="file" id="multiplePhotosInput" accept="image/*" multiple hidden>
     <form class="ask-gemini-row multi-barcode-form scan-control-row" id="scanTextForm">
       <input type="text" id="scanTextInput" placeholder="Barcode or Food" aria-label="Barcode number or food description">
@@ -4358,6 +4360,7 @@ function syncScanAddControls(){
   const button=document.getElementById('scanAddMoreBtn');
   const controls=document.getElementById('scanAddControls');
   button.hidden=!hasItems;
+  document.getElementById('manualScanItemBtn').hidden=!hasItems;
   controls.hidden=hasItems&&!scanAddControlsExpanded;
   button.textContent=controls.hidden?'Add more food':'Hide add options';
   button.setAttribute('aria-expanded',String(!controls.hidden));
@@ -4379,6 +4382,7 @@ function addItem(fields){
 }
 
 document.getElementById('manualScanItemBtn').addEventListener('click',()=>{
+  if(!multiPhotoItems.length) return;
   const index=multiPhotoItems.length;
   addItem({source:'manual',name:'',grams:'',calPer100:'',proteinPer100:'',carbsPer100:'',fatPer100:'',fiberPer100:'',saltPer100:''});
   revealScanItem(index);
