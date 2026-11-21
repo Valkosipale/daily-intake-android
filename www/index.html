@@ -4087,51 +4087,48 @@ function mentionsWeight(text){
 
 // Low-level call to Gemini's generateContent endpoint. Returns the raw text response.
 // jsonMode=true requests structured JSON output; jsonMode=false leaves it as free-form text.
-async function callGeminiRaw(parts, jsonMode){
-  const apiKey = getGeminiKey();
+function nutritionResponseSchema(unit='g',wantsWeight=false){
+  const suffix=unit==='item'?'per_item':'per_100g';
+  const properties={food_name:{type:'STRING'}};
+  for(const field of ['calories','protein','carbs','fat','fiber','salt']) properties[field+'_'+suffix]={type:'NUMBER'};
+  if(wantsWeight) properties.typical_weight_g={type:'NUMBER'};
+  return {type:'OBJECT',properties,required:Object.keys(properties)};
+}
+async function callGeminiRaw(parts, jsonMode, responseSchema){
+  const apiKey=getGeminiKey();
   if(!apiKey) throw new Error('No Gemini API key set');
-
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
-
-  const body = { contents: [{ parts }] };
-  body.generationConfig = { maxOutputTokens: 1024 };
-  if(jsonMode){
-    body.generationConfig.responseMimeType = 'application/json';
+  const url='https://generativelanguage.googleapis.com/v1beta/models/'+GEMINI_MODEL+':generateContent?key='+encodeURIComponent(apiKey);
+  // The output allowance also needs room for reasoning on thinking models.
+  // A MAX_TOKENS response is incomplete even if its visible text is short.
+  for(const maxOutputTokens of [8192,16384]){
+    const generationConfig={maxOutputTokens};
+    if(jsonMode){
+      generationConfig.responseMimeType='application/json';
+      if(responseSchema) generationConfig.responseSchema=responseSchema;
+    }
+    let res;
+    try{
+      res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts}],generationConfig})});
+    }catch(error){throw new Error('Network request to Gemini failed: '+(error?.message||String(error)));}
+    if(!res.ok){
+      const text=await res.text().catch(()=>'');
+      throw new Error('Gemini API HTTP '+res.status+' (model: '+GEMINI_MODEL+'): '+text);
+    }
+    const data=await res.json();
+    const blockReason=data?.promptFeedback?.blockReason;
+    if(blockReason) throw new Error('Gemini blocked this request: '+blockReason);
+    const candidate=data?.candidates?.[0];
+    const finishReason=candidate?.finishReason;
+    if(finishReason==='MAX_TOKENS'){
+      if(maxOutputTokens===8192) continue;
+      const error=new Error('Gemini ran out of response space before finishing. No incomplete nutrition was saved. Please try fewer photos or a simpler question.');
+      error.retryable=false; // Do not repeat the exhausted budgets in the outer retry.
+      throw error;
+    }
+    const text=(candidate?.content?.parts||[]).filter(part=>!part.thought&&typeof part.text==='string').map(part=>part.text).join('');
+    if(!text) throw new Error('No response text from Gemini. finishReason: '+(finishReason||'unknown'));
+    return {text,finishReason};
   }
-
-  let res;
-  try{
-    res = await fetch(url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
-    });
-  }catch(networkErr){
-    throw new Error('Network request to Gemini failed: ' + (networkErr && networkErr.message ? networkErr.message : networkErr));
-  }
-
-  if(!res.ok){
-    const errText = await res.text().catch(()=> '');
-    throw new Error('Gemini API HTTP ' + res.status + ' (model: ' + GEMINI_MODEL + '): ' + errText);
-  }
-
-  const data = await res.json();
-
-  const blockReason = data && data.promptFeedback && data.promptFeedback.blockReason;
-  if(blockReason){
-    throw new Error('Gemini blocked this request: ' + blockReason);
-  }
-
-  const candidate = data && data.candidates && data.candidates[0];
-  const finishReason = candidate && candidate.finishReason;
-  const text = candidate && candidate.content && candidate.content.parts &&
-    candidate.content.parts[0] && candidate.content.parts[0].text;
-
-  if(!text){
-    throw new Error('No response text from Gemini. finishReason: ' + (finishReason || 'unknown') + '. Raw: ' + JSON.stringify(data).slice(0, 300));
-  }
-
-  return {text, finishReason};
 }
 
 function parseMacroJSON(text, finishReason){
@@ -4157,8 +4154,12 @@ function parseMacroJSON(text, finishReason){
     }
   }
 
+  const fields=['calories_per_100g','protein_per_100g','carbs_per_100g','fat_per_100g','fiber_per_100g','salt_per_100g'];
+  if(!parsed || typeof parsed.food_name!=='string' || !parsed.food_name.trim() || fields.some(field=>typeof parsed[field]!=='number' || !Number.isFinite(parsed[field]) || parsed[field]<0)){
+    throw new Error('AI returned incomplete nutrition values. No incomplete food was saved. Please try again.');
+  }
   return {
-    name: String(parsed.food_name || 'Food'),
+    name: parsed.food_name.trim(),
     calPer100: Number(parsed.calories_per_100g) || 0,
     proteinPer100: Number(parsed.protein_per_100g) || 0,
     carbsPer100: Number(parsed.carbs_per_100g) || 0,
@@ -4194,6 +4195,7 @@ async function withRetry(fn, retries){
       return await fn();
     }catch(e){
       lastErr = e;
+      if(e.retryable===false) throw e;
       if(attempt < retries){
         await new Promise(resolve=>setTimeout(resolve, 400));
       }
@@ -4229,7 +4231,7 @@ async function requestMacroEstimate(baseContext, extraContext, photo){
   }
   const parts = buildPromptParts(prompt, photo);
   return await withRetry(async ()=>{
-    const result = await callGeminiRaw(parts, true);
+    const result = await callGeminiRaw(parts, true, nutritionResponseSchema('g',wantsWeight));
     return parseMacroJSON(result.text, result.finishReason);
   }, 1);
 }
@@ -4274,8 +4276,12 @@ async function requestItemQuestion(question, item, amount, notes, unit = 'g', it
     (perItem ? 'All nutrition is for ONE item, never the total for the current item quantity. Only set estimated_quantity when the user supplies or asks for a count; do NOT put grams in this field. estimated_grams is the weight of ONE item, not the total weight of all items. ' : 'All nutrition is per 100g. estimated_grams is the serving amount and must not be used as an item count. ') +
     'Only suggest a new amount or weight when asked for it. Use all attached photos together; different angles or labels of the same food must not duplicate portions. Use the photo if attached. With only a food name, explain that weight is a typical portion estimate, not a measurement. If unknown, use null. Salt is grams of salt, not sodium milligrams. The user will explicitly review and apply changes.';
   const parts = buildPromptParts(prompt, photo);
+  const responseSchema={type:'OBJECT',properties:{
+    answer:{type:'STRING'},nutrition_update:{...nutritionResponseSchema(unit),nullable:true},
+    estimated_grams:{type:'NUMBER',nullable:true},estimated_quantity:{type:'NUMBER',nullable:true}
+  },required:['answer','nutrition_update','estimated_grams','estimated_quantity']};
   return withRetry(async ()=>{
-    const result = await callGeminiRaw(parts, true);
+    const result = await callGeminiRaw(parts, true, responseSchema);
     return parseItemQuestionReply(result.text,unit);
   }, 1);
 }

@@ -1,4 +1,4 @@
-name: Publish multi-barcode scanning
+name: Publish complete Gemini nutrition responses
 
 on:
   push:
@@ -134,17 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-multiple-barcodes-debug.apk
-          sha256sum daily-intake-multiple-barcodes-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-photo-analysis-fix-debug.apk
+          sha256sum daily-intake-photo-analysis-fix-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          The existing Barcode button now opens a collection session. Scan up to ten different products one after another, remove unwanted products, then press Add products to put them into Scan food as separate editable items. Set grams or item quantities before logging the combined meal. Manual barcode lookup is also available in the collection window.
+          Fixed photo analysis failing on truncated JSON with MAX_TOKENS. Increased the initial output allowance from 1024 to 8192 tokens and automatically retries a token-limited response once at 16384, preserving every photo. Exhausted output limits stop clearly without repeating retry loops.
 
-          Repeat scans are detected without duplicating products. Missing products are explained without adding empty nutrition entries. Cancellation, Android Back and stale scan/lookup guards preserve the existing Scan food session. Open Food Facts remains the barcode source and requires no AI API key.
+          Photo, text estimates and item corrections now request a structured JSON schema with all required nutrition fields. Missing nutrition is rejected instead of silently becoming zero. All non-thought response text parts are read, rather than taking only the first part.
 
-          Logic tests and scripted browser checks passed for repeated scans, duplicates, unknown products, removal, finish, editable amounts, correct log totals, cancellation, native Back, limits, manual fallback and phone layouts. Includes all previous improvements and uses the same signing key.
+          Logic tests and browser checks passed for the reported truncated sauce-response shape, larger-budget recovery, retained multi-photo context, per-item correction, repeated truncation and incomplete-value rejection. Includes all previous barcode, camera, gallery and review improvements and uses the same signing key.
           NOTES
-          if gh release view multiple-barcodes-preview-2026-11-21 >/dev/null 2>&1; then
-            gh release upload multiple-barcodes-preview-2026-11-21 daily-intake-multiple-barcodes-debug.apk SHA256SUMS --clobber
+          if gh release view photo-analysis-fix-preview-2026-11-21 >/dev/null 2>&1; then
+            gh release upload photo-analysis-fix-preview-2026-11-21 daily-intake-photo-analysis-fix-debug.apk SHA256SUMS --clobber
           else
-            gh release create multiple-barcodes-preview-2026-11-21 daily-intake-multiple-barcodes-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Scan multiple barcodes before adding products' --notes-file release-notes.md --prerelease --latest=false
+            gh release create photo-analysis-fix-preview-2026-11-21 daily-intake-photo-analysis-fix-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Fix truncated Gemini photo analysis responses' --notes-file release-notes.md --prerelease --latest=false
           fi
