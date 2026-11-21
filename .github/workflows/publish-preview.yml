@@ -1,4 +1,4 @@
-name: Publish aligned add-options spacing
+name: Publish responsive saved-food search
 
 on:
   push:
@@ -134,15 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-add-options-spacing-debug.apk
-          sha256sum daily-intake-add-options-spacing-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-search-performance-debug.apk
+          sha256sum daily-intake-search-performance-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Added the same 10px spacing below Hide add options as between the Photo, Barcode and manual-item rows. Add more / Hide add options now uses the same 48px button height as the other controls.
+          Previous items search now builds and normalizes its history cache once per opening instead of rereading all stored logs for every keystroke. Filtering is briefly debounced and pauses during IME composition, preserving accented-letter input such as ä and ö. The field uses normal text input with keyboard corrections disabled.
 
-          Browser checks passed for consistent gaps, matching heights and aligned edges at 320px and 390px widths, including the initial empty layout. Includes all previous improvements and uses the same signing key.
+          Matching results render in 100-row pages that append automatically on scroll, so large histories do not repeatedly rebuild thousands of buttons while typing. All foods remain searchable; this is not an item-count limit. Event delegation replaces per-row click listeners, and hiding an item updates the cache while preserving logged history.
+
+          Browser checks passed with 2502 saved foods for one cache build per opening, no rebuilds during typing, Finnish names, composed input, scroll loading, correct item reuse and removal. Includes all previous improvements and uses the same signing key.
           NOTES
-          if gh release view add-options-spacing-preview-2026-11-21 >/dev/null 2>&1; then
-            gh release upload add-options-spacing-preview-2026-11-21 daily-intake-add-options-spacing-debug.apk SHA256SUMS --clobber
+          if gh release view search-performance-preview-2026-11-21 >/dev/null 2>&1; then
+            gh release upload search-performance-preview-2026-11-21 daily-intake-search-performance-debug.apk SHA256SUMS --clobber
           else
-            gh release create add-options-spacing-preview-2026-11-21 daily-intake-add-options-spacing-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Space and align expanded Add more controls' --notes-file release-notes.md --prerelease --latest=false
+            gh release create search-performance-preview-2026-11-21 daily-intake-search-performance-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Smooth saved-food search typing and Finnish input' --notes-file release-notes.md --prerelease --latest=false
           fi

@@ -1626,7 +1626,7 @@ body{
   <div class="data-box previous-items-box">
     <div class="data-title" id="previousItemsTitle">Previous items</div>
     <p class="data-desc">Tap an item to add it to this day, using the amount you last logged it with. Scroll for more.</p>
-    <input type="search" id="previousItemsSearch" placeholder="Search previous items" aria-label="Search previous items" autocomplete="off">
+    <input type="text" inputmode="text" enterkeyhint="search" autocapitalize="none" spellcheck="false" id="previousItemsSearch" placeholder="Search previous items" aria-label="Search previous items" autocomplete="off">
     <div id="previousItemsList"></div>
     <div class="data-actions">
       <button type="button" id="previousItemsCloseBtn" class="secondary">Close</button>
@@ -2550,57 +2550,62 @@ function buildPreviousItemsList(){
     });
 }
 
+const normalizePreviousSearch = text => String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+let previousItemsCache=[];
+let previousItemMatches=[];
+let previousItemsShown=0;
+let previousSearchTimer=null;
+let previousSearchComposing=false;
+function appendPreviousItemsPage(){
+  const list=document.getElementById('previousItemsList');
+  const start=previousItemsShown;
+  const page=previousItemMatches.slice(start,start+100);
+  previousItemsShown+=page.length;
+  list.insertAdjacentHTML('beforeend',page.map((entry,index)=>{
+    const d=entry.data,macroBits=[];
+    if(d.calories) macroBits.push(roundNum(d.calories)+' cal');
+    if(d.grams) macroBits.push(d.servingUnit==='item'?(d.grams+(d.grams===1?' item':' items')):d.grams+'g');
+    return `<div class="previous-item-row-wrap"><button type="button" class="previous-item-row" data-previous-index="${start+index}" data-name="${escapeHtml(entry.name)}"><div class="previous-item-info"><div class="previous-item-name">${escapeHtml(entry.name)}</div><div class="previous-item-meta">${macroBits.join(' · ')}</div></div><div class="previous-item-count">${entry.count}×</div></button><button type="button" class="previous-item-delete" data-previous-index="${start+index}" aria-label="Remove from this list">×</button></div>`;
+  }).join(''));
+}
 function renderPreviousItemsList(){
-  const list = document.getElementById('previousItemsList');
-  const allItems = buildPreviousItemsList();
-  const normalize = text => text.toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const terms = normalize(document.getElementById('previousItemsSearch').value.trim()).split(/\s+/).filter(Boolean);
-  const items = allItems.filter(entry => terms.every(term => normalize(entry.name).includes(term)));
-  list.scrollTop = 0;
-  document.getElementById('previousItemsTitle').textContent = allItems.length > 0
-    ? (terms.length ? `Previous items (${items.length} / ${allItems.length})` : `Previous items (${allItems.length})`)
-    : 'Previous items';
-
-  if(items.length === 0){
-    list.innerHTML = allItems.length ? '<div class="previous-items-empty">No matching items. Try another search.</div>' : '<div class="previous-items-empty">Nothing logged yet — items you add will show up here.</div>';
-    return;
+  const list=document.getElementById('previousItemsList');
+  const terms=normalizePreviousSearch(document.getElementById('previousItemsSearch').value.trim()).split(/\s+/).filter(Boolean);
+  previousItemMatches=previousItemsCache.filter(entry=>terms.every(term=>entry.searchName.includes(term)));
+  previousItemsShown=0;
+  document.getElementById('previousItemsTitle').textContent=previousItemsCache.length
+    ? (terms.length?`Previous items (${previousItemMatches.length} / ${previousItemsCache.length})`:`Previous items (${previousItemsCache.length})`):'Previous items';
+  list.innerHTML='';list.scrollTop=0;
+  if(!previousItemMatches.length){
+    list.innerHTML=previousItemsCache.length?'<div class="previous-items-empty">No matching items. Try another search.</div>':'<div class="previous-items-empty">Nothing logged yet — items you add will show up here.</div>';
+  }else appendPreviousItemsPage();
+}
+document.getElementById('previousItemsList').addEventListener('scroll',event=>{
+  const list=event.currentTarget;
+  if(list.scrollTop+list.clientHeight>=list.scrollHeight-120 && previousItemsShown<previousItemMatches.length) appendPreviousItemsPage();
+},{passive:true});
+document.getElementById('previousItemsList').addEventListener('click',async event=>{
+  const button=event.target.closest('[data-previous-index]');
+  if(!button) return;
+  const entry=previousItemMatches[Number(button.dataset.previousIndex)];
+  if(!entry) return;
+  if(button.classList.contains('previous-item-delete')){
+    const confirmed=await showConfirmModal(`Remove "${entry.name}" from this list? Your already-logged days won't be affected — it'll reappear if you log it again.`,'Remove');
+    if(!confirmed) return;
+    hidePreviousItemName(entry.name);
+    previousItemsCache=previousItemsCache.filter(item=>item.name.trim().toLowerCase()!==entry.name.trim().toLowerCase());
+    clearTimeout(previousSearchTimer);renderPreviousItemsList();
+  }else{
+    clearTimeout(previousSearchTimer);
+    addPreviousItemToToday(entry);
   }
-
-  list.innerHTML = items.map(entry=>{
-    const d = entry.data;
-    const macroBits = [];
-    if(d.calories) macroBits.push(roundNum(d.calories) + ' cal');
-    if(d.grams) macroBits.push(d.servingUnit === 'item' ? (d.grams + (d.grams === 1 ? ' item' : ' items')) : (d.grams + 'g'));
-    return `
-      <div class="previous-item-row-wrap">
-        <button type="button" class="previous-item-row" data-name="${escapeHtml(entry.name)}">
-          <div class="previous-item-info">
-            <div class="previous-item-name">${escapeHtml(entry.name)}</div>
-            <div class="previous-item-meta">${macroBits.join(' · ')}</div>
-          </div>
-          <div class="previous-item-count">${entry.count}×</div>
-        </button>
-        <button type="button" class="previous-item-delete" data-name="${escapeHtml(entry.name)}" aria-label="Remove from this list">×</button>
-      </div>
-    `;
-  }).join('');
-
-  list.querySelectorAll('.previous-item-row').forEach((btn, idx)=>{
-    btn.addEventListener('click', ()=>{
-      addPreviousItemToToday(items[idx]);
-    });
-  });
-
-  list.querySelectorAll('.previous-item-delete').forEach(btn=>{
-    btn.addEventListener('click', async (e)=>{
-      e.stopPropagation();
-      const name = btn.getAttribute('data-name');
-      const confirmed = await showConfirmModal(`Remove "${name}" from this list? Your already-logged days won't be affected — it'll reappear if you log it again.`, 'Remove');
-      if(!confirmed) return;
-      hidePreviousItemName(name);
-      renderPreviousItemsList();
-    });
-  });
+});
+function schedulePreviousSearch(){
+  clearTimeout(previousSearchTimer);
+  if(previousSearchComposing) return;
+  previousSearchTimer=setTimeout(()=>{
+    if(document.getElementById('previousItemsOverlay').classList.contains('show')) renderPreviousItemsList();
+  },100);
 }
 
 async function addPreviousItemToToday(entry){
@@ -2616,15 +2621,20 @@ async function addPreviousItemToToday(entry){
   showToast(`Added "${entry.name}"`);
 }
 
-document.getElementById('previousItemsSearch').addEventListener('input', renderPreviousItemsList);
+document.getElementById('previousItemsSearch').addEventListener('input',event=>{if(!event.isComposing)schedulePreviousSearch();});
+document.getElementById('previousItemsSearch').addEventListener('compositionstart',()=>{previousSearchComposing=true;clearTimeout(previousSearchTimer);});
+document.getElementById('previousItemsSearch').addEventListener('compositionend',()=>{previousSearchComposing=false;schedulePreviousSearch();});
 
 document.getElementById('previousItemsBtn').addEventListener('click', ()=>{
+  clearTimeout(previousSearchTimer);previousSearchComposing=false;
+  previousItemsCache=buildPreviousItemsList().map(entry=>({...entry,searchName:normalizePreviousSearch(entry.name)}));
   document.getElementById('previousItemsSearch').value = '';
   renderPreviousItemsList();
   document.getElementById('previousItemsOverlay').classList.add('show');
 });
 
 document.getElementById('previousItemsCloseBtn').addEventListener('click', ()=>{
+  clearTimeout(previousSearchTimer);
   document.getElementById('previousItemsOverlay').classList.remove('show');
 });
 
