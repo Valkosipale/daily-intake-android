@@ -17,3 +17,7 @@ test('invalid food lists, incomplete nutrients and invalid photo mappings are re
 test('unrequested AI serving weights never prefill the individual food amounts',()=>{
  const f={...food('Sauce',[1],100),typical_weight_g:500};assert.equal(setup().parsePhotoItems(JSON.stringify({items:[f]}),1)[0].estimate.typicalWeightG,0);
 });
+test('photo analysis accepts more than twenty distinct foods without an app count cap',()=>{
+ const foods=Array.from({length:25},(_,i)=>food('Food '+i,[1],100+i));
+ assert.equal(setup().parsePhotoItems(JSON.stringify({items:foods}),1).length,25);
+});

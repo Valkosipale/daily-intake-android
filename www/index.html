@@ -657,7 +657,7 @@ body{
 .multi-photo-item{scroll-margin-top:64px;}
 #cameraBatchList > div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair);}
 #cameraBatchList button{flex:0 0 auto;padding:8px 10px;}
-#cameraBatchCaptureBtn:disabled,#cameraBatchAnalyzeBtn:disabled{opacity:0.45;cursor:not-allowed;}
+#cameraBatchCaptureBtn:disabled,#cameraBatchGalleryBtn:disabled,#cameraBatchAnalyzeBtn:disabled{opacity:0.45;cursor:not-allowed;}
 .multi-photo-subtotal{
   display:block;
   margin-top:6px;
@@ -1526,7 +1526,7 @@ body{
 <div class="data-overlay" id="photoSourceOverlay">
   <div class="data-box">
     <div class="data-title">Photos</div>
-    <p class="data-desc">Take photos with the camera or select up to 5 saved images. Each distinct food gets its own entry and amount field.</p>
+    <p class="data-desc">Take photos or select saved images, then add more to the same selection before analyzing. Each distinct food gets its own entry and amount field.</p>
     <div class="data-actions">
       <button type="button" id="photoSourceCameraBtn" class="backup-btn">Camera</button>
       <button type="button" id="photoSourceGalleryBtn" class="backup-btn">Photo library</button>
@@ -1539,11 +1539,12 @@ body{
 
 <div class="data-overlay" id="cameraBatchOverlay">
   <div class="data-box">
-    <div class="data-title">Take multiple photos</div>
-    <p class="data-desc">Take up to 5 photos, then analyze them. Each distinct food gets its own entry. Different angles of the same product are counted once.</p>
-    <div id="cameraBatchCount" class="data-desc" role="status">0 / 5 photos taken</div>
+    <div class="data-title">Photos to analyze</div>
+    <p class="data-desc">Add camera photos or library images, and keep adding or removing photos until you are ready to analyze. Each distinct food gets its own entry; different views of the same product are counted once.</p>
+    <div id="cameraBatchCount" class="data-desc" role="status">0 photos selected</div>
     <div id="cameraBatchList"></div>
     <button type="button" id="cameraBatchCaptureBtn" class="backup-btn api-key-long-btn">Take photo</button>
+    <button type="button" id="cameraBatchGalleryBtn" class="backup-btn api-key-long-btn">Add photos from library</button>
     <div class="data-actions scan-control-row">
       <button type="button" id="cameraBatchCancelBtn" class="secondary">Cancel</button>
       <button type="button" id="cameraBatchAnalyzeBtn" class="primary" disabled>Analyze photos</button>
@@ -4227,7 +4228,7 @@ async function requestMacroEstimate(baseContext, extraContext, photo){
 function parsePhotoItems(text,photoCount){
   const clean=text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
   const parsed=JSON.parse(clean);
-  if(!parsed||!Array.isArray(parsed.items)||!parsed.items.length||parsed.items.length>20) throw new Error('AI did not return a valid food list. Please try again.');
+  if(!parsed||!Array.isArray(parsed.items)||!parsed.items.length) throw new Error('AI did not return a valid food list. Please try again.');
   return parsed.items.map(item=>{
     const estimate=parseMacroJSON(JSON.stringify(item),'STOP');
     const indices=item.photo_indices;
@@ -4241,7 +4242,7 @@ async function requestPhotoEstimates(photos){
   itemSchema.properties.photo_indices={type:'ARRAY',items:{type:'INTEGER'}};
   itemSchema.required.push('photo_indices');
   const schema={type:'OBJECT',properties:{items:{type:'ARRAY',items:itemSchema}},required:['items']};
-  const prompt='Identify the distinct foods/products in these '+photos.length+' photos. Return strict JSON with an items array, one entry per distinct food/product, up to 20 entries. '+
+  const prompt='Identify the distinct foods/products in these '+photos.length+' photos. Return strict JSON with an items array, one entry per distinct food/product. '+
     'Keep DIFFERENT products separate, even if they appear together in one photo. Never average or combine different sauces, ingredients or products into one item. '+
     'Different angles, package fronts and nutrition labels of the SAME product belong to ONE entry; do not count them as extra portions. A prepared dish can remain one food, but distinct foods that can be weighed separately need separate entries. '+
     'Each entry must contain food_name and ALL six numeric nutrition values per 100g: calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, salt_per_100g. Use package labels when visible; otherwise give realistic estimates. Salt is grams of salt, not sodium milligrams. '+
@@ -4437,7 +4438,6 @@ async function addTextToMulti(description){
   return true;
 }
 
-const MAX_SCAN_PHOTOS = 5;
 function scanPhotoSessionActive(session){
   return session===multiPhotoSession && document.getElementById('multiPhotoOverlay').classList.contains('show');
 }
@@ -4507,12 +4507,13 @@ document.getElementById('photoSourceGalleryBtn').addEventListener('click',()=>{
 let cameraBatch = null;
 function closeCameraBatch(){
   cameraBatch=null;
+  uploadPhotoBatch=null;
   document.getElementById('cameraBatchOverlay').classList.remove('show');
 }
 function renderCameraBatch(){
   if(!cameraBatch) return;
   const batch=cameraBatch;
-  document.getElementById('cameraBatchCount').textContent=batch.photos.length+' / '+MAX_SCAN_PHOTOS+' photos taken';
+  document.getElementById('cameraBatchCount').textContent=batch.photos.length+' photo'+(batch.photos.length===1?'':'s')+' selected';
   const list=document.getElementById('cameraBatchList');
   list.innerHTML=batch.photos.map((_,index)=>`<div><span>Photo ${index+1}</span><button type="button" class="backup-btn" data-remove-photo="${index}" aria-label="Remove photo ${index+1}">Remove</button></div>`).join('');
   list.querySelectorAll('[data-remove-photo]').forEach(button=>{
@@ -4520,16 +4521,17 @@ function renderCameraBatch(){
     button.addEventListener('click',()=>{if(cameraBatch!==batch||batch.capturing)return;batch.photos.splice(Number(button.dataset.removePhoto),1);renderCameraBatch();});
   });
   const capture=document.getElementById('cameraBatchCaptureBtn');
-  capture.disabled=batch.capturing||batch.photos.length>=MAX_SCAN_PHOTOS;
-  capture.textContent=batch.capturing?'Camera open…':batch.photos.length>=MAX_SCAN_PHOTOS?'5 photos taken':batch.photos.length?'Take another photo':'Take photo';
+  capture.disabled=batch.capturing||!window.Capacitor?.Plugins?.Camera?.getPhoto;
+  document.getElementById('cameraBatchGalleryBtn').disabled=batch.capturing;
+  capture.textContent=batch.capturing?(batch.action==='camera'?'Camera open…':'Selecting photos…'):batch.photos.length?'Take another photo':'Take photo';
   document.getElementById('cameraBatchAnalyzeBtn').disabled=batch.capturing||batch.photos.length===0;
 }
 async function captureBatchPhoto(){
   const batch=cameraBatch;
-  if(!batch||batch.capturing||batch.photos.length>=MAX_SCAN_PHOTOS||!scanPhotoSessionActive(batch.session)) return;
+  if(!batch||batch.capturing||!scanPhotoSessionActive(batch.session)) return;
   const Camera=window.Capacitor?.Plugins?.Camera;
   if(!Camera?.getPhoto) return;
-  batch.capturing=true;
+  batch.capturing=true;batch.action='camera';
   renderCameraBatch();
   try{
     const photo=await Camera.getPhoto({quality:75,width:1280,height:1280,resultType:'base64',source:'CAMERA',correctOrientation:true});
@@ -4551,6 +4553,7 @@ function openCameraBatch(){
   captureBatchPhoto();
 }
 document.getElementById('cameraBatchCaptureBtn').addEventListener('click',captureBatchPhoto);
+document.getElementById('cameraBatchGalleryBtn').addEventListener('click',selectScanPhotos);
 document.getElementById('cameraBatchCancelBtn').addEventListener('click',closeCameraBatch);
 document.getElementById('cameraBatchOverlay').addEventListener('click',event=>{if(event.target.id==='cameraBatchOverlay')closeCameraBatch();});
 document.getElementById('cameraBatchAnalyzeBtn').addEventListener('click',async()=>{
@@ -4563,42 +4566,52 @@ document.getElementById('cameraBatchAnalyzeBtn').addEventListener('click',async(
   await analyzeScanPhotos(photos,session,request);
 });
 
-async function uploadPhotoSources(sources,session){
-  if(!sources.length||!scanPhotoSessionActive(session)) return;
-  if(sources.length>MAX_SCAN_PHOTOS){showToast('Choose up to 5 photos at a time');return;}
+function photoBatchActive(batch){return cameraBatch===batch && scanPhotoSessionActive(batch.session);}
+async function uploadPhotoSources(sources,batch){
+  if(!sources.length||!photoBatchActive(batch)) return;
   const request=showLoadingOverlay('Preparing '+sources.length+' photo'+(sources.length===1?'':'s')+'…');
   try{
     const photos=[];
     for(const source of sources){
-      if(!isLoadingRequestActive(request)||!scanPhotoSessionActive(session)) return;
+      if(!isLoadingRequestActive(request)||!photoBatchActive(batch)) return;
       photos.push(await prepareUploadImage(source));
     }
-    if(!isLoadingRequestActive(request)||!scanPhotoSessionActive(session)) return;
-    document.getElementById('photoLoadingTitle').textContent='Analyzing '+photos.length+' photo'+(photos.length===1?'':'s')+'…';
-    await analyzeScanPhotos(photos,session,request);
+    if(!isLoadingRequestActive(request)||!photoBatchActive(batch)) return;
+    batch.photos.push(...photos);
   }catch(error){
-    if(isLoadingRequestActive(request)&&scanPhotoSessionActive(session)) showErrorModal(error.message||String(error),'Photo upload failed');
+    if(isLoadingRequestActive(request)&&photoBatchActive(batch)) showErrorModal(error.message||String(error),'Photo upload failed');
   }finally{hideLoadingOverlay(request);}
 }
-let uploadPhotoSession = null;
+let uploadPhotoBatch = null;
 async function selectScanPhotos(){
   if(!requireGeminiKey()) return;
   const session=multiPhotoSession;
+  if(!scanPhotoSessionActive(session)) return;
+  if(!cameraBatch){cameraBatch={session,photos:[],capturing:false};}
+  const batch=cameraBatch;
+  if(!photoBatchActive(batch)||batch.capturing) return;
+  document.getElementById('cameraBatchOverlay').classList.add('show');
+  batch.capturing=true;batch.action='gallery';renderCameraBatch();
   const Camera=window.Capacitor?.Plugins?.Camera;
-  if(Camera?.pickImages){
-    let selected;
-    try{selected=await Camera.pickImages({quality:75,width:1280,height:1280,limit:MAX_SCAN_PHOTOS,correctOrientation:true});}
-    catch(error){if(!/cancel/i.test(error?.message||'')&&scanPhotoSessionActive(session)) showErrorModal(error.message||String(error),'Photo selection failed');return;}
-    await uploadPhotoSources((selected?.photos||[]).map(photo=>photo.webPath),session);
-  }else{
-    uploadPhotoSession=session;
-    const input=document.getElementById('multiplePhotosInput');input.value='';input.click();
-  }
+  try{
+    if(Camera?.pickImages){
+      const selected=await Camera.pickImages({quality:75,width:1280,height:1280,correctOrientation:true});
+      if(photoBatchActive(batch)) await uploadPhotoSources((selected?.photos||[]).map(photo=>photo.webPath),batch);
+    }else{
+      uploadPhotoBatch=batch;
+      const input=document.getElementById('multiplePhotosInput');input.value='';input.click();
+    }
+  }catch(error){
+    if(photoBatchActive(batch)&&!/cancel/i.test(error?.message||'')) showErrorModal(error.message||String(error),'Photo selection failed');
+  }finally{if(photoBatchActive(batch)){batch.capturing=false;renderCameraBatch();}}
 }
 document.getElementById('multiplePhotosInput').addEventListener('change',async event=>{
-  const files=Array.from(event.target.files||[]),session=uploadPhotoSession;
+  const files=Array.from(event.target.files||[]),batch=uploadPhotoBatch;
   event.target.value='';
-  if(requireGeminiKey()) await uploadPhotoSources(files,session);
+  if(!batch||!photoBatchActive(batch)||batch.capturing||!files.length||!requireGeminiKey()) return;
+  batch.capturing=true;batch.action='gallery';renderCameraBatch();
+  try{await uploadPhotoSources(files,batch);}
+  finally{if(photoBatchActive(batch)){batch.capturing=false;renderCameraBatch();}}
 });
 
 document.getElementById('multiPhotoAddBtn').addEventListener('click', addPhotoToMulti);
