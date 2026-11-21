@@ -651,6 +651,9 @@ body{
 .scan-reanalyze input{width:100%;min-width:0;height:44px;padding:8px;background:#0D0D0D;color:var(--ink);border:1px solid var(--hair);font-size:16px;}
 .scan-reanalyze button{width:100%;min-height:44px;}
 .scan-reanalyze-answer{overflow-wrap:anywhere;}
+#cameraBatchList > div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair);}
+#cameraBatchList button{flex:0 0 auto;padding:8px 10px;}
+#cameraBatchCaptureBtn:disabled,#cameraBatchAnalyzeBtn:disabled{opacity:0.45;cursor:not-allowed;}
 .multi-photo-subtotal{
   display:block;
   margin-top:6px;
@@ -1498,6 +1501,7 @@ body{
       <button type="button" id="multiPhotoAddBtn" class="backup-btn">Photo</button>
       <button type="button" id="multiBarcodeAddBtn" class="backup-btn">Barcode</button>
     </div>
+    <button type="button" id="takeMultiplePhotosBtn" class="backup-btn api-key-long-btn">Take multiple photos</button>
     <button type="button" id="uploadPhotosBtn" class="backup-btn api-key-long-btn">Upload photos</button>
     <div class="multi-photo-hint">Select up to 5 photos for one food or meal analysis. Different angles of the same food are counted once.</div>
     <input type="file" id="multiplePhotosInput" accept="image/*" multiple hidden>
@@ -1509,6 +1513,20 @@ body{
     <div class="data-actions scan-control-row">
       <button type="button" id="multiPhotoCancelBtn" class="secondary">Cancel</button>
       <button type="button" id="multiPhotoUseBtn" class="primary">Add to log</button>
+    </div>
+  </div>
+</div>
+
+<div class="data-overlay" id="cameraBatchOverlay">
+  <div class="data-box">
+    <div class="data-title">Take multiple photos</div>
+    <p class="data-desc">Take up to 5 photos, then analyze them together as one food or meal. Different angles of the same food are counted once.</p>
+    <div id="cameraBatchCount" class="data-desc" role="status">0 / 5 photos taken</div>
+    <div id="cameraBatchList"></div>
+    <button type="button" id="cameraBatchCaptureBtn" class="backup-btn api-key-long-btn">Take photo</button>
+    <div class="data-actions scan-control-row">
+      <button type="button" id="cameraBatchCancelBtn" class="secondary">Cancel</button>
+      <button type="button" id="cameraBatchAnalyzeBtn" class="primary" disabled>Analyze photos</button>
     </div>
   </div>
 </div>
@@ -4239,6 +4257,7 @@ function newItemId(){
 
 // focusText: opened from "Ask Gemini", so the typing box is ready for a description
 function openMultiModal(focusText){
+  closeCameraBatch();
   multiPhotoSession++;
   multiPhotoItems = [];
   renderMultiPhotoList();
@@ -4250,6 +4269,7 @@ function openMultiModal(focusText){
 
 document.getElementById('scanBtn').addEventListener('click', ()=> openMultiModal(false));
 document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
+  closeCameraBatch();
   multiPhotoSession++;
   document.getElementById('multiPhotoOverlay').classList.remove('show');
   multiPhotoItems = [];
@@ -4373,6 +4393,65 @@ async function addPhotoToMulti(){
   const request=showLoadingOverlay('Analyzing photo…');
   await analyzeScanPhotos([{base64:photo.base64String,mime:'image/'+(photo.format||'jpeg')}],session,request);
 }
+let cameraBatch = null;
+function closeCameraBatch(){
+  cameraBatch=null;
+  document.getElementById('cameraBatchOverlay').classList.remove('show');
+}
+function renderCameraBatch(){
+  if(!cameraBatch) return;
+  const batch=cameraBatch;
+  document.getElementById('cameraBatchCount').textContent=batch.photos.length+' / '+MAX_SCAN_PHOTOS+' photos taken';
+  const list=document.getElementById('cameraBatchList');
+  list.innerHTML=batch.photos.map((_,index)=>`<div><span>Photo ${index+1}</span><button type="button" class="backup-btn" data-remove-photo="${index}" aria-label="Remove photo ${index+1}">Remove</button></div>`).join('');
+  list.querySelectorAll('[data-remove-photo]').forEach(button=>{
+    button.disabled=batch.capturing;
+    button.addEventListener('click',()=>{if(cameraBatch!==batch||batch.capturing)return;batch.photos.splice(Number(button.dataset.removePhoto),1);renderCameraBatch();});
+  });
+  const capture=document.getElementById('cameraBatchCaptureBtn');
+  capture.disabled=batch.capturing||batch.photos.length>=MAX_SCAN_PHOTOS;
+  capture.textContent=batch.capturing?'Camera open…':batch.photos.length>=MAX_SCAN_PHOTOS?'5 photos taken':batch.photos.length?'Take another photo':'Take photo';
+  document.getElementById('cameraBatchAnalyzeBtn').disabled=batch.capturing||batch.photos.length===0;
+}
+async function captureBatchPhoto(){
+  const batch=cameraBatch;
+  if(!batch||batch.capturing||batch.photos.length>=MAX_SCAN_PHOTOS||!scanPhotoSessionActive(batch.session)) return;
+  const Camera=window.Capacitor?.Plugins?.Camera;
+  if(!Camera?.getPhoto) return;
+  batch.capturing=true;
+  renderCameraBatch();
+  try{
+    const photo=await Camera.getPhoto({quality:75,width:1280,height:1280,resultType:'base64',source:'CAMERA',correctOrientation:true});
+    if(cameraBatch!==batch||!scanPhotoSessionActive(batch.session)) return;
+    if(!photo?.base64String) throw new Error('Could not read that photo. Try taking it again.');
+    batch.photos.push({base64:photo.base64String,mime:'image/'+(photo.format||'jpeg')});
+  }catch(error){
+    if(cameraBatch===batch&&scanPhotoSessionActive(batch.session)&&!/cancel/i.test(error?.message||'')) showErrorModal(error.message||String(error),'Camera failed');
+  }finally{
+    if(cameraBatch===batch){batch.capturing=false;renderCameraBatch();}
+  }
+}
+document.getElementById('takeMultiplePhotosBtn').addEventListener('click',()=>{
+  if(!requireGeminiKey()) return;
+  if(!window.Capacitor?.Plugins?.Camera?.getPhoto){showToast('Camera is only available in the installed app');return;}
+  cameraBatch={session:multiPhotoSession,photos:[],capturing:false};
+  renderCameraBatch();
+  document.getElementById('cameraBatchOverlay').classList.add('show');
+  captureBatchPhoto();
+});
+document.getElementById('cameraBatchCaptureBtn').addEventListener('click',captureBatchPhoto);
+document.getElementById('cameraBatchCancelBtn').addEventListener('click',closeCameraBatch);
+document.getElementById('cameraBatchOverlay').addEventListener('click',event=>{if(event.target.id==='cameraBatchOverlay')closeCameraBatch();});
+document.getElementById('cameraBatchAnalyzeBtn').addEventListener('click',async()=>{
+  const batch=cameraBatch;
+  if(!batch||batch.capturing||!batch.photos.length||!scanPhotoSessionActive(batch.session)) return;
+  if(!requireGeminiKey()) return;
+  const photos=batch.photos.slice(),session=batch.session;
+  closeCameraBatch();
+  const request=showLoadingOverlay('Analyzing '+photos.length+' photo'+(photos.length===1?'':'s')+'…');
+  await analyzeScanPhotos(photos,session,request);
+});
+
 async function uploadPhotoSources(sources,session){
   if(!sources.length||!scanPhotoSessionActive(session)) return;
   if(sources.length>MAX_SCAN_PHOTOS){showToast('Choose up to 5 photos at a time');return;}

@@ -1,4 +1,4 @@
-name: Publish multi-photo AI uploads
+name: Publish multi-photo camera capture
 
 on:
   push:
@@ -134,17 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-multiple-photos-debug.apk
-          sha256sum daily-intake-multiple-photos-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-camera-batch-debug.apk
+          sha256sum daily-intake-camera-batch-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Added Upload photos in Scan food. Select up to five gallery images for one AI analysis of a food or combined meal. The existing Photo camera option remains available. Photos are resized before upload, and the prompt combines views/labels without treating repeated views as extra portions.
+          Added Take multiple photos in Scan food. It opens the camera, then lets you take more photos or remove captured shots before pressing Analyze photos. Up to five camera photos are sent together as one food or meal analysis and retained for re-analysis and Ask AI.
 
-          All selected photos remain attached to the item for inline re-analysis and Ask AI corrections. The browser file-picker fallback also supports multiple images. Upload limits and scan-session/loading guards prevent oversized batches or cancelled selections from adding unexpected items.
+          The existing single Photo option and multi-photo gallery upload remain available. Cancelling a capture preserves earlier shots; cancelling the collection or closing it with Android Back discards the collection. Late camera results cannot add images after cancellation. Text-only controls match the existing scan flow.
 
-          Logic and browser checks passed for multi-image request parts, native gallery batches, retained image context, direct logging, single-camera regression, cancelled picker isolation, multi-file fallback, limits and phone layouts. Includes all previous improvements and uses the same signing key.
+          Logic tests and scripted browser checks with mocked camera/native events passed for camera-only capture, deferred analysis, removal, cancellation, limits, retained image context, Android Back and phone layouts. Includes all previous improvements and uses the same signing key.
           NOTES
-          if gh release view multiple-photos-preview-2026-11-21 >/dev/null 2>&1; then
-            gh release upload multiple-photos-preview-2026-11-21 daily-intake-multiple-photos-debug.apk SHA256SUMS --clobber
+          if gh release view camera-batch-preview-2026-11-21 >/dev/null 2>&1; then
+            gh release upload camera-batch-preview-2026-11-21 daily-intake-camera-batch-debug.apk SHA256SUMS --clobber
           else
-            gh release create multiple-photos-preview-2026-11-21 daily-intake-multiple-photos-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Upload multiple photos together for AI analysis' --notes-file release-notes.md --prerelease --latest=false
+            gh release create camera-batch-preview-2026-11-21 daily-intake-camera-batch-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Take multiple camera photos before AI analysis' --notes-file release-notes.md --prerelease --latest=false
           fi
