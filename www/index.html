@@ -1541,7 +1541,7 @@ body{
 <div class="data-overlay" id="photoSourceOverlay">
   <div class="data-box">
     <div class="data-title">Photos</div>
-    <p class="data-desc">Take photos with the camera or select saved images. Up to 5 photos are analyzed together as one food or meal.</p>
+    <p class="data-desc">Take photos with the camera or select up to 5 saved images. Each distinct food gets its own entry and amount field.</p>
     <div class="data-actions">
       <button type="button" id="photoSourceCameraBtn" class="backup-btn">Camera</button>
       <button type="button" id="photoSourceGalleryBtn" class="backup-btn">Photo library</button>
@@ -1555,7 +1555,7 @@ body{
 <div class="data-overlay" id="cameraBatchOverlay">
   <div class="data-box">
     <div class="data-title">Take multiple photos</div>
-    <p class="data-desc">Take up to 5 photos, then analyze them together as one food or meal. Different angles of the same food are counted once.</p>
+    <p class="data-desc">Take up to 5 photos, then analyze them. Each distinct food gets its own entry. Different angles of the same product are counted once.</p>
     <div id="cameraBatchCount" class="data-desc" role="status">0 / 5 photos taken</div>
     <div id="cameraBatchList"></div>
     <button type="button" id="cameraBatchCaptureBtn" class="backup-btn api-key-long-btn">Take photo</button>
@@ -4227,13 +4227,44 @@ async function requestMacroEstimate(baseContext, extraContext, photo){
   }
 
   if(Array.isArray(photo) && photo.length>1){
-    prompt += ' These photos are submitted together as ONE food or meal. Combine their evidence: a package front, nutrition label, or different angles may show the SAME food. Never multiply a serving because it appears in several photos. If distinct foods are shown, estimate their combined meal with weight-adjusted nutrition per 100g. Do not add per-100g numbers together.';
+    prompt += ' These photos provide context for the selected food. Different angles or labels of the same product do not represent extra portions. Other visible products must not be mixed into the selected food nutrition.';
   }
   const parts = buildPromptParts(prompt, photo);
   return await withRetry(async ()=>{
     const result = await callGeminiRaw(parts, true, nutritionResponseSchema('g',wantsWeight));
     return parseMacroJSON(result.text, result.finishReason);
   }, 1);
+}
+
+// Validate every detected food before adding any of them to the editable list.
+function parsePhotoItems(text,photoCount){
+  const clean=text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
+  const parsed=JSON.parse(clean);
+  if(!parsed||!Array.isArray(parsed.items)||!parsed.items.length||parsed.items.length>20) throw new Error('AI did not return a valid food list. Please try again.');
+  return parsed.items.map(item=>{
+    const estimate=parseMacroJSON(JSON.stringify(item),'STOP');
+    const indices=item.photo_indices;
+    if(!Array.isArray(indices)||!indices.length||indices.some(index=>!Number.isInteger(index)||index<1||index>photoCount)) throw new Error('AI could not match a food to its photos. Please try again.');
+    estimate.typicalWeightG=0; // Amounts are entered separately by the user.
+    return {estimate,photoIndices:[...new Set(indices)]};
+  });
+}
+async function requestPhotoEstimates(photos){
+  const itemSchema=nutritionResponseSchema();
+  itemSchema.properties.photo_indices={type:'ARRAY',items:{type:'INTEGER'}};
+  itemSchema.required.push('photo_indices');
+  const schema={type:'OBJECT',properties:{items:{type:'ARRAY',items:itemSchema}},required:['items']};
+  const prompt='Identify the distinct foods/products in these '+photos.length+' photos. Return strict JSON with an items array, one entry per distinct food/product, up to 20 entries. '+
+    'Keep DIFFERENT products separate, even if they appear together in one photo. Never average or combine different sauces, ingredients or products into one item. '+
+    'Different angles, package fronts and nutrition labels of the SAME product belong to ONE entry; do not count them as extra portions. A prepared dish can remain one food, but distinct foods that can be weighed separately need separate entries. '+
+    'Each entry must contain food_name and ALL six numeric nutrition values per 100g: calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, salt_per_100g. Use package labels when visible; otherwise give realistic estimates. Salt is grams of salt, not sodium milligrams. '+
+    'Do not provide serving grams or a combined meal total: the user will enter grams or item quantity separately for each food. '+
+    'Each entry must also contain photo_indices, a nonempty array of 1-based photo numbers that show THAT food or its label. Photos are numbered in the attached order, 1 through '+photos.length+'. One photo can be referenced by several different foods if it shows them together.';
+  const parts=buildPromptParts(prompt,photos);
+  return withRetry(async()=>{
+    const result=await callGeminiRaw(parts,true,schema);
+    return parsePhotoItems(result.text,photos.length);
+  },1);
 }
 
 function parseItemQuestionReply(text, unit = 'g'){
@@ -4274,7 +4305,7 @@ async function requestItemQuestion(question, item, amount, notes, unit = 'g', it
     'Respond ONLY with strict JSON: {"answer": string, "nutrition_update": null or {"food_name": string, '+fields+'}, "estimated_grams": null or number, "estimated_quantity": null or number}. ' +
     'Answer concisely. If values are missing, the user corrects the food, or asks to recalculate nutrition, provide ALL nutrition_update fields for the SELECTED BASIS. Otherwise use null and preserve existing values. ' +
     (perItem ? 'All nutrition is for ONE item, never the total for the current item quantity. Only set estimated_quantity when the user supplies or asks for a count; do NOT put grams in this field. estimated_grams is the weight of ONE item, not the total weight of all items. ' : 'All nutrition is per 100g. estimated_grams is the serving amount and must not be used as an item count. ') +
-    'Only suggest a new amount or weight when asked for it. Use all attached photos together; different angles or labels of the same food must not duplicate portions. Use the photo if attached. With only a food name, explain that weight is a typical portion estimate, not a measurement. If unknown, use null. Salt is grams of salt, not sodium milligrams. The user will explicitly review and apply changes.';
+    'Only suggest a new amount or weight when asked for it. Use the attached photos only for the SELECTED food named in the current item. Other visible products are background context; never combine their nutrition with this food. Different angles or labels of the same food must not duplicate portions. Use the photo if attached. With only a food name, explain that weight is a typical portion estimate, not a measurement. If unknown, use null. Salt is grams of salt, not sodium milligrams. The user will explicitly review and apply changes.';
   const parts = buildPromptParts(prompt, photo);
   const responseSchema={type:'OBJECT',properties:{
     answer:{type:'STRING'},nutrition_update:{...nutritionResponseSchema(unit),nullable:true},
@@ -4416,11 +4447,14 @@ async function prepareUploadImage(source){
 }
 async function analyzeScanPhotos(photos,session,request){
   try{
-    const result=await requestMacroEstimate('Look at these food photos together and identify the food or combined meal.','',photos);
+    const items=await requestPhotoEstimates(photos);
     if(!isLoadingRequestActive(request)||!scanPhotoSessionActive(session)) return;
-    const fields=itemFromEstimate(result);
-    if(photos.length>1) fields.hint=[fields.hint,photos.length+' photos analyzed together as one food or meal.'].filter(Boolean).join(' ');
-    addItem({...fields,source:'photo',photo:photos[0],photos});
+    items.forEach(item=>{
+      const relevantPhotos=item.photoIndices.map(index=>photos[index-1]);
+      const fields=itemFromEstimate(item.estimate);
+      fields.grams='';
+      addItem({...fields,source:'photo',photo:relevantPhotos[0],photos:relevantPhotos});
+    });
   }catch(error){
     if(isLoadingRequestActive(request)&&scanPhotoSessionActive(session)) showErrorModal(error.message||String(error),'Photo analysis failed');
   }finally{hideLoadingOverlay(request);}

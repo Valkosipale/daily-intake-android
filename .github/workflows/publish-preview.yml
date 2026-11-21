@@ -1,4 +1,4 @@
-name: Publish complete Gemini nutrition responses
+name: Publish separate photo food entries
 
 on:
   push:
@@ -134,17 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-photo-analysis-fix-debug.apk
-          sha256sum daily-intake-photo-analysis-fix-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-separate-photo-foods-debug.apk
+          sha256sum daily-intake-separate-photo-foods-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Fixed photo analysis failing on truncated JSON with MAX_TOKENS. Increased the initial output allowance from 1024 to 8192 tokens and automatically retries a token-limited response once at 16384, preserving every photo. Exhausted output limits stop clearly without repeating retry loops.
+          Photo analysis now returns one editable entry per distinct food or product instead of averaging different products into one meal before amounts are entered. Each entry has independent nutrition and grams/item quantity fields. The existing Add to log flow combines totals only after all amounts are provided, matching multi-barcode behavior.
 
-          Photo, text estimates and item corrections now request a structured JSON schema with all required nutrition fields. Missing nutrition is rejected instead of silently becoming zero. All non-thought response text parts are read, rather than taking only the first part.
+          Different views of the same product can still form one entry. Each detected food retains only the photos that show it for re-analysis and Ask AI, with instructions not to blend in other visible products. Photo-list responses require every food's complete nutrition and valid image references before any entry is added. The larger-output MAX_TOKENS recovery remains in place.
 
-          Logic tests and browser checks passed for the reported truncated sauce-response shape, larger-budget recovery, retained multi-photo context, per-item correction, repeated truncation and incomplete-value rejection. Includes all previous barcode, camera, gallery and review improvements and uses the same signing key.
+          Logic and browser checks passed for two sauces with separate values and amounts, required amounts before saving, correct saved totals, isolated correction context, multi-view grouping, output-limit recovery and phone layouts. Includes all previous improvements and uses the same signing key.
           NOTES
-          if gh release view photo-analysis-fix-preview-2026-11-21 >/dev/null 2>&1; then
-            gh release upload photo-analysis-fix-preview-2026-11-21 daily-intake-photo-analysis-fix-debug.apk SHA256SUMS --clobber
+          if gh release view separate-photo-foods-preview-2026-11-21 >/dev/null 2>&1; then
+            gh release upload separate-photo-foods-preview-2026-11-21 daily-intake-separate-photo-foods-debug.apk SHA256SUMS --clobber
           else
-            gh release create photo-analysis-fix-preview-2026-11-21 daily-intake-photo-analysis-fix-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Fix truncated Gemini photo analysis responses' --notes-file release-notes.md --prerelease --latest=false
+            gh release create separate-photo-foods-preview-2026-11-21 daily-intake-separate-photo-foods-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Keep foods from photo analysis separate until logging' --notes-file release-notes.md --prerelease --latest=false
           fi
