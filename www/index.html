@@ -647,6 +647,7 @@ body{
 .multi-photo-header .multi-photo-name{flex:1;min-width:0;overflow-wrap:anywhere;}
 .multi-photo-header .multi-photo-side{flex-direction:row;}
 .multi-photo-header button{width:40px;height:40px;}
+.manual-food-name{width:100%;min-width:0;height:44px;padding:8px;border:1px solid var(--hair);background:#0D0D0D;color:var(--ink);font-size:16px;}
 .scan-reanalyze{display:grid;gap:8px;margin-top:12px;}
 .scan-reanalyze input{width:100%;min-width:0;height:44px;padding:8px;background:#0D0D0D;color:var(--ink);border:1px solid var(--hair);font-size:16px;}
 .scan-reanalyze button{width:100%;min-height:44px;}
@@ -1507,6 +1508,7 @@ body{
       <button type="button" id="multiPhotoAddBtn" class="backup-btn">Photo</button>
       <button type="button" id="multiBarcodeAddBtn" class="backup-btn">Barcode</button>
     </div>
+    <button type="button" id="manualScanItemBtn" class="backup-btn api-key-long-btn">Manual item</button>
     <input type="file" id="multiplePhotosInput" accept="image/*" multiple hidden>
     <form class="ask-gemini-row multi-barcode-form scan-control-row" id="scanTextForm">
       <input type="text" id="scanTextInput" placeholder="Barcode or Food" aria-label="Barcode number or food description">
@@ -4376,6 +4378,13 @@ function addItem(fields){
   renderMultiPhotoList();
 }
 
+document.getElementById('manualScanItemBtn').addEventListener('click',()=>{
+  const index=multiPhotoItems.length;
+  addItem({source:'manual',name:'',grams:'',calPer100:'',proteinPer100:'',carbsPer100:'',fatPer100:'',fiberPer100:'',saltPer100:''});
+  revealScanItem(index);
+  document.getElementById('multiPhotoList').children[index]?.querySelector('.manual-food-name')?.focus({preventScroll:true});
+});
+
 function itemFromEstimate(result){
   const hints = [];
   if(result.missing && result.missing.length){
@@ -4682,7 +4691,7 @@ function renderMultiPhotoList(){
     row.innerHTML = `
       <div class="multi-photo-info">
         <div class="multi-photo-header">
-          <div class="multi-photo-name">${escapeHtml(item.name)}</div>
+          <div class="multi-photo-name">${item.source==='manual'?`<input type="text" class="manual-food-name" data-id="${item.id}" aria-label="Food name" placeholder="Food name" value="${escapeHtml(item.name)}">`:escapeHtml(item.name)}</div>
           <div class="multi-photo-side">
             <button type="button" class="multi-photo-edit" data-id="${item.id}" aria-label="Fix or ask about this item">✎</button>
             <button type="button" class="multi-photo-remove" data-id="${item.id}" aria-label="Remove">×</button>
@@ -4748,6 +4757,13 @@ function renderMultiPhotoList(){
     const row = list.querySelector(`.multi-photo-item .multi-photo-grams-input[data-id="${id}"]`).closest('.multi-photo-item');
     row.querySelector('.multi-photo-subtotal').textContent = amount > 0 ? subtotalCal + ' cal' : '';
   }
+
+  list.querySelectorAll('.manual-food-name').forEach(input=>{
+    input.addEventListener('input',()=>{
+      const item=multiPhotoItems.find(item=>item.id===input.dataset.id);
+      if(item) item.name=input.value;
+    });
+  });
 
   list.querySelectorAll('.scan-unit-btn').forEach(button=>{
     button.addEventListener('click',()=>{

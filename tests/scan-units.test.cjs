@@ -36,3 +36,7 @@ test('nutrition display uses at most two decimals without changing calculation p
  const f=food();f.grams='235';setScanUnit(f,'item');
  const precise=f.saltPerItem;formatScanValue(precise);assert.equal(f.saltPerItem,precise);
 });
+test('manual foods require a name, amount and calories without needing AI fields',()=>{
+ const item={source:'manual',name:'',unit:'g',grams:'100',calPer100:150};
+ assert.match(scanValidationMessage([item]),/food name/);item.name='Homemade food';assert.equal(scanValidationMessage([item]),'');item.grams='';assert.match(scanValidationMessage([item]),/grams/);item.grams='100';item.calPer100='';assert.match(scanValidationMessage([item]),/calories/);
+});

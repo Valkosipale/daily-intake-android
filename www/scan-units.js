@@ -98,6 +98,7 @@ function scanTotals(items){
 }
 function scanValidationMessage(items){
   for(const item of items){
+    if(item.source==='manual' && !String(item.name||'').trim()) return 'Enter a food name for every manual item';
     if(scanQuantity(item)<=0) return 'Enter grams or item quantity for every food';
     const unit = scanUnit(item);
     if(unit === 'item' && item.itemWeightG !== '' && item.itemWeightG != null){

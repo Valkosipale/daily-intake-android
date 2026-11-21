@@ -1,4 +1,4 @@
-name: Publish expandable photo selections
+name: Publish manual items in Scan food
 
 on:
   push:
@@ -134,17 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-more-photos-debug.apk
-          sha256sum daily-intake-more-photos-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-manual-scan-food-debug.apk
+          sha256sum daily-intake-manual-scan-food-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Removed the fixed five-photo selection/camera cap and the twenty-food photo-response cap. The native picker uses its default selection allowance rather than an app-supplied count limit. Device capacity and Gemini request/usage limits still apply; very large selections may require smaller groups.
+          Added Manual item to the Scan food add controls and pinned Add more food menu. It creates an editable card with a food-name field, grams/per-item quantity, calories and macros. No barcode lookup, AI call or API key is required.
 
-          Camera shots and gallery selections now share a Photos to analyze window. Add photos from library appends to the current selection, and Take another photo adds camera shots. Remove individual photos or cancel without changing existing Scan food entries. Gallery uploads no longer start AI immediately; analysis begins only when Analyze photos is pressed.
+          Manual entries can be mixed with scanned and AI foods before logging. Names persist through unit changes and list updates; missing manual names, amounts or calories block saving. Existing amounts and the separate main-form draft are preserved.
 
-          Barcodes and typed AI foods continue appending without an item-count cap in Scan food. Logic/browser checks passed with twelve selected photos, an eleven-image AI request, repeated gallery/camera additions, cancellation/removal, file-picker fallback, twenty-five parsed foods, and more than ten barcode and typed-food additions. Includes all previous improvements and uses the same signing key.
+          Logic and browser checks passed for manual entry with no key/network requests, required names, grams/per-item amounts, mixed totals, saved results and phone layouts. Includes all previous improvements and uses the same signing key.
           NOTES
-          if gh release view more-photos-preview-2026-11-21 >/dev/null 2>&1; then
-            gh release upload more-photos-preview-2026-11-21 daily-intake-more-photos-debug.apk SHA256SUMS --clobber
+          if gh release view manual-scan-food-preview-2026-11-21 >/dev/null 2>&1; then
+            gh release upload manual-scan-food-preview-2026-11-21 daily-intake-manual-scan-food-debug.apk SHA256SUMS --clobber
           else
-            gh release create more-photos-preview-2026-11-21 daily-intake-more-photos-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Add more photos without a fixed app count cap' --notes-file release-notes.md --prerelease --latest=false
+            gh release create manual-scan-food-preview-2026-11-21 daily-intake-manual-scan-food-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Add manual foods alongside scanned and AI foods' --notes-file release-notes.md --prerelease --latest=false
           fi
