@@ -655,7 +655,8 @@ body{
 .scan-reanalyze button{width:100%;min-height:44px;}
 .scan-reanalyze-answer{overflow-wrap:anywhere;}
 #scanAddToolbar{position:sticky;top:-18px;z-index:3;background:var(--panel);padding:8px 0;flex-shrink:0;}
-#scanAddMoreBtn{width:100%;min-height:44px;}
+#scanAddMoreBtn{width:100%;min-height:48px;}
+#scanAddMoreBtn:not([hidden]) + #scanAddControls{margin-top:10px;}
 #scanAddMoreBtn[hidden],#scanAddControls[hidden]{display:none;}
 .multi-photo-item{scroll-margin-top:64px;}
 #cameraBatchList > div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair);}

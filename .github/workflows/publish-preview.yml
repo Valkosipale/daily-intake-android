@@ -1,4 +1,4 @@
-name: Publish contextual manual add option
+name: Publish aligned add-options spacing
 
 on:
   push:
@@ -134,15 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-manual-add-more-debug.apk
-          sha256sum daily-intake-manual-add-more-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-add-options-spacing-debug.apk
+          sha256sum daily-intake-add-options-spacing-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Add manual item is now hidden when Scan first opens or the food list is empty. It appears only inside expanded Add more food options after an item exists. Its placement now uses the same button grid, height and aligned edges as Photo and Barcode, without the extra long-button margin.
+          Added the same 10px spacing below Hide add options as between the Photo, Barcode and manual-item rows. Add more / Hide add options now uses the same 48px button height as the other controls.
 
-          Manual name inputs also match the other food fields in height. Browser checks passed for initial/empty visibility, barcode/photo/AI contexts, Add more expansion, aligned bounds at 320px and 390px, and unchanged manual nutrition totals. Includes all previous improvements and uses the same signing key.
+          Browser checks passed for consistent gaps, matching heights and aligned edges at 320px and 390px widths, including the initial empty layout. Includes all previous improvements and uses the same signing key.
           NOTES
-          if gh release view manual-add-more-preview-2026-11-21 >/dev/null 2>&1; then
-            gh release upload manual-add-more-preview-2026-11-21 daily-intake-manual-add-more-debug.apk SHA256SUMS --clobber
+          if gh release view add-options-spacing-preview-2026-11-21 >/dev/null 2>&1; then
+            gh release upload add-options-spacing-preview-2026-11-21 daily-intake-add-options-spacing-debug.apk SHA256SUMS --clobber
           else
-            gh release create manual-add-more-preview-2026-11-21 daily-intake-manual-add-more-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Show aligned manual option only under Add more food' --notes-file release-notes.md --prerelease --latest=false
+            gh release create add-options-spacing-preview-2026-11-21 daily-intake-add-options-spacing-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Space and align expanded Add more controls' --notes-file release-notes.md --prerelease --latest=false
           fi
