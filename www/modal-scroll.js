@@ -5,7 +5,7 @@
   const previousZIndex = new Map();
   const closeButtons = {
     confirmOverlay:'confirmCancelBtn', multiPhotoOverlay:'multiPhotoCancelBtn',
-    cameraBatchOverlay:'cameraBatchCancelBtn', photoSourceOverlay:'photoSourceCancelBtn',
+    barcodeBatchOverlay:'barcodeBatchCancelBtn', cameraBatchOverlay:'cameraBatchCancelBtn', photoSourceOverlay:'photoSourceCancelBtn',
     apiKeyOverlay:'apiKeyCloseBtn', photoResultOverlay:'photoResultCancelBtn',
     errorOverlay:'errorCloseBtn', copyToDayOverlay:'copyToDayCancelBtn',
     previousItemsOverlay:'previousItemsCloseBtn', bodyOverlay:'bodyCancelBtn',

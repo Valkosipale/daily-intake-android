@@ -651,6 +651,11 @@ body{
 .scan-reanalyze input{width:100%;min-width:0;height:44px;padding:8px;background:#0D0D0D;color:var(--ink);border:1px solid var(--hair);font-size:16px;}
 .scan-reanalyze button{width:100%;min-height:44px;}
 .scan-reanalyze-answer{overflow-wrap:anywhere;}
+#barcodeBatchList > div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair);}
+#barcodeBatchList .barcode-product-info{min-width:0;overflow-wrap:anywhere;}
+#barcodeBatchList button{flex:0 0 auto;padding:8px 10px;}
+#barcodeBatchList small{display:block;color:var(--ink-soft);margin-top:3px;}
+#barcodeBatchOverlay button:disabled{opacity:0.45;cursor:not-allowed;}
 #cameraBatchList > div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair);}
 #cameraBatchList button{flex:0 0 auto;padding:8px 10px;}
 #cameraBatchCaptureBtn:disabled,#cameraBatchAnalyzeBtn:disabled{opacity:0.45;cursor:not-allowed;}
@@ -1510,6 +1515,25 @@ body{
     <div class="data-actions scan-control-row">
       <button type="button" id="multiPhotoCancelBtn" class="secondary">Cancel</button>
       <button type="button" id="multiPhotoUseBtn" class="primary">Add to log</button>
+    </div>
+  </div>
+</div>
+
+<div class="data-overlay" id="barcodeBatchOverlay">
+  <div class="data-box">
+    <div class="data-title">Scan barcodes</div>
+    <p class="data-desc">Scan up to 10 different products, one after another. Add products when ready, then set grams or quantity for each in Scan food.</p>
+    <div id="barcodeBatchCount" class="data-desc" role="status">0 products</div>
+    <div id="barcodeBatchStatus" class="multi-photo-hint" role="status"></div>
+    <div id="barcodeBatchList"></div>
+    <button type="button" id="barcodeBatchScanBtn" class="backup-btn api-key-long-btn">Scan barcode</button>
+    <form id="barcodeBatchForm" class="ask-gemini-row scan-control-row">
+      <input type="text" inputmode="numeric" id="barcodeBatchInput" placeholder="Barcode number" aria-label="Barcode number">
+      <button type="submit" id="barcodeBatchLookupBtn" class="backup-btn">Look up</button>
+    </form>
+    <div class="data-actions scan-control-row">
+      <button type="button" id="barcodeBatchCancelBtn" class="secondary">Cancel</button>
+      <button type="button" id="barcodeBatchUseBtn" class="primary" disabled>Add products</button>
     </div>
   </div>
 </div>
@@ -4270,6 +4294,7 @@ function newItemId(){
 function openMultiModal(focusText){
   closeCameraBatch();
   closePhotoSource();
+  closeBarcodeBatch();
   multiPhotoSession++;
   multiPhotoItems = [];
   renderMultiPhotoList();
@@ -4283,6 +4308,7 @@ document.getElementById('scanBtn').addEventListener('click', ()=> openMultiModal
 document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
   closeCameraBatch();
   closePhotoSource();
+  closeBarcodeBatch();
   multiPhotoSession++;
   document.getElementById('multiPhotoOverlay').classList.remove('show');
   multiPhotoItems = [];
@@ -4515,9 +4541,88 @@ document.getElementById('multiplePhotosInput').addEventListener('change',async e
 
 document.getElementById('multiPhotoAddBtn').addEventListener('click', addPhotoToMulti);
 
-document.getElementById('multiBarcodeAddBtn').addEventListener('click', async ()=>{
-  const code = await scanBarcodeCode('scanTextInput');
-  if(code) await addBarcodeToMulti(code);
+const MAX_BATCH_BARCODES=10;
+let barcodeBatch=null;
+function closeBarcodeBatch(){
+  if(barcodeBatch?.lookupRequest && isLoadingRequestActive(barcodeBatch.lookupRequest)) cancelLoadingOverlay();
+  barcodeBatch=null;
+  document.getElementById('barcodeBatchOverlay').classList.remove('show');
+}
+function barcodeBatchActive(batch){return barcodeBatch===batch && scanPhotoSessionActive(batch.session);}
+function renderBarcodeBatch(){
+  const batch=barcodeBatch;
+  if(!batch) return;
+  const count=batch.products.length;
+  document.getElementById('barcodeBatchCount').textContent=count+' / '+MAX_BATCH_BARCODES+' products';
+  document.getElementById('barcodeBatchStatus').textContent=batch.status||'';
+  const list=document.getElementById('barcodeBatchList');
+  list.innerHTML=batch.products.map(product=>`<div><div class="barcode-product-info">${escapeHtml(product.result.name)}<small>${escapeHtml(product.code)}</small></div><button type="button" class="backup-btn" data-remove-code="${product.code}" aria-label="Remove ${escapeHtml(product.result.name)}">Remove</button></div>`).join('');
+  list.querySelectorAll('[data-remove-code]').forEach(button=>{
+    button.disabled=batch.busy;
+    button.addEventListener('click',()=>{if(!barcodeBatchActive(batch)||batch.busy)return;batch.products=batch.products.filter(product=>product.code!==button.dataset.removeCode);renderBarcodeBatch();});
+  });
+  const scan=document.getElementById('barcodeBatchScanBtn');
+  scan.disabled=batch.busy||count>=MAX_BATCH_BARCODES||!window.Capacitor?.Plugins?.BarcodeScanner;
+  scan.textContent=batch.busy?'Reading barcode…':count>=MAX_BATCH_BARCODES?'10 products scanned':count?'Scan another':'Scan barcode';
+  document.getElementById('barcodeBatchInput').disabled=batch.busy||count>=MAX_BATCH_BARCODES;
+  document.getElementById('barcodeBatchLookupBtn').disabled=batch.busy||count>=MAX_BATCH_BARCODES;
+  document.getElementById('barcodeBatchUseBtn').disabled=batch.busy||count===0;
+}
+async function lookupBatchBarcode(batch,rawCode){
+  if(!barcodeBatchActive(batch)) return;
+  const code=String(rawCode||'').replace(/\D/g,'');
+  if(code.length<8||code.length>14){batch.status='Barcodes have 8–14 digits.';return;}
+  if(batch.products.some(product=>product.code===code)){batch.status='Already scanned. Set the amount or quantity after adding products.';return;}
+  if(batch.products.length>=MAX_BATCH_BARCODES){batch.status='Add these products before scanning more.';return;}
+  const request=showLoadingOverlay('Looking up product…');
+  batch.lookupRequest=request;
+  try{
+    const product=await withRetry(()=>fetchOffProduct(code),1);
+    if(!isLoadingRequestActive(request)||!barcodeBatchActive(batch)) return;
+    if(!product){batch.status='Not found in Open Food Facts: '+code+'. Try another barcode or add this food manually in Scan food.';return;}
+    batch.products.push({code,result:mapOffProduct(product,code)});
+    batch.status='';
+    document.getElementById('barcodeBatchInput').value='';
+  }catch(error){
+    if(isLoadingRequestActive(request)&&barcodeBatchActive(batch)) batch.status=error.message||'Could not look up this barcode. Try again.';
+  }finally{
+    if(batch.lookupRequest===request) batch.lookupRequest=null;
+    hideLoadingOverlay(request);
+  }
+}
+async function scanBatchBarcode(){
+  const batch=barcodeBatch;
+  if(!batch||batch.busy||batch.products.length>=MAX_BATCH_BARCODES||!barcodeBatchActive(batch)) return;
+  batch.busy=true;renderBarcodeBatch();
+  try{
+    const code=await scanBarcodeCode('barcodeBatchInput');
+    if(code&&barcodeBatchActive(batch)) await lookupBatchBarcode(batch,code);
+  }finally{if(barcodeBatchActive(batch)){batch.busy=false;renderBarcodeBatch();}}
+}
+document.getElementById('multiBarcodeAddBtn').addEventListener('click',()=>{
+  barcodeBatch={session:multiPhotoSession,products:[],busy:false,status:''};
+  document.getElementById('barcodeBatchInput').value='';
+  renderBarcodeBatch();
+  document.getElementById('barcodeBatchOverlay').classList.add('show');
+  if(window.Capacitor?.Plugins?.BarcodeScanner) scanBatchBarcode();
+  else document.getElementById('barcodeBatchInput').focus();
+});
+document.getElementById('barcodeBatchScanBtn').addEventListener('click',scanBatchBarcode);
+document.getElementById('barcodeBatchForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const batch=barcodeBatch;
+  if(!batch||batch.busy||batch.products.length>=MAX_BATCH_BARCODES||!barcodeBatchActive(batch))return;
+  batch.busy=true;renderBarcodeBatch();
+  try{await lookupBatchBarcode(batch,document.getElementById('barcodeBatchInput').value);}
+  finally{if(barcodeBatchActive(batch)){batch.busy=false;renderBarcodeBatch();}}
+});
+document.getElementById('barcodeBatchCancelBtn').addEventListener('click',closeBarcodeBatch);
+document.getElementById('barcodeBatchOverlay').addEventListener('click',event=>{if(event.target.id==='barcodeBatchOverlay')closeBarcodeBatch();});
+document.getElementById('barcodeBatchUseBtn').addEventListener('click',()=>{
+  const batch=barcodeBatch;
+  if(!batch||batch.busy||!batch.products.length||!barcodeBatchActive(batch)) return;
+  closeBarcodeBatch();
+  batch.products.forEach(product=>addItem({...itemFromEstimate(product.result),source:'barcode',query:product.result.name,barcode:product.code}));
 });
 
 // One typed field for both: a run of digits is a barcode, anything else is a description for Gemini
