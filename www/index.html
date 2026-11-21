@@ -511,11 +511,15 @@ body{
   margin-top:1px;
 }
 
-.previous-items-box{ max-width:440px; max-height:86vh; }
+.previous-items-box{max-width:440px;height:86vh;height:min(640px,86dvh);max-height:86vh;max-height:86dvh;overflow:hidden;}
+.previous-items-box > .data-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+.previous-items-box > .data-desc,.previous-items-box > .data-actions,#previousItemsSearch{flex-shrink:0;}
 #previousItemsSearch{width:100%;min-width:0;min-height:44px;margin-bottom:12px;padding:10px;background:#0D0D0D;color:var(--ink);border:1px solid var(--hair);font-size:16px;}
 #previousItemsSearch:focus{outline:none;border-color:var(--accent);}
 #previousItemsList{
-  max-height:60vh;
+  flex:1 1 0;
+  min-height:0;
+  max-height:none;
   overflow-y:auto;
   -webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;
@@ -2556,6 +2560,7 @@ let previousItemMatches=[];
 let previousItemsShown=0;
 let previousSearchTimer=null;
 let previousSearchComposing=false;
+let previousItemsOpenVersion=0;
 function appendPreviousItemsPage(){
   const list=document.getElementById('previousItemsList');
   const start=previousItemsShown;
@@ -2617,7 +2622,7 @@ async function addPreviousItemToToday(entry){
   currentEntries.push(copy);
   render();
   await saveEntries();
-  document.getElementById('previousItemsOverlay').classList.remove('show');
+  closePreviousItems();
   showToast(`Added "${entry.name}"`);
 }
 
@@ -2625,23 +2630,29 @@ document.getElementById('previousItemsSearch').addEventListener('input',event=>{
 document.getElementById('previousItemsSearch').addEventListener('compositionstart',()=>{previousSearchComposing=true;clearTimeout(previousSearchTimer);});
 document.getElementById('previousItemsSearch').addEventListener('compositionend',()=>{previousSearchComposing=false;schedulePreviousSearch();});
 
+function closePreviousItems(){
+  previousItemsOpenVersion++;
+  clearTimeout(previousSearchTimer);
+  previousSearchComposing=false;
+  document.getElementById('previousItemsSearch').blur();
+  document.getElementById('previousItemsOverlay').classList.remove('show');
+}
 document.getElementById('previousItemsBtn').addEventListener('click', ()=>{
   clearTimeout(previousSearchTimer);previousSearchComposing=false;
+  const version=++previousItemsOpenVersion;
   previousItemsCache=buildPreviousItemsList().map(entry=>({...entry,searchName:normalizePreviousSearch(entry.name)}));
-  document.getElementById('previousItemsSearch').value = '';
+  const input=document.getElementById('previousItemsSearch');
+  input.value='';
   renderPreviousItemsList();
   document.getElementById('previousItemsOverlay').classList.add('show');
+  // Let the dialog and background scroll lock settle before creating the IME focus.
+  requestAnimationFrame(()=>{
+    if(version===previousItemsOpenVersion && document.getElementById('previousItemsOverlay').classList.contains('show')) input.focus({preventScroll:true});
+  });
 });
-
-document.getElementById('previousItemsCloseBtn').addEventListener('click', ()=>{
-  clearTimeout(previousSearchTimer);
-  document.getElementById('previousItemsOverlay').classList.remove('show');
-});
-
-document.getElementById('previousItemsOverlay').addEventListener('click', (e)=>{
-  if(e.target.id === 'previousItemsOverlay'){
-    document.getElementById('previousItemsOverlay').classList.remove('show');
-  }
+document.getElementById('previousItemsCloseBtn').addEventListener('click',closePreviousItems);
+document.getElementById('previousItemsOverlay').addEventListener('click',event=>{
+  if(event.target.id==='previousItemsOverlay') closePreviousItems();
 });
 
 // ---- Weight tracking ----

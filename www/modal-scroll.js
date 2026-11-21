@@ -28,8 +28,12 @@
         stack.push(dialog);
       }
     }
-    stack.forEach((dialog,index)=>{ dialog.style.zIndex = String(110+index); });
-    root.classList.toggle('dialog-open', stack.length > 0);
+    stack.forEach((dialog,index)=>{
+      const zIndex=String(110+index);
+      if(dialog.style.zIndex!==zIndex) dialog.style.zIndex=zIndex;
+    });
+    const locked=stack.length>0;
+    if(root.classList.contains('dialog-open')!==locked) root.classList.toggle('dialog-open',locked);
   };
   const closeTopDialog = () => {
     syncDialogs();
