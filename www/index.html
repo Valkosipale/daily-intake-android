@@ -651,7 +651,11 @@ body{
 .scan-reanalyze input{width:100%;min-width:0;height:44px;padding:8px;background:#0D0D0D;color:var(--ink);border:1px solid var(--hair);font-size:16px;}
 .scan-reanalyze button{width:100%;min-height:44px;}
 .scan-reanalyze-answer{overflow-wrap:anywhere;}
-#barcodeBatchList > div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair);}
+#barcodeBatchList > div{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px;padding:12px 0;border-bottom:1px solid var(--hair);}
+.barcode-nutrition{grid-column:1 / -1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font-family:'Space Mono',monospace;}
+.barcode-nutrition-basis,.barcode-nutrition-note{grid-column:1 / -1;font-size:10px;color:var(--ink-soft);}
+.barcode-nutrient span{display:block;font-size:9px;color:var(--ink-soft);}
+.barcode-nutrient strong{display:block;font-size:13px;color:var(--accent);overflow-wrap:anywhere;}
 #barcodeBatchList .barcode-product-info{min-width:0;overflow-wrap:anywhere;}
 #barcodeBatchList button{flex:0 0 auto;padding:8px 10px;}
 #barcodeBatchList small{display:block;color:var(--ink-soft);margin-top:3px;}
@@ -4596,7 +4600,12 @@ function renderBarcodeBatch(){
   document.getElementById('barcodeBatchCount').textContent=count+' / '+MAX_BATCH_BARCODES+' products';
   document.getElementById('barcodeBatchStatus').textContent=batch.status||'';
   const list=document.getElementById('barcodeBatchList');
-  list.innerHTML=batch.products.map(product=>`<div><div class="barcode-product-info">${escapeHtml(product.result.name)}<small>${escapeHtml(product.code)}</small></div><button type="button" class="backup-btn" data-remove-code="${product.code}" aria-label="Remove ${escapeHtml(product.result.name)}">Remove</button></div>`).join('');
+  list.innerHTML=batch.products.map(product=>{
+    const result=product.result,missing=result.missing||[];
+    const labels={calories:'Calories',protein:'Protein',carbs:'Carbs',fat:'Fat',fiber:'Fiber',salt:'Salt'};
+    const nutrition=SCAN_NUTRIENTS.map(field=>`<div class="barcode-nutrient" data-nutrient="${field.key}"><span>${labels[field.key]}</span><strong>${missing.includes(field.key)?'—':escapeHtml(formatScanValue(result[field.g]))+(field.key==='calories'?' kcal':'g')}</strong></div>`).join('');
+    return `<div><div class="barcode-product-info">${escapeHtml(result.name)}<small>${escapeHtml(product.code)}</small></div><button type="button" class="backup-btn" data-remove-code="${product.code}" aria-label="Remove ${escapeHtml(result.name)}">Remove</button><div class="barcode-nutrition"><div class="barcode-nutrition-basis">Per 100g</div>${nutrition}${missing.length?`<div class="barcode-nutrition-note">Not supplied by database: ${escapeHtml(missing.join(', '))}. Check the package.</div>`:''}</div></div>`;
+  }).join('');
   list.querySelectorAll('[data-remove-code]').forEach(button=>{
     button.disabled=batch.busy;
     button.addEventListener('click',()=>{if(!barcodeBatchActive(batch)||batch.busy)return;batch.products=batch.products.filter(product=>product.code!==button.dataset.removeCode);renderBarcodeBatch();});
