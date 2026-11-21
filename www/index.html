@@ -651,15 +651,10 @@ body{
 .scan-reanalyze input{width:100%;min-width:0;height:44px;padding:8px;background:#0D0D0D;color:var(--ink);border:1px solid var(--hair);font-size:16px;}
 .scan-reanalyze button{width:100%;min-height:44px;}
 .scan-reanalyze-answer{overflow-wrap:anywhere;}
-#barcodeBatchList > div{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px;padding:12px 0;border-bottom:1px solid var(--hair);}
-.barcode-nutrition{grid-column:1 / -1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font-family:'Space Mono',monospace;}
-.barcode-nutrition-basis,.barcode-nutrition-note{grid-column:1 / -1;font-size:10px;color:var(--ink-soft);}
-.barcode-nutrient span{display:block;font-size:9px;color:var(--ink-soft);}
-.barcode-nutrient strong{display:block;font-size:13px;color:var(--accent);overflow-wrap:anywhere;}
-#barcodeBatchList .barcode-product-info{min-width:0;overflow-wrap:anywhere;}
-#barcodeBatchList button{flex:0 0 auto;padding:8px 10px;}
-#barcodeBatchList small{display:block;color:var(--ink-soft);margin-top:3px;}
-#barcodeBatchOverlay button:disabled{opacity:0.45;cursor:not-allowed;}
+#scanAddToolbar{position:sticky;top:-18px;z-index:3;background:var(--panel);padding:8px 0;flex-shrink:0;}
+#scanAddMoreBtn{width:100%;min-height:44px;}
+#scanAddMoreBtn[hidden],#scanAddControls[hidden]{display:none;}
+.multi-photo-item{scroll-margin-top:64px;}
 #cameraBatchList > div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair);}
 #cameraBatchList button{flex:0 0 auto;padding:8px 10px;}
 #cameraBatchCaptureBtn:disabled,#cameraBatchAnalyzeBtn:disabled{opacity:0.45;cursor:not-allowed;}
@@ -1505,7 +1500,9 @@ body{
   <div class="data-box multi-photo-box">
     <div class="data-title">Scan food</div>
     <p class="data-desc">Add each item by photo, barcode or a short description. One item or several, mixed freely. Choose Per 100g or Per item for each food, then enter grams or quantity. Tap ✎ on an item to correct it or ask AI a question.</p>
-    <div id="multiPhotoList"></div>
+    <div id="scanAddToolbar">
+      <button type="button" id="scanAddMoreBtn" class="backup-btn" aria-expanded="true" aria-controls="scanAddControls" hidden>Add more food</button>
+      <div id="scanAddControls">
     <div class="backup-actions multi-add-row scan-control-row">
       <button type="button" id="multiPhotoAddBtn" class="backup-btn">Photo</button>
       <button type="button" id="multiBarcodeAddBtn" class="backup-btn">Barcode</button>
@@ -1515,29 +1512,13 @@ body{
       <input type="text" id="scanTextInput" placeholder="Barcode or Food" aria-label="Barcode number or food description">
       <button type="submit" class="backup-btn">Add barcode / <span class="ask-ai-label">Ask AI</span></button>
     </form>
+      </div>
+    </div>
+    <div id="multiPhotoList"></div>
     <div class="multi-photo-total" id="multiPhotoTotal">Add at least one item to see the combined total</div>
     <div class="data-actions scan-control-row">
       <button type="button" id="multiPhotoCancelBtn" class="secondary">Cancel</button>
       <button type="button" id="multiPhotoUseBtn" class="primary">Add to log</button>
-    </div>
-  </div>
-</div>
-
-<div class="data-overlay" id="barcodeBatchOverlay">
-  <div class="data-box">
-    <div class="data-title">Scan barcodes</div>
-    <p class="data-desc">Scan up to 10 different products, one after another. Add products when ready, then set grams or quantity for each in Scan food.</p>
-    <div id="barcodeBatchCount" class="data-desc" role="status">0 products</div>
-    <div id="barcodeBatchStatus" class="multi-photo-hint" role="status"></div>
-    <div id="barcodeBatchList"></div>
-    <button type="button" id="barcodeBatchScanBtn" class="backup-btn api-key-long-btn">Scan barcode</button>
-    <form id="barcodeBatchForm" class="ask-gemini-row scan-control-row">
-      <input type="text" inputmode="numeric" id="barcodeBatchInput" placeholder="Barcode number" aria-label="Barcode number">
-      <button type="submit" id="barcodeBatchLookupBtn" class="backup-btn">Look up</button>
-    </form>
-    <div class="data-actions scan-control-row">
-      <button type="button" id="barcodeBatchCancelBtn" class="secondary">Cancel</button>
-      <button type="button" id="barcodeBatchUseBtn" class="primary" disabled>Add products</button>
     </div>
   </div>
 </div>
@@ -3228,7 +3209,7 @@ async function fetchOffProduct(code){
 
 // Validates a barcode, looks it up, and returns the mapped result - or null after telling
 // the person why (bad number, not in the database, or a lookup error).
-async function fetchBarcodeResult(rawCode){
+async function fetchBarcodeResult(rawCode,isActive=()=>true){
   const code = String(rawCode || '').replace(/\D/g, '');
   if(code.length < 8 || code.length > 14){
     showToast('Barcodes have 8–14 digits');
@@ -3240,13 +3221,13 @@ async function fetchBarcodeResult(rawCode){
   try{
     product = await withRetry(() => fetchOffProduct(code), 1);
   }catch(e){
-    if(!isLoadingRequestActive(loadingRequest)) return null;
+    if(!isLoadingRequestActive(loadingRequest)||!isActive()) return null;
     console.error('Barcode lookup failed', e);
     hideLoadingOverlay(loadingRequest);
     showErrorModal((e && e.message) ? e.message : 'Unknown error', 'Barcode lookup failed');
     return null;
   }
-  if(!isLoadingRequestActive(loadingRequest)) return null;
+  if(!isLoadingRequestActive(loadingRequest)||!isActive()) return null;
   hideLoadingOverlay(loadingRequest);
 
   if(!product){
@@ -3271,7 +3252,7 @@ async function waitForScannerModule(Scanner, timeoutMs, request){
 
 // Opens the scanner and returns the numeric barcode, or null if nothing usable was scanned
 // (cancelled, empty, not a food barcode, or the scanner couldn't start - already explained).
-async function scanBarcodeCode(fallbackInputId){
+async function scanBarcodeCode(fallbackInputId,isActive=()=>true){
   const Scanner = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BarcodeScanner;
   if(!Scanner){
     showToast("Scanner isn't available in this build — type the barcode number instead");
@@ -3307,6 +3288,7 @@ async function scanBarcodeCode(fallbackInputId){
     }
 
     const result = await Scanner.scan({formats: ['EAN_13', 'EAN_8', 'UPC_A', 'UPC_E']});
+    if(!isActive()) return null;
     const barcodes = (result && result.barcodes) || [];
     const code = barcodes
       .map(b => String(b.rawValue || b.displayValue || '').replace(/\D/g, ''))
@@ -3317,6 +3299,7 @@ async function scanBarcodeCode(fallbackInputId){
     }
     return code;
   }catch(e){
+    if(!isActive()) return null;
     if(preparingRequest !== null && !isLoadingRequestActive(preparingRequest)) return null;
     hideLoadingOverlay(preparingRequest === null ? undefined : preparingRequest);
     const msg = (e && e.message) ? e.message : String(e);
@@ -4323,6 +4306,8 @@ async function requestItemQuestion(question, item, amount, notes, unit = 'g', it
 
 let multiPhotoItems = [];
 let multiPhotoSession = 0;
+let scanAddControlsExpanded = true;
+let barcodeScanSession = null;
 let resultEditTarget = null; // id of the item currently open in the fix / ask box
 
 // Each item: {id, name, per-100g values, grams (string), source: 'photo'|'barcode'|'text',
@@ -4335,8 +4320,10 @@ function newItemId(){
 function openMultiModal(focusText){
   closeCameraBatch();
   closePhotoSource();
-  closeBarcodeBatch();
   multiPhotoSession++;
+  barcodeScanSession=null;
+  document.getElementById('multiBarcodeAddBtn').disabled=false;
+  scanAddControlsExpanded=true;
   multiPhotoItems = [];
   renderMultiPhotoList();
   const input = document.getElementById('scanTextInput');
@@ -4349,7 +4336,6 @@ document.getElementById('scanBtn').addEventListener('click', ()=> openMultiModal
 document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
   closeCameraBatch();
   closePhotoSource();
-  closeBarcodeBatch();
   multiPhotoSession++;
   document.getElementById('multiPhotoOverlay').classList.remove('show');
   multiPhotoItems = [];
@@ -4364,7 +4350,25 @@ function requireGeminiKey(){
   return false;
 }
 
+function syncScanAddControls(){
+  const hasItems=multiPhotoItems.length>0;
+  const button=document.getElementById('scanAddMoreBtn');
+  const controls=document.getElementById('scanAddControls');
+  button.hidden=!hasItems;
+  controls.hidden=hasItems&&!scanAddControlsExpanded;
+  button.textContent=controls.hidden?'Add more food':'Hide add options';
+  button.setAttribute('aria-expanded',String(!controls.hidden));
+}
+document.getElementById('scanAddMoreBtn').addEventListener('click',()=>{
+  scanAddControlsExpanded=!scanAddControlsExpanded;
+  syncScanAddControls();
+});
+function revealScanItem(index){
+  document.getElementById('multiPhotoList').children[index]?.scrollIntoView({block:'start'});
+}
+
 function addItem(fields){
+  scanAddControlsExpanded=false;
   multiPhotoItems.push(Object.assign({
     id: newItemId(), unit:'g', grams:'', quantity:'1', itemWeightG:'', thumbnail: null, source: 'text', photo: null, photos: null, query: null, notes: []
   }, fields));
@@ -4394,14 +4398,24 @@ function itemFromEstimate(result){
 }
 
 async function addBarcodeToMulti(rawCode){
-  const result = await fetchBarcodeResult(rawCode);
-  if(!result) return false;
-  // Keeping the product name lets "fix / ask" fall back to Gemini if the database values look wrong
-  addItem(Object.assign(itemFromEstimate(result), {source: 'barcode', query: result.name}));
+  const session=multiPhotoSession;
+  if(!scanPhotoSessionActive(session)) return false;
+  const code=String(rawCode||'').replace(/\D/g,'');
+  const existing=multiPhotoItems.findIndex(item=>item.barcode===code);
+  if(existing!==-1){
+    scanAddControlsExpanded=false;syncScanAddControls();revealScanItem(existing);
+    showToast('Already added — adjust its grams or quantity');return false;
+  }
+  const result=await fetchBarcodeResult(code,()=>scanPhotoSessionActive(session));
+  if(!result||!scanPhotoSessionActive(session)) return false;
+  const index=multiPhotoItems.length;
+  addItem({...itemFromEstimate(result),source:'barcode',query:result.name,barcode:code});
+  revealScanItem(index);
   return true;
 }
 
 async function addTextToMulti(description){
+  const session=multiPhotoSession;
   if(!requireGeminiKey()) return false;
   const loadingRequest = showLoadingOverlay('Getting estimate…');
   let result;
@@ -4409,15 +4423,17 @@ async function addTextToMulti(description){
     // null = no photo. Asking about weight ("... macros and weight") also returns a typical weight.
     result = await requestMacroEstimate('The user describes this food: "' + description + '". Identify it and estimate its nutrition.', '', null);
   }catch(e){
-    if(!isLoadingRequestActive(loadingRequest)) return false;
+    if(!isLoadingRequestActive(loadingRequest)||!scanPhotoSessionActive(session)) return false;
     console.error('Gemini query failed', e);
     hideLoadingOverlay(loadingRequest);
     showErrorModal((e && e.message) ? e.message : 'Unknown error');
     return false;
   }
-  if(!isLoadingRequestActive(loadingRequest)) return false;
+  if(!isLoadingRequestActive(loadingRequest)||!scanPhotoSessionActive(session)) return false;
   hideLoadingOverlay(loadingRequest);
+  const index=multiPhotoItems.length;
   addItem(Object.assign(itemFromEstimate(result), {source: 'text', query: description}));
+  revealScanItem(index);
   return true;
 }
 
@@ -4453,12 +4469,14 @@ async function analyzeScanPhotos(photos,session,request){
   try{
     const items=await requestPhotoEstimates(photos);
     if(!isLoadingRequestActive(request)||!scanPhotoSessionActive(session)) return;
+    const firstNewItem=multiPhotoItems.length;
     items.forEach(item=>{
       const relevantPhotos=item.photoIndices.map(index=>photos[index-1]);
       const fields=itemFromEstimate(item.estimate);
       fields.grams='';
       addItem({...fields,source:'photo',photo:relevantPhotos[0],photos:relevantPhotos});
     });
+    revealScanItem(firstNewItem);
   }catch(error){
     if(isLoadingRequestActive(request)&&scanPhotoSessionActive(session)) showErrorModal(error.message||String(error),'Photo analysis failed');
   }finally{hideLoadingOverlay(request);}
@@ -4585,93 +4603,23 @@ document.getElementById('multiplePhotosInput').addEventListener('change',async e
 
 document.getElementById('multiPhotoAddBtn').addEventListener('click', addPhotoToMulti);
 
-const MAX_BATCH_BARCODES=10;
-let barcodeBatch=null;
-function closeBarcodeBatch(){
-  if(barcodeBatch?.lookupRequest && isLoadingRequestActive(barcodeBatch.lookupRequest)) cancelLoadingOverlay();
-  barcodeBatch=null;
-  document.getElementById('barcodeBatchOverlay').classList.remove('show');
-}
-function barcodeBatchActive(batch){return barcodeBatch===batch && scanPhotoSessionActive(batch.session);}
-function renderBarcodeBatch(){
-  const batch=barcodeBatch;
-  if(!batch) return;
-  const count=batch.products.length;
-  document.getElementById('barcodeBatchCount').textContent=count+' / '+MAX_BATCH_BARCODES+' products';
-  document.getElementById('barcodeBatchStatus').textContent=batch.status||'';
-  const list=document.getElementById('barcodeBatchList');
-  list.innerHTML=batch.products.map(product=>{
-    const result=product.result,missing=result.missing||[];
-    const labels={calories:'Calories',protein:'Protein',carbs:'Carbs',fat:'Fat',fiber:'Fiber',salt:'Salt'};
-    const nutrition=SCAN_NUTRIENTS.map(field=>`<div class="barcode-nutrient" data-nutrient="${field.key}"><span>${labels[field.key]}</span><strong>${missing.includes(field.key)?'—':escapeHtml(formatScanValue(result[field.g]))+(field.key==='calories'?' kcal':'g')}</strong></div>`).join('');
-    return `<div><div class="barcode-product-info">${escapeHtml(result.name)}<small>${escapeHtml(product.code)}</small></div><button type="button" class="backup-btn" data-remove-code="${product.code}" aria-label="Remove ${escapeHtml(result.name)}">Remove</button><div class="barcode-nutrition"><div class="barcode-nutrition-basis">Per 100g</div>${nutrition}${missing.length?`<div class="barcode-nutrition-note">Not supplied by database: ${escapeHtml(missing.join(', '))}. Check the package.</div>`:''}</div></div>`;
-  }).join('');
-  list.querySelectorAll('[data-remove-code]').forEach(button=>{
-    button.disabled=batch.busy;
-    button.addEventListener('click',()=>{if(!barcodeBatchActive(batch)||batch.busy)return;batch.products=batch.products.filter(product=>product.code!==button.dataset.removeCode);renderBarcodeBatch();});
-  });
-  const scan=document.getElementById('barcodeBatchScanBtn');
-  scan.disabled=batch.busy||count>=MAX_BATCH_BARCODES||!window.Capacitor?.Plugins?.BarcodeScanner;
-  scan.textContent=batch.busy?'Reading barcode…':count>=MAX_BATCH_BARCODES?'10 products scanned':count?'Scan another':'Scan barcode';
-  document.getElementById('barcodeBatchInput').disabled=batch.busy||count>=MAX_BATCH_BARCODES;
-  document.getElementById('barcodeBatchLookupBtn').disabled=batch.busy||count>=MAX_BATCH_BARCODES;
-  document.getElementById('barcodeBatchUseBtn').disabled=batch.busy||count===0;
-}
-async function lookupBatchBarcode(batch,rawCode){
-  if(!barcodeBatchActive(batch)) return;
-  const code=String(rawCode||'').replace(/\D/g,'');
-  if(code.length<8||code.length>14){batch.status='Barcodes have 8–14 digits.';return;}
-  if(batch.products.some(product=>product.code===code)){batch.status='Already scanned. Set the amount or quantity after adding products.';return;}
-  if(batch.products.length>=MAX_BATCH_BARCODES){batch.status='Add these products before scanning more.';return;}
-  const request=showLoadingOverlay('Looking up product…');
-  batch.lookupRequest=request;
+document.getElementById('multiBarcodeAddBtn').addEventListener('click',async()=>{
+  const session=multiPhotoSession;
+  if(barcodeScanSession===session||!scanPhotoSessionActive(session)) return;
+  const button=document.getElementById('multiBarcodeAddBtn');
+  barcodeScanSession=session;button.disabled=true;
   try{
-    const product=await withRetry(()=>fetchOffProduct(code),1);
-    if(!isLoadingRequestActive(request)||!barcodeBatchActive(batch)) return;
-    if(!product){batch.status='Not found in Open Food Facts: '+code+'. Try another barcode or add this food manually in Scan food.';return;}
-    batch.products.push({code,result:mapOffProduct(product,code)});
-    batch.status='';
-    document.getElementById('barcodeBatchInput').value='';
-  }catch(error){
-    if(isLoadingRequestActive(request)&&barcodeBatchActive(batch)) batch.status=error.message||'Could not look up this barcode. Try again.';
+    if(!window.Capacitor?.Plugins?.BarcodeScanner){
+      scanAddControlsExpanded=true;syncScanAddControls();
+      document.getElementById('scanTextInput').focus();
+      showToast('Type the barcode number in Barcode or Food');return;
+    }
+    scanAddControlsExpanded=false;syncScanAddControls();
+    const code=await scanBarcodeCode('scanTextInput',()=>scanPhotoSessionActive(session));
+    if(code&&scanPhotoSessionActive(session)) await addBarcodeToMulti(code);
   }finally{
-    if(batch.lookupRequest===request) batch.lookupRequest=null;
-    hideLoadingOverlay(request);
+    if(barcodeScanSession===session){barcodeScanSession=null;button.disabled=false;}
   }
-}
-async function scanBatchBarcode(){
-  const batch=barcodeBatch;
-  if(!batch||batch.busy||batch.products.length>=MAX_BATCH_BARCODES||!barcodeBatchActive(batch)) return;
-  batch.busy=true;renderBarcodeBatch();
-  try{
-    const code=await scanBarcodeCode('barcodeBatchInput');
-    if(code&&barcodeBatchActive(batch)) await lookupBatchBarcode(batch,code);
-  }finally{if(barcodeBatchActive(batch)){batch.busy=false;renderBarcodeBatch();}}
-}
-document.getElementById('multiBarcodeAddBtn').addEventListener('click',()=>{
-  barcodeBatch={session:multiPhotoSession,products:[],busy:false,status:''};
-  document.getElementById('barcodeBatchInput').value='';
-  renderBarcodeBatch();
-  document.getElementById('barcodeBatchOverlay').classList.add('show');
-  if(window.Capacitor?.Plugins?.BarcodeScanner) scanBatchBarcode();
-  else document.getElementById('barcodeBatchInput').focus();
-});
-document.getElementById('barcodeBatchScanBtn').addEventListener('click',scanBatchBarcode);
-document.getElementById('barcodeBatchForm').addEventListener('submit',async event=>{
-  event.preventDefault();
-  const batch=barcodeBatch;
-  if(!batch||batch.busy||batch.products.length>=MAX_BATCH_BARCODES||!barcodeBatchActive(batch))return;
-  batch.busy=true;renderBarcodeBatch();
-  try{await lookupBatchBarcode(batch,document.getElementById('barcodeBatchInput').value);}
-  finally{if(barcodeBatchActive(batch)){batch.busy=false;renderBarcodeBatch();}}
-});
-document.getElementById('barcodeBatchCancelBtn').addEventListener('click',closeBarcodeBatch);
-document.getElementById('barcodeBatchOverlay').addEventListener('click',event=>{if(event.target.id==='barcodeBatchOverlay')closeBarcodeBatch();});
-document.getElementById('barcodeBatchUseBtn').addEventListener('click',()=>{
-  const batch=barcodeBatch;
-  if(!batch||batch.busy||!batch.products.length||!barcodeBatchActive(batch)) return;
-  closeBarcodeBatch();
-  batch.products.forEach(product=>addItem({...itemFromEstimate(product.result),source:'barcode',query:product.result.name,barcode:product.code}));
 });
 
 // One typed field for both: a run of digits is a barcode, anything else is a description for Gemini
@@ -4707,6 +4655,7 @@ function computeMultiPhotoTotals(){
 }
 
 function renderMultiPhotoList(){
+  syncScanAddControls();
   const list = document.getElementById('multiPhotoList');
   list.innerHTML = '';
 

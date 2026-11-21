@@ -1,4 +1,4 @@
-name: Publish barcode nutrition previews
+name: Publish direct barcode editing and add more
 
 on:
   push:
@@ -134,15 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-barcode-nutrition-debug.apk
-          sha256sum daily-intake-barcode-nutrition-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-add-more-food-debug.apk
+          sha256sum daily-intake-add-more-food-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          The Scan barcodes collection window now shows each product's per-100g calories, protein, carbs, fat, fiber and salt immediately after lookup, alongside its name and barcode. Values display at most two decimals. Nutrients missing from the database show a dash and a package-check note instead of appearing to be measured zero.
+          Barcode scans now open the full editable Scan food card immediately, including grams/quantity, nutrition and AI correction fields, without the intermediate product collection window. Scan further barcodes through Add more food; each stays a separate editable food until logging.
 
-          Browser checks passed for all six fields, decimal formatting, missing values, real zeros, phone layouts and the existing Add products flow. Scanning, quantities and saved nutrition calculations are unchanged. Includes all previous improvements and uses the same signing key.
+          Added a pinned Add more food control to the current Scan food list. Expand it for Photo, Barcode or the description/Ask AI field. New foods append without resetting existing amounts, units or nutrition, and the first newly added card is brought into view. Removing all foods restores the initial add controls.
+
+          Existing duplicate-code detection and late-result/session guards remain. Logic and browser checks passed for direct barcode fields, barcode/photo/text appending, preserved amounts, sticky phone layouts, correct saved totals and cancelled late scanner results. Includes all previous improvements and uses the same signing key.
           NOTES
-          if gh release view barcode-nutrition-preview-2026-11-21 >/dev/null 2>&1; then
-            gh release upload barcode-nutrition-preview-2026-11-21 daily-intake-barcode-nutrition-debug.apk SHA256SUMS --clobber
+          if gh release view add-more-food-preview-2026-11-21 >/dev/null 2>&1; then
+            gh release upload add-more-food-preview-2026-11-21 daily-intake-add-more-food-debug.apk SHA256SUMS --clobber
           else
-            gh release create barcode-nutrition-preview-2026-11-21 daily-intake-barcode-nutrition-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Show barcode nutrition immediately after scanning' --notes-file release-notes.md --prerelease --latest=false
+            gh release create add-more-food-preview-2026-11-21 daily-intake-add-more-food-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Edit barcodes immediately and append more foods' --notes-file release-notes.md --prerelease --latest=false
           fi
