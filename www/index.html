@@ -1501,9 +1501,6 @@ body{
       <button type="button" id="multiPhotoAddBtn" class="backup-btn">Photo</button>
       <button type="button" id="multiBarcodeAddBtn" class="backup-btn">Barcode</button>
     </div>
-    <button type="button" id="takeMultiplePhotosBtn" class="backup-btn api-key-long-btn">Take multiple photos</button>
-    <button type="button" id="uploadPhotosBtn" class="backup-btn api-key-long-btn">Upload photos</button>
-    <div class="multi-photo-hint">Select up to 5 photos for one food or meal analysis. Different angles of the same food are counted once.</div>
     <input type="file" id="multiplePhotosInput" accept="image/*" multiple hidden>
     <form class="ask-gemini-row multi-barcode-form scan-control-row" id="scanTextForm">
       <input type="text" id="scanTextInput" placeholder="Barcode or Food" aria-label="Barcode number or food description">
@@ -1513,6 +1510,20 @@ body{
     <div class="data-actions scan-control-row">
       <button type="button" id="multiPhotoCancelBtn" class="secondary">Cancel</button>
       <button type="button" id="multiPhotoUseBtn" class="primary">Add to log</button>
+    </div>
+  </div>
+</div>
+
+<div class="data-overlay" id="photoSourceOverlay">
+  <div class="data-box">
+    <div class="data-title">Photos</div>
+    <p class="data-desc">Take photos with the camera or select saved images. Up to 5 photos are analyzed together as one food or meal.</p>
+    <div class="data-actions">
+      <button type="button" id="photoSourceCameraBtn" class="backup-btn">Camera</button>
+      <button type="button" id="photoSourceGalleryBtn" class="backup-btn">Photo library</button>
+    </div>
+    <div class="data-actions">
+      <button type="button" id="photoSourceCancelBtn" class="secondary">Cancel</button>
     </div>
   </div>
 </div>
@@ -4258,6 +4269,7 @@ function newItemId(){
 // focusText: opened from "Ask Gemini", so the typing box is ready for a description
 function openMultiModal(focusText){
   closeCameraBatch();
+  closePhotoSource();
   multiPhotoSession++;
   multiPhotoItems = [];
   renderMultiPhotoList();
@@ -4270,6 +4282,7 @@ function openMultiModal(focusText){
 document.getElementById('scanBtn').addEventListener('click', ()=> openMultiModal(false));
 document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
   closeCameraBatch();
+  closePhotoSource();
   multiPhotoSession++;
   document.getElementById('multiPhotoOverlay').classList.remove('show');
   multiPhotoItems = [];
@@ -4380,19 +4393,29 @@ async function analyzeScanPhotos(photos,session,request){
     if(isLoadingRequestActive(request)&&scanPhotoSessionActive(session)) showErrorModal(error.message||String(error),'Photo analysis failed');
   }finally{hideLoadingOverlay(request);}
 }
-async function addPhotoToMulti(){
-  if(!requireGeminiKey()) return;
-  const Camera=window.Capacitor?.Plugins?.Camera;
-  if(!Camera){showToast('Camera is only available in the installed app');return;}
-  const session=multiPhotoSession;
-  let photo;
-  try{photo=await Camera.getPhoto({quality:70,resultType:'base64',source:'PROMPT',correctOrientation:true});}
-  catch(error){return;}
-  if(!scanPhotoSessionActive(session)) return;
-  if(!photo?.base64String){showToast('Could not read that photo');return;}
-  const request=showLoadingOverlay('Analyzing photo…');
-  await analyzeScanPhotos([{base64:photo.base64String,mime:'image/'+(photo.format||'jpeg')}],session,request);
+let photoSourceSession = null;
+function closePhotoSource(){
+  photoSourceSession=null;
+  document.getElementById('photoSourceOverlay').classList.remove('show');
 }
+function addPhotoToMulti(){
+  if(!requireGeminiKey()) return;
+  photoSourceSession=multiPhotoSession;
+  document.getElementById('photoSourceCameraBtn').disabled=!window.Capacitor?.Plugins?.Camera?.getPhoto;
+  document.getElementById('photoSourceOverlay').classList.add('show');
+}
+document.getElementById('photoSourceCancelBtn').addEventListener('click',closePhotoSource);
+document.getElementById('photoSourceOverlay').addEventListener('click',event=>{if(event.target.id==='photoSourceOverlay')closePhotoSource();});
+document.getElementById('photoSourceCameraBtn').addEventListener('click',()=>{
+  const session=photoSourceSession;
+  closePhotoSource();
+  if(scanPhotoSessionActive(session)) openCameraBatch();
+});
+document.getElementById('photoSourceGalleryBtn').addEventListener('click',()=>{
+  const session=photoSourceSession;
+  closePhotoSource();
+  if(scanPhotoSessionActive(session)) selectScanPhotos();
+});
 let cameraBatch = null;
 function closeCameraBatch(){
   cameraBatch=null;
@@ -4431,14 +4454,14 @@ async function captureBatchPhoto(){
     if(cameraBatch===batch){batch.capturing=false;renderCameraBatch();}
   }
 }
-document.getElementById('takeMultiplePhotosBtn').addEventListener('click',()=>{
+function openCameraBatch(){
   if(!requireGeminiKey()) return;
   if(!window.Capacitor?.Plugins?.Camera?.getPhoto){showToast('Camera is only available in the installed app');return;}
   cameraBatch={session:multiPhotoSession,photos:[],capturing:false};
   renderCameraBatch();
   document.getElementById('cameraBatchOverlay').classList.add('show');
   captureBatchPhoto();
-});
+}
 document.getElementById('cameraBatchCaptureBtn').addEventListener('click',captureBatchPhoto);
 document.getElementById('cameraBatchCancelBtn').addEventListener('click',closeCameraBatch);
 document.getElementById('cameraBatchOverlay').addEventListener('click',event=>{if(event.target.id==='cameraBatchOverlay')closeCameraBatch();});
@@ -4470,7 +4493,7 @@ async function uploadPhotoSources(sources,session){
   }finally{hideLoadingOverlay(request);}
 }
 let uploadPhotoSession = null;
-document.getElementById('uploadPhotosBtn').addEventListener('click',async()=>{
+async function selectScanPhotos(){
   if(!requireGeminiKey()) return;
   const session=multiPhotoSession;
   const Camera=window.Capacitor?.Plugins?.Camera;
@@ -4483,7 +4506,7 @@ document.getElementById('uploadPhotosBtn').addEventListener('click',async()=>{
     uploadPhotoSession=session;
     const input=document.getElementById('multiplePhotosInput');input.value='';input.click();
   }
-});
+}
 document.getElementById('multiplePhotosInput').addEventListener('change',async event=>{
   const files=Array.from(event.target.files||[]),session=uploadPhotoSession;
   event.target.value='';

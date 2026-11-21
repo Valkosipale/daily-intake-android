@@ -1,4 +1,4 @@
-name: Publish multi-photo camera capture
+name: Publish unified Photo controls
 
 on:
   push:
@@ -134,17 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-camera-batch-debug.apk
-          sha256sum daily-intake-camera-batch-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-unified-photo-debug.apk
+          sha256sum daily-intake-unified-photo-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Added Take multiple photos in Scan food. It opens the camera, then lets you take more photos or remove captured shots before pressing Analyze photos. Up to five camera photos are sent together as one food or meal analysis and retained for re-analysis and Ask AI.
+          Removed the separate Take multiple photos and Upload photos buttons from Scan food. The existing Photo button now opens a compact Camera / Photo library choice. Camera collects up to five shots before Analyze photos; Photo library selects up to five saved images for one analysis. One-photo use is also supported.
 
-          The existing single Photo option and multi-photo gallery upload remain available. Cancelling a capture preserves earlier shots; cancelling the collection or closing it with Android Back discards the collection. Late camera results cannot add images after cancellation. Text-only controls match the existing scan flow.
+          Barcode and the rest of the scan form keep their existing layout. Android Back closes the photo-source menu or camera collection without closing Scan. Camera/gallery cancellation, late-result guards and all retained-image AI correction features remain available.
 
-          Logic tests and scripted browser checks with mocked camera/native events passed for camera-only capture, deferred analysis, removal, cancellation, limits, retained image context, Android Back and phone layouts. Includes all previous improvements and uses the same signing key.
+          Logic and browser checks passed for both multi-photo routes through Photo, gallery/file-picker fallback, camera limits, removal, cancellation, native Back and phone layouts. Includes all previous improvements and uses the same signing key.
           NOTES
-          if gh release view camera-batch-preview-2026-11-21 >/dev/null 2>&1; then
-            gh release upload camera-batch-preview-2026-11-21 daily-intake-camera-batch-debug.apk SHA256SUMS --clobber
+          if gh release view unified-photo-preview-2026-11-21 >/dev/null 2>&1; then
+            gh release upload unified-photo-preview-2026-11-21 daily-intake-unified-photo-debug.apk SHA256SUMS --clobber
           else
-            gh release create camera-batch-preview-2026-11-21 daily-intake-camera-batch-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Take multiple camera photos before AI analysis' --notes-file release-notes.md --prerelease --latest=false
+            gh release create unified-photo-preview-2026-11-21 daily-intake-unified-photo-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Use Photo for both multi-camera and gallery images' --notes-file release-notes.md --prerelease --latest=false
           fi
