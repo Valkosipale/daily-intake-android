@@ -1498,6 +1498,9 @@ body{
       <button type="button" id="multiPhotoAddBtn" class="backup-btn">Photo</button>
       <button type="button" id="multiBarcodeAddBtn" class="backup-btn">Barcode</button>
     </div>
+    <button type="button" id="uploadPhotosBtn" class="backup-btn api-key-long-btn">Upload photos</button>
+    <div class="multi-photo-hint">Select up to 5 photos for one food or meal analysis. Different angles of the same food are counted once.</div>
+    <input type="file" id="multiplePhotosInput" accept="image/*" multiple hidden>
     <form class="ask-gemini-row multi-barcode-form scan-control-row" id="scanTextForm">
       <input type="text" id="scanTextInput" placeholder="Barcode or Food" aria-label="Barcode number or food description">
       <button type="submit" class="backup-btn">Add barcode / <span class="ask-ai-label">Ask AI</span></button>
@@ -4115,14 +4118,14 @@ function parseMacroJSON(text, finishReason){
 
 // Builds the prompt parts array, attaching the stored photo if this session started from one.
 // photo: undefined -> the photo of the item open in the fix/ask box (global state);
-//        null -> no photo; {base64, mime} -> that photo
+//        null -> no photo; {base64, mime} or an array -> explicit image context
 function buildPromptParts(promptText, photo){
   const parts = [{text: promptText}];
   const p = photo === undefined
-    ? (lastPhotoBase64 ? {base64: lastPhotoBase64, mime: lastPhotoMimeType} : null)
+    ? (lastPhotoSet || (lastPhotoBase64 ? {base64: lastPhotoBase64, mime: lastPhotoMimeType} : null))
     : photo;
-  if(p){
-    parts.push({inline_data: {mime_type: p.mime, data: p.base64}});
+  for(const image of (Array.isArray(p) ? p : p ? [p] : [])){
+    parts.push({inline_data: {mime_type: image.mime, data: image.base64}});
   }
   return parts;
 }
@@ -4168,6 +4171,9 @@ async function requestMacroEstimate(baseContext, extraContext, photo){
     prompt += ' The user has provided corrections or additional context to improve accuracy — treat this as more reliable than your own guess: "' + extraContext + '". Update your estimate accordingly.';
   }
 
+  if(Array.isArray(photo) && photo.length>1){
+    prompt += ' These photos are submitted together as ONE food or meal. Combine their evidence: a package front, nutrition label, or different angles may show the SAME food. Never multiply a serving because it appears in several photos. If distinct foods are shown, estimate their combined meal with weight-adjusted nutrition per 100g. Do not add per-100g numbers together.';
+  }
   const parts = buildPromptParts(prompt, photo);
   return await withRetry(async ()=>{
     const result = await callGeminiRaw(parts, true);
@@ -4213,7 +4219,7 @@ async function requestItemQuestion(question, item, amount, notes, unit = 'g', it
     'Respond ONLY with strict JSON: {"answer": string, "nutrition_update": null or {"food_name": string, '+fields+'}, "estimated_grams": null or number, "estimated_quantity": null or number}. ' +
     'Answer concisely. If values are missing, the user corrects the food, or asks to recalculate nutrition, provide ALL nutrition_update fields for the SELECTED BASIS. Otherwise use null and preserve existing values. ' +
     (perItem ? 'All nutrition is for ONE item, never the total for the current item quantity. Only set estimated_quantity when the user supplies or asks for a count; do NOT put grams in this field. estimated_grams is the weight of ONE item, not the total weight of all items. ' : 'All nutrition is per 100g. estimated_grams is the serving amount and must not be used as an item count. ') +
-    'Only suggest a new amount or weight when asked for it. Use the photo if attached. With only a food name, explain that weight is a typical portion estimate, not a measurement. If unknown, use null. Salt is grams of salt, not sodium milligrams. The user will explicitly review and apply changes.';
+    'Only suggest a new amount or weight when asked for it. Use all attached photos together; different angles or labels of the same food must not duplicate portions. Use the photo if attached. With only a food name, explain that weight is a typical portion estimate, not a measurement. If unknown, use null. Salt is grams of salt, not sodium milligrams. The user will explicitly review and apply changes.';
   const parts = buildPromptParts(prompt, photo);
   return withRetry(async ()=>{
     const result = await callGeminiRaw(parts, true);
@@ -4222,6 +4228,7 @@ async function requestItemQuestion(question, item, amount, notes, unit = 'g', it
 }
 
 let multiPhotoItems = [];
+let multiPhotoSession = 0;
 let resultEditTarget = null; // id of the item currently open in the fix / ask box
 
 // Each item: {id, name, per-100g values, grams (string), source: 'photo'|'barcode'|'text',
@@ -4232,6 +4239,7 @@ function newItemId(){
 
 // focusText: opened from "Ask Gemini", so the typing box is ready for a description
 function openMultiModal(focusText){
+  multiPhotoSession++;
   multiPhotoItems = [];
   renderMultiPhotoList();
   const input = document.getElementById('scanTextInput');
@@ -4242,6 +4250,7 @@ function openMultiModal(focusText){
 
 document.getElementById('scanBtn').addEventListener('click', ()=> openMultiModal(false));
 document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
+  multiPhotoSession++;
   document.getElementById('multiPhotoOverlay').classList.remove('show');
   multiPhotoItems = [];
 });
@@ -4257,7 +4266,7 @@ function requireGeminiKey(){
 
 function addItem(fields){
   multiPhotoItems.push(Object.assign({
-    id: newItemId(), unit:'g', grams:'', quantity:'1', itemWeightG:'', thumbnail: null, source: 'text', photo: null, query: null, notes: []
+    id: newItemId(), unit:'g', grams:'', quantity:'1', itemWeightG:'', thumbnail: null, source: 'text', photo: null, photos: null, query: null, notes: []
   }, fields));
   renderMultiPhotoList();
 }
@@ -4312,52 +4321,95 @@ async function addTextToMulti(description){
   return true;
 }
 
+const MAX_SCAN_PHOTOS = 5;
+function scanPhotoSessionActive(session){
+  return session===multiPhotoSession && document.getElementById('multiPhotoOverlay').classList.contains('show');
+}
+// Normalize gallery images to bounded JPEGs before sending them to AI.
+async function prepareUploadImage(source){
+  let blob;
+  if(source instanceof Blob){
+    if(source.size>20*1024*1024) throw new Error('Each photo must be smaller than 20 MB.');
+    blob=source;
+  }else{
+    const response=await fetch(source);
+    if(!response.ok) throw new Error('Could not read one of the selected photos.');
+    blob=await response.blob();
+  }
+  const url=URL.createObjectURL(blob);
+  try{
+    const img=new Image();
+    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('Could not open a selected photo. Try a JPG or PNG image.'));img.src=url;});
+    const scale=Math.min(1,1280/Math.max(img.naturalWidth,img.naturalHeight));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+    const context=canvas.getContext('2d');
+    context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);
+    context.drawImage(img,0,0,canvas.width,canvas.height);
+    return {base64:canvas.toDataURL('image/jpeg',0.75).split(',')[1],mime:'image/jpeg'};
+  }finally{URL.revokeObjectURL(url);}
+}
+async function analyzeScanPhotos(photos,session,request){
+  try{
+    const result=await requestMacroEstimate('Look at these food photos together and identify the food or combined meal.','',photos);
+    if(!isLoadingRequestActive(request)||!scanPhotoSessionActive(session)) return;
+    const fields=itemFromEstimate(result);
+    if(photos.length>1) fields.hint=[fields.hint,photos.length+' photos analyzed together as one food or meal.'].filter(Boolean).join(' ');
+    addItem({...fields,source:'photo',photo:photos[0],photos});
+  }catch(error){
+    if(isLoadingRequestActive(request)&&scanPhotoSessionActive(session)) showErrorModal(error.message||String(error),'Photo analysis failed');
+  }finally{hideLoadingOverlay(request);}
+}
 async function addPhotoToMulti(){
   if(!requireGeminiKey()) return;
-  const CapCamera = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
-  if(!CapCamera){
-    showToast('Camera is only available in the installed app');
-    return;
-  }
-
+  const Camera=window.Capacitor?.Plugins?.Camera;
+  if(!Camera){showToast('Camera is only available in the installed app');return;}
+  const session=multiPhotoSession;
   let photo;
-  try{
-    photo = await CapCamera.getPhoto({
-      quality: 70,
-      resultType: 'base64',
-      source: 'PROMPT',
-      correctOrientation: true
-    });
-  }catch(e){
-    return; // person cancelled
-  }
-
-  if(!photo || !photo.base64String){
-    showToast('Could not read that photo');
-    return;
-  }
-
-  const mime = 'image/' + (photo.format || 'jpeg');
-  const loadingRequest = showLoadingOverlay('Analyzing photo…');
-  let result;
-  try{
-    result = await requestMacroEstimate('Look at this food photo and identify the food.', '', {base64: photo.base64String, mime});
-  }catch(e){
-    if(!isLoadingRequestActive(loadingRequest)) return;
-    console.error('Gemini analysis failed', e);
-    hideLoadingOverlay(loadingRequest);
-    showErrorModal((e && e.message) ? e.message : 'Unknown error');
-    return;
-  }
-  if(!isLoadingRequestActive(loadingRequest)) return;
-  hideLoadingOverlay(loadingRequest);
-
-  addItem(Object.assign(itemFromEstimate(result), {
-    source: 'photo',
-    photo: {base64: photo.base64String, mime},
-    thumbnail: 'data:' + mime + ';base64,' + photo.base64String
-  }));
+  try{photo=await Camera.getPhoto({quality:70,resultType:'base64',source:'PROMPT',correctOrientation:true});}
+  catch(error){return;}
+  if(!scanPhotoSessionActive(session)) return;
+  if(!photo?.base64String){showToast('Could not read that photo');return;}
+  const request=showLoadingOverlay('Analyzing photo…');
+  await analyzeScanPhotos([{base64:photo.base64String,mime:'image/'+(photo.format||'jpeg')}],session,request);
 }
+async function uploadPhotoSources(sources,session){
+  if(!sources.length||!scanPhotoSessionActive(session)) return;
+  if(sources.length>MAX_SCAN_PHOTOS){showToast('Choose up to 5 photos at a time');return;}
+  const request=showLoadingOverlay('Preparing '+sources.length+' photo'+(sources.length===1?'':'s')+'…');
+  try{
+    const photos=[];
+    for(const source of sources){
+      if(!isLoadingRequestActive(request)||!scanPhotoSessionActive(session)) return;
+      photos.push(await prepareUploadImage(source));
+    }
+    if(!isLoadingRequestActive(request)||!scanPhotoSessionActive(session)) return;
+    document.getElementById('photoLoadingTitle').textContent='Analyzing '+photos.length+' photo'+(photos.length===1?'':'s')+'…';
+    await analyzeScanPhotos(photos,session,request);
+  }catch(error){
+    if(isLoadingRequestActive(request)&&scanPhotoSessionActive(session)) showErrorModal(error.message||String(error),'Photo upload failed');
+  }finally{hideLoadingOverlay(request);}
+}
+let uploadPhotoSession = null;
+document.getElementById('uploadPhotosBtn').addEventListener('click',async()=>{
+  if(!requireGeminiKey()) return;
+  const session=multiPhotoSession;
+  const Camera=window.Capacitor?.Plugins?.Camera;
+  if(Camera?.pickImages){
+    let selected;
+    try{selected=await Camera.pickImages({quality:75,width:1280,height:1280,limit:MAX_SCAN_PHOTOS,correctOrientation:true});}
+    catch(error){if(!/cancel/i.test(error?.message||'')&&scanPhotoSessionActive(session)) showErrorModal(error.message||String(error),'Photo selection failed');return;}
+    await uploadPhotoSources((selected?.photos||[]).map(photo=>photo.webPath),session);
+  }else{
+    uploadPhotoSession=session;
+    const input=document.getElementById('multiplePhotosInput');input.value='';input.click();
+  }
+});
+document.getElementById('multiplePhotosInput').addEventListener('change',async event=>{
+  const files=Array.from(event.target.files||[]),session=uploadPhotoSession;
+  event.target.value='';
+  if(requireGeminiKey()) await uploadPhotoSources(files,session);
+});
 
 document.getElementById('multiPhotoAddBtn').addEventListener('click', addPhotoToMulti);
 
@@ -4565,7 +4617,7 @@ async function reanalyzeScanItem(id){
   for(const field of SCAN_NUTRIENTS) snapshot[field[unit]] = item[field[unit]];
   try{
     const reply = await requestItemQuestion('Re-analyze this existing food and recalculate its nutrition using this comment: '+comment,
-      snapshot, unit === 'item' ? item.quantity : item.grams, (item.notes || []).slice(), unit, scanWeight(item) || null, item.photo || null);
+      snapshot, unit === 'item' ? item.quantity : item.grams, (item.notes || []).slice(), unit, scanWeight(item) || null, item.photos || item.photo || null);
     if(!isLoadingRequestActive(request) || !multiPhotoItems.includes(item)) return;
     const draft = {...item};
     if(reply.nutrition && reply.nutrition.name !== item.name && reply.grams === null) draft.itemWeightG = '';
@@ -4631,6 +4683,7 @@ document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
   saveEntries();
   maybeUnhidePreviousItem(name);
   multiPhotoItems = [];
+  multiPhotoSession++;
   document.getElementById('multiPhotoOverlay').classList.remove('show');
   render();
   showToast('Added to log');
@@ -4638,6 +4691,7 @@ document.getElementById('multiPhotoUseBtn').addEventListener('click', ()=>{
 
 let lastPhotoResult = null;
 let lastPhotoBase64 = null;
+let lastPhotoSet = null;
 let lastPhotoMimeType = null;
 let lastTextQuery = null;
 let refinementNotes = [];
@@ -4677,6 +4731,7 @@ function showPhotoResult(result){
 function resetPhotoState(){
   lastPhotoResult = null;
   lastPhotoBase64 = null;
+  lastPhotoSet = null;
   lastPhotoMimeType = null;
   lastTextQuery = null;
   refinementNotes = [];
@@ -4706,6 +4761,7 @@ function openItemEditor(id){
   document.getElementById('photoAskBtn').disabled = false;
   document.getElementById('photoAskBtn').textContent = 'Ask AI';
   document.getElementById('photoResultUseBtn').disabled = false;
+  lastPhotoSet = item.photos || (item.photo ? [item.photo] : null);
   lastPhotoBase64 = item.photo ? item.photo.base64 : null;
   lastPhotoMimeType = item.photo ? item.photo.mime : null;
   lastTextQuery = item.photo ? null : (item.query || item.name);

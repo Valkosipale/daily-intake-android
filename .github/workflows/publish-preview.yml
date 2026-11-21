@@ -1,4 +1,4 @@
-name: Publish yearly monthly weight averages
+name: Publish multi-photo AI uploads
 
 on:
   push:
@@ -134,15 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-year-weight-averages-debug.apk
-          sha256sum daily-intake-year-weight-averages-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-multiple-photos-debug.apk
+          sha256sum daily-intake-multiple-photos-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          The yearly weight chart now uses one average per included completed month instead of individual daily weigh-ins. Rows show monthly averages, weigh-in counts and the change from the previous recorded month's average. The summary compares the first and latest monthly averages, displayed to two decimals.
+          Added Upload photos in Scan food. Select up to five gallery images for one AI analysis of a food or combined meal. The existing Photo camera option remains available. Photos are resized before upload, and the prompt combines views/labels without treating repeated views as extra portions.
 
-          Months with no weigh-ins are skipped, and removed/current months remain excluded. A single recorded month displays one chart point. Individual weigh-ins and their monthly-view editing/deletion controls are unchanged. Logic and browser checks passed for averaging, month changes, missing/excluded months, retained precision, monthly-view regression and phone layouts. Includes all previous improvements and uses the same signing key.
+          All selected photos remain attached to the item for inline re-analysis and Ask AI corrections. The browser file-picker fallback also supports multiple images. Upload limits and scan-session/loading guards prevent oversized batches or cancelled selections from adding unexpected items.
+
+          Logic and browser checks passed for multi-image request parts, native gallery batches, retained image context, direct logging, single-camera regression, cancelled picker isolation, multi-file fallback, limits and phone layouts. Includes all previous improvements and uses the same signing key.
           NOTES
-          if gh release view year-weight-averages-preview-2026-11-14 >/dev/null 2>&1; then
-            gh release upload year-weight-averages-preview-2026-11-14 daily-intake-year-weight-averages-debug.apk SHA256SUMS --clobber
+          if gh release view multiple-photos-preview-2026-11-21 >/dev/null 2>&1; then
+            gh release upload multiple-photos-preview-2026-11-21 daily-intake-multiple-photos-debug.apk SHA256SUMS --clobber
           else
-            gh release create year-weight-averages-preview-2026-11-14 daily-intake-year-weight-averages-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Compare monthly average weights in the yearly chart' --notes-file release-notes.md --prerelease --latest=false
+            gh release create multiple-photos-preview-2026-11-21 daily-intake-multiple-photos-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Upload multiple photos together for AI analysis' --notes-file release-notes.md --prerelease --latest=false
           fi
