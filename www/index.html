@@ -1564,17 +1564,19 @@ body{
 <div class="data-overlay" id="apiKeyOverlay">
   <div class="data-box">
     <div class="data-title">AI provider &amp; API keys</div>
-    <label for="aiProviderSelect">Use for photos and Ask AI</label>
-    <select id="aiProviderSelect" class="api-key-input">
-      <option value="gemini">Gemini</option>
-      <option value="openai">OpenAI (ChatGPT)</option>
-    </select>
+    <div id="aiProviderLabel">Use for photos and Ask AI</div>
+    <div class="unit-toggle" role="group" aria-labelledby="aiProviderLabel">
+      <button type="button" id="aiGeminiBtn" class="unit-btn">Gemini</button>
+      <button type="button" id="aiOpenAIBtn" class="unit-btn">ChatGPT</button>
+    </div>
     <p class="data-desc">Keys are saved separately on this device. Photos, questions and food context are sent directly to your selected provider.</p>
     <label for="apiKeyInput">Gemini API key</label>
     <input type="password" id="apiKeyInput" placeholder="Google AI Studio API key" class="api-key-input" autocomplete="off" spellcheck="false">
     <label for="openaiKeyInput">OpenAI API key</label>
     <input type="password" id="openaiKeyInput" placeholder="OpenAI API key" class="api-key-input" autocomplete="off" spellcheck="false">
     <p class="data-desc">Gemini keys: aistudio.google.com. OpenAI keys and API credits: platform.openai.com. OpenAI uses GPT-4.1 mini; API usage is paid separately and is not included in a ChatGPT subscription.</p>
+    <p class="data-desc">Remaining OpenAI API credit cannot be read using a normal API key. Check your balance on OpenAI's billing page.</p>
+    <a class="backup-btn" href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;">Check OpenAI balance</a>
     <div class="data-actions">
       <button type="button" id="apiKeyCloseBtn" class="secondary">Cancel</button>
       <button type="button" id="apiKeySaveBtn" class="primary">Save</button>
@@ -4072,8 +4074,19 @@ function getAIProvider(){
 function getOpenAIKey(){
   try{return localStorage.getItem('dic:openaiKey')||'';}catch(_){return '';}
 }
+let selectedAIProvider='gemini';
+function selectAIProvider(provider){
+  selectedAIProvider=provider;
+  for(const [id,value] of [['aiGeminiBtn','gemini'],['aiOpenAIBtn','openai']]){
+    const button=document.getElementById(id);
+    button.classList.toggle('active',provider===value);
+    button.setAttribute('aria-pressed',String(provider===value));
+  }
+}
+document.getElementById('aiGeminiBtn').addEventListener('click',()=>selectAIProvider('gemini'));
+document.getElementById('aiOpenAIBtn').addEventListener('click',()=>selectAIProvider('openai'));
 function openAISettings(){
-  document.getElementById('aiProviderSelect').value=getAIProvider();
+  selectAIProvider(getAIProvider());
   document.getElementById('apiKeyInput').value=getGeminiKey();
   document.getElementById('openaiKeyInput').value=getOpenAIKey();
   document.getElementById('apiKeyOverlay').classList.add('show');
@@ -4086,7 +4099,7 @@ document.getElementById('apiKeySaveBtn').addEventListener('click',()=>{
   try{
     localStorage.setItem('dic:geminiKey',document.getElementById('apiKeyInput').value.trim());
     localStorage.setItem('dic:openaiKey',document.getElementById('openaiKeyInput').value.trim());
-    localStorage.setItem('dic:aiProvider',document.getElementById('aiProviderSelect').value);
+    localStorage.setItem('dic:aiProvider',selectedAIProvider);
   }catch(_){showToast('Could not save API settings on this device');return;}
   document.getElementById('apiKeyOverlay').classList.remove('show');
   showToast('AI provider and API keys saved');

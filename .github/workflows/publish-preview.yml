@@ -1,4 +1,4 @@
-name: Publish Gemini and OpenAI provider switch
+name: Publish AI provider buttons
 
 on:
   push:
@@ -134,17 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-ai-provider-debug.apk
-          sha256sum daily-intake-ai-provider-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-ai-buttons-debug.apk
+          sha256sum daily-intake-ai-buttons-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          API key settings now include a Gemini / OpenAI switch and separately saved keys. Existing Gemini keys remain available. Photos, food estimates, re-analysis and follow-up questions use the selected provider. OpenAI uses GPT-4.1 mini with strict structured nutrition output and supports multiple photos.
+          Replaces the AI provider dropdown with side-by-side Gemini / ChatGPT buttons matching the Male / Female controls, including a yellow selected state. Selection changes take effect when saved; cancel preserves the previous provider. Separately saved API keys remain available.
 
-          OpenAI API credits are billed separately from ChatGPT subscriptions. Keys stay on the device and requests go directly to the selected provider. No key is included in the APK.
+          Adds a Check OpenAI balance link to the official billing page. A normal OpenAI API key cannot retrieve the remaining prepaid credit balance, so the app does not invent or estimate a balance.
 
-          All 60 automated tests passed, including OpenAI schema, photos, exhausted quota, refusal and incomplete output checks. Browser tests with mocked API responses verified settings persistence, cancel behavior, separate keys and routing for photo, text and follow-up requests. No paid live OpenAI request was made. Retains previous improvements and the same signing key.
+          All automated tests passed. Browser tests verified equal button alignment, pressed state, saved selection, cancel, separate keys, billing destination, and mocked text/photo/follow-up routing. Includes previous improvements and retains the signing key.
           NOTES
-          if gh release view ai-provider-preview-2026-11-23 >/dev/null 2>&1; then
-            gh release upload ai-provider-preview-2026-11-23 daily-intake-ai-provider-debug.apk SHA256SUMS --clobber
+          if gh release view ai-buttons-preview-2026-11-23 >/dev/null 2>&1; then
+            gh release upload ai-buttons-preview-2026-11-23 daily-intake-ai-buttons-debug.apk SHA256SUMS --clobber
           else
-            gh release create ai-provider-preview-2026-11-23 daily-intake-ai-provider-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Choose Gemini or OpenAI for food analysis' --notes-file release-notes.md --prerelease --latest=false
+            gh release create ai-buttons-preview-2026-11-23 daily-intake-ai-buttons-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Gemini and ChatGPT buttons with billing shortcut' --notes-file release-notes.md --prerelease --latest=false
           fi
