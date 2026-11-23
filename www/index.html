@@ -1563,9 +1563,18 @@ body{
 
 <div class="data-overlay" id="apiKeyOverlay">
   <div class="data-box">
-    <div class="data-title">Gemini API key</div>
-    <p class="data-desc">Paste your free API key from Google AI Studio (aistudio.google.com → Get API key). It's stored only on this device and never leaves it except to call Gemini directly.</p>
-    <input type="password" id="apiKeyInput" placeholder="Paste your API key here" class="api-key-input">
+    <div class="data-title">AI provider &amp; API keys</div>
+    <label for="aiProviderSelect">Use for photos and Ask AI</label>
+    <select id="aiProviderSelect" class="api-key-input">
+      <option value="gemini">Gemini</option>
+      <option value="openai">OpenAI (ChatGPT)</option>
+    </select>
+    <p class="data-desc">Keys are saved separately on this device. Photos, questions and food context are sent directly to your selected provider.</p>
+    <label for="apiKeyInput">Gemini API key</label>
+    <input type="password" id="apiKeyInput" placeholder="Google AI Studio API key" class="api-key-input" autocomplete="off" spellcheck="false">
+    <label for="openaiKeyInput">OpenAI API key</label>
+    <input type="password" id="openaiKeyInput" placeholder="OpenAI API key" class="api-key-input" autocomplete="off" spellcheck="false">
+    <p class="data-desc">Gemini keys: aistudio.google.com. OpenAI keys and API credits: platform.openai.com. OpenAI uses GPT-4.1 mini; API usage is paid separately and is not included in a ChatGPT subscription.</p>
     <div class="data-actions">
       <button type="button" id="apiKeyCloseBtn" class="secondary">Cancel</button>
       <button type="button" id="apiKeySaveBtn" class="primary">Save</button>
@@ -1751,6 +1760,7 @@ body{
   </div>
 </div>
 
+<script src="openai.js"></script>
 <script src="scan-units.js"></script>
 <script src="year-review.js"></script>
 <script>
@@ -3258,7 +3268,7 @@ async function fetchBarcodeResult(rawCode,isActive=()=>true){
   hideLoadingOverlay(loadingRequest);
 
   if(!product){
-    showToast('Not found in Open Food Facts — add it manually or try Ask Gemini');
+    showToast('Not found in Open Food Facts — add it manually or try Ask AI');
     return null;
   }
   return mapOffProduct(product, code);
@@ -4056,21 +4066,36 @@ function setGeminiKey(key){
   }catch(e){ console.error('Failed to save API key', e); }
 }
 
-document.getElementById('changeApiKeyBtn').addEventListener('click', ()=>{
-  document.getElementById('apiKeyInput').value = getGeminiKey();
+function getAIProvider(){
+  try{return localStorage.getItem('dic:aiProvider')==='openai'?'openai':'gemini';}catch(_){return 'gemini';}
+}
+function getOpenAIKey(){
+  try{return localStorage.getItem('dic:openaiKey')||'';}catch(_){return '';}
+}
+function openAISettings(){
+  document.getElementById('aiProviderSelect').value=getAIProvider();
+  document.getElementById('apiKeyInput').value=getGeminiKey();
+  document.getElementById('openaiKeyInput').value=getOpenAIKey();
   document.getElementById('apiKeyOverlay').classList.add('show');
-});
-
-document.getElementById('apiKeyCloseBtn').addEventListener('click', ()=>{
+}
+document.getElementById('changeApiKeyBtn').addEventListener('click',openAISettings);
+document.getElementById('apiKeyCloseBtn').addEventListener('click',()=>{
   document.getElementById('apiKeyOverlay').classList.remove('show');
 });
-
-document.getElementById('apiKeySaveBtn').addEventListener('click', ()=>{
-  const key = document.getElementById('apiKeyInput').value.trim();
-  setGeminiKey(key);
+document.getElementById('apiKeySaveBtn').addEventListener('click',()=>{
+  try{
+    localStorage.setItem('dic:geminiKey',document.getElementById('apiKeyInput').value.trim());
+    localStorage.setItem('dic:openaiKey',document.getElementById('openaiKeyInput').value.trim());
+    localStorage.setItem('dic:aiProvider',document.getElementById('aiProviderSelect').value);
+  }catch(_){showToast('Could not save API settings on this device');return;}
   document.getElementById('apiKeyOverlay').classList.remove('show');
-  showToast(key ? 'API key saved' : 'API key cleared');
+  showToast('AI provider and API keys saved');
 });
+async function callAIRaw(parts,jsonMode,responseSchema){
+  return getAIProvider()==='openai'
+    ? OpenAINutrition.request(parts,jsonMode,responseSchema,getOpenAIKey())
+    : callGeminiRaw(parts,jsonMode,responseSchema);
+}
 
 let loadingRequestVersion = 0;
 
@@ -4161,10 +4186,10 @@ function parseMacroJSON(text, finishReason){
       try{
         parsed = JSON.parse(cleanText.slice(firstBrace, lastBrace + 1));
       }catch(secondErr){
-        throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total, finishReason: ' + (finishReason || 'unknown') + '). Raw text: ' + cleanText.slice(0, 1500));
+        throw new Error('Could not parse AI response as JSON (' + cleanText.length + ' chars total, finishReason: ' + (finishReason || 'unknown') + '). Raw text: ' + cleanText.slice(0, 1500));
       }
     } else {
-      throw new Error('Could not parse Gemini response as JSON (' + cleanText.length + ' chars total, finishReason: ' + (finishReason || 'unknown') + '). Raw text: ' + cleanText.slice(0, 1500));
+      throw new Error('Could not parse AI response as JSON (' + cleanText.length + ' chars total, finishReason: ' + (finishReason || 'unknown') + '). Raw text: ' + cleanText.slice(0, 1500));
     }
   }
 
@@ -4245,7 +4270,7 @@ async function requestMacroEstimate(baseContext, extraContext, photo){
   }
   const parts = buildPromptParts(prompt, photo);
   return await withRetry(async ()=>{
-    const result = await callGeminiRaw(parts, true, nutritionResponseSchema('g',wantsWeight));
+    const result = await callAIRaw(parts, true, nutritionResponseSchema('g',wantsWeight));
     return parseMacroJSON(result.text, result.finishReason);
   }, 1);
 }
@@ -4276,7 +4301,7 @@ async function requestPhotoEstimates(photos){
     'Each entry must also contain photo_indices, a nonempty array of 1-based photo numbers that show THAT food or its label. Photos are numbered in the attached order, 1 through '+photos.length+'. One photo can be referenced by several different foods if it shows them together.';
   const parts=buildPromptParts(prompt,photos);
   return withRetry(async()=>{
-    const result=await callGeminiRaw(parts,true,schema);
+    const result=await callAIRaw(parts,true,schema);
     return parsePhotoItems(result.text,photos.length);
   },1);
 }
@@ -4326,7 +4351,7 @@ async function requestItemQuestion(question, item, amount, notes, unit = 'g', it
     estimated_grams:{type:'NUMBER',nullable:true},estimated_quantity:{type:'NUMBER',nullable:true}
   },required:['answer','nutrition_update','estimated_grams','estimated_quantity']};
   return withRetry(async ()=>{
-    const result = await callGeminiRaw(parts, true, responseSchema);
+    const result = await callAIRaw(parts, true, responseSchema);
     return parseItemQuestionReply(result.text,unit);
   }, 1);
 }
@@ -4368,12 +4393,12 @@ document.getElementById('multiPhotoCancelBtn').addEventListener('click', ()=>{
   multiPhotoItems = [];
 });
 
-// Photos and descriptions go through Gemini so they need the key; barcodes don't.
-function requireGeminiKey(){
-  if(getGeminiKey()) return true;
-  showToast('Set your Gemini API key first');
-  document.getElementById('apiKeyInput').value = '';
-  document.getElementById('apiKeyOverlay').classList.add('show');
+// Photos and descriptions use the selected AI provider; barcodes need no key.
+function requireAIKey(){
+  const openai=getAIProvider()==='openai';
+  if(openai?getOpenAIKey():getGeminiKey()) return true;
+  showToast('Set your '+(openai?'OpenAI':'Gemini')+' API key first');
+  openAISettings();
   return false;
 }
 
@@ -4452,7 +4477,7 @@ async function addBarcodeToMulti(rawCode){
 
 async function addTextToMulti(description){
   const session=multiPhotoSession;
-  if(!requireGeminiKey()) return false;
+  if(!requireAIKey()) return false;
   const loadingRequest = showLoadingOverlay('Getting estimate…');
   let result;
   try{
@@ -4522,7 +4547,7 @@ function closePhotoSource(){
   document.getElementById('photoSourceOverlay').classList.remove('show');
 }
 function addPhotoToMulti(){
-  if(!requireGeminiKey()) return;
+  if(!requireAIKey()) return;
   photoSourceSession=multiPhotoSession;
   document.getElementById('photoSourceCameraBtn').disabled=!window.Capacitor?.Plugins?.Camera?.getPhoto;
   document.getElementById('photoSourceOverlay').classList.add('show');
@@ -4580,7 +4605,7 @@ async function captureBatchPhoto(){
   }
 }
 function openCameraBatch(){
-  if(!requireGeminiKey()) return;
+  if(!requireAIKey()) return;
   if(!window.Capacitor?.Plugins?.Camera?.getPhoto){showToast('Camera is only available in the installed app');return;}
   cameraBatch={session:multiPhotoSession,photos:[],capturing:false};
   renderCameraBatch();
@@ -4594,7 +4619,7 @@ document.getElementById('cameraBatchOverlay').addEventListener('click',event=>{i
 document.getElementById('cameraBatchAnalyzeBtn').addEventListener('click',async()=>{
   const batch=cameraBatch;
   if(!batch||batch.capturing||!batch.photos.length||!scanPhotoSessionActive(batch.session)) return;
-  if(!requireGeminiKey()) return;
+  if(!requireAIKey()) return;
   const photos=batch.photos.slice(),session=batch.session;
   closeCameraBatch();
   const request=showLoadingOverlay('Analyzing '+photos.length+' photo'+(photos.length===1?'':'s')+'…');
@@ -4619,7 +4644,7 @@ async function uploadPhotoSources(sources,batch){
 }
 let uploadPhotoBatch = null;
 async function selectScanPhotos(){
-  if(!requireGeminiKey()) return;
+  if(!requireAIKey()) return;
   const session=multiPhotoSession;
   if(!scanPhotoSessionActive(session)) return;
   if(!cameraBatch){cameraBatch={session,photos:[],capturing:false};}
@@ -4643,7 +4668,7 @@ async function selectScanPhotos(){
 document.getElementById('multiplePhotosInput').addEventListener('change',async event=>{
   const files=Array.from(event.target.files||[]),batch=uploadPhotoBatch;
   event.target.value='';
-  if(!batch||!photoBatchActive(batch)||batch.capturing||!files.length||!requireGeminiKey()) return;
+  if(!batch||!photoBatchActive(batch)||batch.capturing||!files.length||!requireAIKey()) return;
   batch.capturing=true;batch.action='gallery';renderCameraBatch();
   try{await uploadPhotoSources(files,batch);}
   finally{if(photoBatchActive(batch)){batch.capturing=false;renderCameraBatch();}}
@@ -4869,7 +4894,7 @@ async function reanalyzeScanItem(id){
   if(!item || item.reanalyzing) return;
   const comment = (item.reanalyzeComment || '').trim();
   if(!comment){showToast('Type a comment or correction first');return;}
-  if(!requireGeminiKey()) return;
+  if(!requireAIKey()) return;
   item.reanalyzing = true;
   const request = showLoadingOverlay('Re-analyzing item…');
   const unit = scanUnit(item);
@@ -5066,7 +5091,7 @@ document.getElementById('photoAskBtn').addEventListener('click', async ()=>{
   if(askBtn.disabled) return;
   if(!question){ showToast('Type a question or food correction first'); return; }
   if(!lastPhotoResult || !resultEditTarget) return;
-  if(!requireGeminiKey()) return;
+  if(!requireAIKey()) return;
   const session = itemEditorSession;
   const target = resultEditTarget;
   const updateBtn = document.getElementById('photoResultUseBtn');

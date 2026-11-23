@@ -1,4 +1,4 @@
-name: Publish stable first-open search
+name: Publish Gemini and OpenAI provider switch
 
 on:
   push:
@@ -134,15 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-search-layout-debug.apk
-          sha256sum daily-intake-search-layout-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-ai-provider-debug.apk
+          sha256sum daily-intake-ai-provider-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Keeps the Previous items window at a stable height while filtering, so the search field no longer moves when the number of matches changes. Focus initializes after the dialog opens, and closing clears pending focus and composition state. Avoids redundant dialog scroll-lock updates during result rendering.
+          API key settings now include a Gemini / OpenAI switch and separately saved keys. Existing Gemini keys remain available. Photos, food estimates, re-analysis and follow-up questions use the selected provider. OpenAI uses GPT-4.1 mini with strict structured nutrition output and supports multiple photos.
 
-          Browser checks passed at three screen sizes, including a keyboard-sized viewport, for stable input position, first-open focus and close behavior. Regression checks passed with 2502 foods, Finnish letters, IME composition, pagination, item reuse and removal. All nine automated test suites passed. Includes previous improvements and retains the signing key.
+          OpenAI API credits are billed separately from ChatGPT subscriptions. Keys stay on the device and requests go directly to the selected provider. No key is included in the APK.
+
+          All 60 automated tests passed, including OpenAI schema, photos, exhausted quota, refusal and incomplete output checks. Browser tests with mocked API responses verified settings persistence, cancel behavior, separate keys and routing for photo, text and follow-up requests. No paid live OpenAI request was made. Retains previous improvements and the same signing key.
           NOTES
-          if gh release view search-layout-preview-2026-11-21 >/dev/null 2>&1; then
-            gh release upload search-layout-preview-2026-11-21 daily-intake-search-layout-debug.apk SHA256SUMS --clobber
+          if gh release view ai-provider-preview-2026-11-23 >/dev/null 2>&1; then
+            gh release upload ai-provider-preview-2026-11-23 daily-intake-ai-provider-debug.apk SHA256SUMS --clobber
           else
-            gh release create search-layout-preview-2026-11-21 daily-intake-search-layout-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Stable saved-food search on first open' --notes-file release-notes.md --prerelease --latest=false
+            gh release create ai-provider-preview-2026-11-23 daily-intake-ai-provider-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Choose Gemini or OpenAI for food analysis' --notes-file release-notes.md --prerelease --latest=false
           fi
