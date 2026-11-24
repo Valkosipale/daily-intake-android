@@ -21,3 +21,13 @@ test('photo analysis accepts more than twenty distinct foods without an app coun
  const foods=Array.from({length:25},(_,i)=>food('Food '+i,[1],100+i));
  assert.equal(setup().parsePhotoItems(JSON.stringify({items:foods}),1).length,25);
 });
+
+test('prepared meals prefill estimated total portion while packaged products remain unweighed',()=>{
+ const meal={...food('Roasted vegetable meal',[1,2],120),is_prepared_meal:true,estimated_portion_grams:350};
+ const items=setup().parsePhotoItems(JSON.stringify({items:[meal,food('Sauce bottle',[2],200)]}),2);
+ assert.equal(items.length,2);assert.equal(items[0].estimate.typicalWeightG,350);
+ assert.match(items[0].estimate.weightLabel,/AI-estimated/);
+ assert.equal(items[0].estimate.calPer100*items[0].estimate.typicalWeightG/100,420);
+ assert.equal(items[1].estimate.typicalWeightG,0);
+ for(const grams of [0,-1,'350',null]) assert.throws(()=>setup().parsePhotoItems(JSON.stringify({items:[{...meal,estimated_portion_grams:grams}]}),2));
+});

@@ -4297,21 +4297,29 @@ function parsePhotoItems(text,photoCount){
     const estimate=parseMacroJSON(JSON.stringify(item),'STOP');
     const indices=item.photo_indices;
     if(!Array.isArray(indices)||!indices.length||indices.some(index=>!Number.isInteger(index)||index<1||index>photoCount)) throw new Error('AI could not match a food to its photos. Please try again.');
-    estimate.typicalWeightG=0; // Amounts are entered separately by the user.
+    estimate.typicalWeightG=0;
+    if(item.is_prepared_meal===true){
+      if(typeof item.estimated_portion_grams!=='number'||!Number.isFinite(item.estimated_portion_grams)||item.estimated_portion_grams<=0) throw new Error('AI did not estimate a valid meal portion. Please try again.');
+      estimate.typicalWeightG=item.estimated_portion_grams;
+      estimate.weightLabel='AI-estimated whole portion (check before saving)';
+    }
     return {estimate,photoIndices:[...new Set(indices)]};
   });
 }
 async function requestPhotoEstimates(photos){
   const itemSchema=nutritionResponseSchema();
   itemSchema.properties.photo_indices={type:'ARRAY',items:{type:'INTEGER'}};
-  itemSchema.required.push('photo_indices');
+  itemSchema.properties.is_prepared_meal={type:'BOOLEAN'};
+  itemSchema.properties.estimated_portion_grams={type:'NUMBER'};
+  itemSchema.required.push('photo_indices','is_prepared_meal','estimated_portion_grams');
   const schema={type:'OBJECT',properties:{items:{type:'ARRAY',items:itemSchema}},required:['items']};
-  const prompt='Identify the distinct foods/products in these '+photos.length+' photos. Return strict JSON with an items array, one entry per distinct food/product. '+
-    'Keep DIFFERENT products separate, even if they appear together in one photo. Never average or combine different sauces, ingredients or products into one item. '+
-    'Different angles, package fronts and nutrition labels of the SAME product belong to ONE entry; do not count them as extra portions. A prepared dish can remain one food, but distinct foods that can be weighed separately need separate entries. '+
-    'Each entry must contain food_name and ALL six numeric nutrition values per 100g: calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, salt_per_100g. Use package labels when visible; otherwise give realistic estimates. Salt is grams of salt, not sodium milligrams. '+
-    'Do not provide serving grams or a combined meal total: the user will enter grams or item quantity separately for each food. '+
-    'Each entry must also contain photo_indices, a nonempty array of 1-based photo numbers that show THAT food or its label. Photos are numbered in the attached order, 1 through '+photos.length+'. One photo can be referenced by several different foods if it shows them together.';
+  const prompt='Analyze these '+photos.length+' photos. Return strict JSON with an items array. '+
+    'A prepared meal served together on ONE plate, bowl or food container must be ONE combined entry, including all its ingredients, sides, sauces and likely cooking oil. For example, mixed roasted vegetables in one container are one meal, not separate carrot, potato and onion entries. Give the combined meal a descriptive name. '+
+    'For each prepared meal set is_prepared_meal=true and estimated_portion_grams to your best realistic estimate of the TOTAL visible edible portion weight. Its six per-100g nutrition values must describe the whole mixture in its estimated ingredient proportions; do not simply add per-100g values of individual ingredients. The app will multiply these values by portion grams to show whole-portion calories and macros immediately. This is a rough visual estimate, not a measurement. '+
+    'Keep distinct PACKAGED products separate, even in one photo. For packaged products set is_prepared_meal=false and estimated_portion_grams=0; the user enters their amount. Separate plates/containers of different meals remain separate entries. '+
+    'Different angles and labels of the SAME meal or product belong to ONE entry and must not duplicate the portion. '+
+    'Each entry must contain food_name and ALL six numeric nutrition values per 100g: calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, salt_per_100g. Use visible labels when available, otherwise estimate realistically. Salt is grams of salt, not sodium milligrams. '+
+    'Each entry must also contain photo_indices, a nonempty array of 1-based photo numbers showing that meal or product, from 1 through '+photos.length+'.';
   const parts=buildPromptParts(prompt,photos);
   return withRetry(async()=>{
     const result=await callAIRaw(parts,true,schema);
@@ -4546,7 +4554,6 @@ async function analyzeScanPhotos(photos,session,request){
     items.forEach(item=>{
       const relevantPhotos=item.photoIndices.map(index=>photos[index-1]);
       const fields=itemFromEstimate(item.estimate);
-      fields.grams='';
       addItem({...fields,source:'photo',photo:relevantPhotos[0],photos:relevantPhotos});
     });
     revealScanItem(firstNewItem);
