@@ -1,4 +1,4 @@
-name: Restore visible daily steps
+name: Restore live monthly TDEE comparison
 
 on:
   push:
@@ -134,15 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-visible-steps-debug.apk
-          sha256sum daily-intake-visible-steps-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-live-month-debug.apk
+          sha256sum daily-intake-live-month-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Restores the effective daily step count beneath TDEE alongside the projected/historical label and adaptive confidence. Explicit zero steps display as zero; absent data is shown as No steps recorded. Uses the existing higher-of-manual/phone count for the selected day.
+          Restores live week/month TDEE comparisons: food logged today counts immediately, alongside today's personalized full-day expenditure projection. The summary says includes today so far and clarifies that today's burn is projected. Future dates and unlogged days remain excluded.
 
-          Includes the personalized TDEE update and all previous features. Step synchronization and calculations are unchanged. Browser checks verify automatic/manual counts, zero versus missing data, date changes and immediate display updates. Retains the update signing key.
+          Adaptive calibration stays fully enabled and continues using completed days only. Today's partial intake never enters the calibration window. Historical estimates, visible steps and all previous improvements are retained.
+
+          All 87 automated tests passed. A browser test with active calibration verified that adding 500 calories today increases the monthly intake total by exactly 500, without changing the adaptive correction, historical average intake or calibration days. It also verified future-date exclusion and the weekly live label. Retains the update signing key.
           NOTES
-          if gh release view visible-steps-preview-2026-11-27 >/dev/null 2>&1; then
-            gh release upload visible-steps-preview-2026-11-27 daily-intake-visible-steps-debug.apk SHA256SUMS --clobber
+          if gh release view live-month-preview-2026-11-27 >/dev/null 2>&1; then
+            gh release upload live-month-preview-2026-11-27 daily-intake-live-month-debug.apk SHA256SUMS --clobber
           else
-            gh release create visible-steps-preview-2026-11-27 daily-intake-visible-steps-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Restore step count beneath TDEE' --notes-file release-notes.md --prerelease --latest=false
+            gh release create live-month-preview-2026-11-27 daily-intake-live-month-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Live monthly totals with adaptive TDEE' --notes-file release-notes.md --prerelease --latest=false
           fi
