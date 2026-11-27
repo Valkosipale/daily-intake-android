@@ -152,3 +152,19 @@ test('a pending activity batch defers smoothing until the whole observation is a
  const pending=store.sync(h.today,{allowCalibration:false});assert.equal(pending.state.calibration.lastCalibrationDate,null);
  const finished=store.sync(h.today);assert.equal(finished.state.calibration.lastCalibrationDate,M.shift(h.today,-1));assert.notEqual(finished.state.calibration.offset,0);
 });
+test('removed months exclude intake, activity and weights and clear learned influence without deleting records',()=>{
+ const h=history(),storage=memory(seedLocal(h)),store=Local.create(storage);const before=store.sync(h.today);assert.ok(before.activeOffset!==0);
+ const logs=[...storage.data].filter(([key])=>key.startsWith('dic:log:'));const weights=storage.getItem('dic:weightLog');const records=JSON.stringify(before.state.records);
+ storage.setItem('dic:hiddenYearMonths',JSON.stringify(['2026-10']));const after=store.sync(h.today);
+ assert.equal(after.observation.eligible,false);assert.equal(after.activeOffset,0);assert.equal(after.state.calibration.offset,0);assert.deepEqual(after.state.calibration.targets,[]);assert.deepEqual(after.state.calibration.estimates,[]);
+ assert.equal(after.state.calibration.lastCalibrationDate,before.state.calibration.lastCalibrationDate);assert.match(after.observation.reason,/removed/);assert.equal(storage.getItem('dic:weightLog'),weights);assert.equal(JSON.stringify(after.state.records),records);for(const [key,value] of logs)assert.equal(storage.getItem(key),value);
+ // Restoring months permits eligibility again but does not bypass today's guard.
+ storage.setItem('dic:hiddenYearMonths','[]');const restored=store.sync(h.today);assert.equal(restored.observation.eligible,true);assert.equal(restored.activeOffset,0);assert.notEqual(store.sync(M.shift(h.today,1)).activeOffset,0);
+});
+test('removed month cannot supply weigh-in endpoints even if its food logs are present',()=>{
+ const h=history(),seed=seedLocal(h);seed['dic:hiddenYearMonths']='["2026-10"]';const store=Local.create(memory(seed));const c=store.sync(h.today);assert.equal(c.observation.eligible,false);assert.equal(c.state.excludedMonths[0],'2026-10');
+});
+test('backup calibration with a different excluded-month selection cannot reintroduce old influence',()=>{
+ const h=history(),source=Local.create(memory(seedLocal(h)));source.sync(h.today);const backup=source.exportData();
+ const seed=seedLocal(h);seed['dic:hiddenYearMonths']='["2026-10"]';const destination=Local.create(memory(seed));destination.restore(backup);const c=destination.sync(h.today);assert.equal(c.activeOffset,0);assert.equal(c.state.calibration.offset,0);assert.equal(c.observation.eligible,false);
+});

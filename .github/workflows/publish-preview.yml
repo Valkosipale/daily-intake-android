@@ -1,4 +1,4 @@
-name: Restore live monthly TDEE comparison
+name: Exclude removed months from calibration
 
 on:
   push:
@@ -134,17 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-live-month-debug.apk
-          sha256sum daily-intake-live-month-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-excluded-months-debug.apk
+          sha256sum daily-intake-excluded-months-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          Restores live week/month TDEE comparisons: food logged today counts immediately, alongside today's personalized full-day expenditure projection. The summary says includes today so far and clarifies that today's burn is projected. Future dates and unlogged days remain excluded.
+          Months removed from the yearly view now also stay out of adaptive TDEE calibration. Their calorie/activity dates and weigh-ins are excluded, and excluded gaps cannot be bridged by dropping them from the intake average.
 
-          Adaptive calibration stays fully enabled and continues using completed days only. Today's partial intake never enters the calibration window. Historical estimates, visible steps and all previous improvements are retained.
+          Changing the removed-month selection clears the learned correction and stability history so excluded months cannot retain indirect influence. The once-per-day guard and saved historical estimates remain intact. Original food, fasting, steps, workouts and weights are preserved. Restoring months makes their data eligible again under normal quality rules.
 
-          All 87 automated tests passed. A browser test with active calibration verified that adding 500 calories today increases the monthly intake total by exactly 500, without changing the adaptive correction, historical average intake or calibration days. It also verified future-date exclusion and the weekly live label. Retains the update signing key.
+          All 90 automated tests passed, including removal, learned-offset reset, restored eligibility, source-selection checks on backup import, preservation and the daily guard. Browser checks passed for yearly remove/cancel/restore, totals, records, persistence, backups and mobile layout. Retains live monthly totals, visible steps, personalized TDEE and the update signing key.
           NOTES
-          if gh release view live-month-preview-2026-11-27 >/dev/null 2>&1; then
-            gh release upload live-month-preview-2026-11-27 daily-intake-live-month-debug.apk SHA256SUMS --clobber
+          if gh release view excluded-months-preview-2026-11-27 >/dev/null 2>&1; then
+            gh release upload excluded-months-preview-2026-11-27 daily-intake-excluded-months-debug.apk SHA256SUMS --clobber
           else
-            gh release create live-month-preview-2026-11-27 daily-intake-live-month-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Live monthly totals with adaptive TDEE' --notes-file release-notes.md --prerelease --latest=false
+            gh release create excluded-months-preview-2026-11-27 daily-intake-excluded-months-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Exclude removed months from adaptive TDEE' --notes-file release-notes.md --prerelease --latest=false
           fi

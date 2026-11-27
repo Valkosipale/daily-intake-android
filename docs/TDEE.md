@@ -76,3 +76,9 @@ Daily, week/month and year views share the same dated result function. Today/fut
 `npm test` covers formulas, zero/high steps, gym METs, loss/gain/stability, irregular weigh-ins, high-calorie weekends, water fluctuations, missing food/activity, duration requirements, current-day exclusion, daily smoothing, limits/warnings, data quality, repeat launches, legacy preservation, unchanged snapshots after edits, backups and storage failure. Existing step, food, AI, fasting and yearly tests remain enabled.
 
 Browser checks at 320px and 390px verify the detailed panel without horizontal overflow, weight-dependent preview/cancel behavior, live month totals including today, backup content, a High-confidence seeded calibration and unchanged offset after reload. Responses from Health Connect still depend on when the source app makes its data locally available. No external TDEE service, new dependency or paid AI request is used.
+
+## Months removed from yearly view
+
+`dic:hiddenYearMonths` also excludes those months from adaptive calibration: their calorie/activity days are unavailable and their weigh-ins cannot define or support the regression interval. Excluded periods cannot be bridged by simply dropping their calorie records from an average. Ordinary daily food/weight records and saved historical estimates are retained.
+
+Changing the excluded-month selection clears the learned calibration offset and its target/estimate stability history, preventing indirect influence from previously included months. The last daily update date is preserved so removing/restoring months cannot trigger repeated same-day learning. If enough eligible non-excluded history remains, subsequent daily calibration can learn from it. Restoring months makes their data eligible again under the normal quality requirements. Backup restoration checks the calibration's month selection against the current exclusions before applying it.

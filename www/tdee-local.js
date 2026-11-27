@@ -9,7 +9,7 @@
     const validProfile=p=>p&&(p.sex==='male'||p.sex==='female')&&Number.isFinite(p.age)&&p.age>=15&&p.age<=100&&Number.isFinite(p.heightCm)&&p.heightCm>=100&&p.heightCm<=250&&Number.isFinite(p.weightKg)&&p.weightKg>=30&&p.weightKg<=300;
     function state(){
       const s=object(read(KEY,{}));
-      return {version:2,started:s.started||null,originals:object(s.originals),records:object(s.records),observations:object(s.observations),stepChecks:object(s.stepChecks),timeline:object(s.timeline),calibration:object(s.calibration)};
+      return {version:2,started:s.started||null,excludedMonths:Array.isArray(s.excludedMonths)?s.excludedMonths:[],originals:object(s.originals),records:object(s.records),observations:object(s.observations),stepChecks:object(s.stepChecks),timeline:object(s.timeline),calibration:object(s.calibration)};
     }
     function save(s){storage.setItem(KEY,JSON.stringify(s));}
     function weights(){const w=read('dic:weightLog',[]);return (Array.isArray(w)?w:[]).filter(w=>w&&M.validDate(w.date)&&Number.isFinite(w.kg)&&w.kg>=30&&w.kg<=300).sort((a,b)=>a.date.localeCompare(b.date));}
@@ -44,7 +44,16 @@
     }
     function sync(today,options={}){
       const s=state(),profile=read('dic:profile',null),steps=map('dic:steps'),gym=map('dic:gym'),list=weights();
-      if(!validProfile(profile)) return {state:s,profile:null,observation:M.observe({today,days:{},weights:list})};
+      const hidden=read('dic:hiddenYearMonths',[]);
+      const excludedMonths=[...new Set((Array.isArray(hidden)?hidden:[]).filter(value=>typeof value==='string'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(value)))].sort();
+      if(JSON.stringify(excludedMonths)!==JSON.stringify(s.excludedMonths.slice().sort())){
+        // Drop any learned influence from the old selection, including target
+        // stability history. Preserve the daily update guard and saved estimates.
+        s.calibration={offset:0,lastCalibrationDate:s.calibration.lastCalibrationDate||null,limitStreak:0,warning:false,targets:[],estimates:[]};
+      }
+      s.excludedMonths=excludedMonths;
+      const excluded=new Set(excludedMonths),calibrationWeights=list.filter(w=>!excluded.has(w.date.slice(0,7)));
+      if(!validProfile(profile)) return {state:s,profile:null,observation:M.observe({today,days:{},weights:calibrationWeights})};
       if(!s.started){
         // The old app never stored TDEE snapshots. Preserve what it would have
         // displayed at upgrade, clearly identified as reconstructed, not measured.
@@ -66,15 +75,16 @@
         const step=stepsAt(date,steps),workout=workoutAt(date,gym,s);
         const manual=steps[date]?.manual;
         const finalSteps=(typeof manual==='number'&&Number.isFinite(manual)&&manual>=0)||s.stepChecks[date]===true;
-        if(!validProfile(p)) continue; // Never substitute today's profile for unknown past activity.
-        const kg=kgAt(date,list,p),estimated=M.estimate(p,kg,step||0,workout||{});
+        if(!validProfile(p)||excluded.has(date.slice(0,7))) continue; // Never substitute today's profile for unknown past activity.
+        const kg=kgAt(date,calibrationWeights,p),estimated=M.estimate(p,kg,step||0,workout||{});
         days[date]={...intakeAt(date,{...p,weightKg:kg}),estimatedTDEE:estimated.estimatedTDEE,activityComplete:step!==null&&!!workout&&finalSteps,activityQuality:gym[date]?1:.85};
         if(days[date].activityComplete&&!s.originals[date]&&!s.records[date]){
           const offset=offsetAt(s,date);
           s.records[date]={...estimated,total:Math.round(estimated.estimatedTDEE+offset),calibrationOffset:offset,formula:'adaptive-v2',source:'Saved completed-day estimate',activityComplete:days[date].activityComplete};
         }
       }
-      const observation=M.observe({today,days,weights:list,previousTargets:s.calibration.targets||[],previousEstimates:s.calibration.estimates||[]});
+      const observation=M.observe({today,days,weights:calibrationWeights,previousTargets:s.calibration.targets||[],previousEstimates:s.calibration.estimates||[]});
+      if(excludedMonths.length)observation.reason+=' Months removed from the yearly view are excluded from calibration.';
       const next=M.calibrate(s.calibration,options.allowCalibration===false?{...observation,eligible:false}:observation,M.shift(today,-1));
       s.calibration=next;
       const warning=next.warning===true;
@@ -115,7 +125,7 @@
       for(const [date,value] of Object.entries(object(incoming.timeline))) if(M.validDate(date)&&Number.isFinite(value)&&Math.abs(value)<=500&&s.timeline[date]===undefined)s.timeline[date]=value;
       if(!s.started&&M.validDate(incoming.started))s.started=incoming.started;
       const c=incoming.calibration;
-      if(c&&Number.isFinite(c.offset)&&Math.abs(c.offset)<=500&&M.validDate(c.lastCalibrationDate)&&(!s.calibration.lastCalibrationDate||c.lastCalibrationDate>s.calibration.lastCalibrationDate)) s.calibration={offset:c.offset,lastCalibrationDate:c.lastCalibrationDate,limitStreak:Math.max(0,Number(c.limitStreak)||0),warning:c.warning===true,targets:Array.isArray(c.targets)?c.targets.filter(Number.isFinite).slice(-14):[],estimates:Array.isArray(c.estimates)?c.estimates.filter(Number.isFinite).slice(-14):[]};
+      if(c&&Number.isFinite(c.offset)&&Math.abs(c.offset)<=500&&M.validDate(c.lastCalibrationDate)&&(!s.calibration.lastCalibrationDate||c.lastCalibrationDate>s.calibration.lastCalibrationDate)){s.excludedMonths=Array.isArray(incoming.excludedMonths)?incoming.excludedMonths:[];s.calibration={offset:c.offset,lastCalibrationDate:c.lastCalibrationDate,limitStreak:Math.max(0,Number(c.limitStreak)||0),warning:c.warning===true,targets:Array.isArray(c.targets)?c.targets.filter(Number.isFinite).slice(-14):[],estimates:Array.isArray(c.estimates)?c.estimates.filter(Number.isFinite).slice(-14):[]};}
       save(s);
     }
     return {sync,result,noteStepRead,noteActivity,exportData:state,restore};

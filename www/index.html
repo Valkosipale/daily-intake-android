@@ -2857,12 +2857,12 @@ function getHiddenYearMonths(){
 }
 function saveHiddenYearMonths(months){
   if(!hasStorage()) return false;
-  try{localStorage.setItem('dic:hiddenYearMonths',JSON.stringify([...new Set(months)]));return true;}
+  try{localStorage.setItem('dic:hiddenYearMonths',JSON.stringify([...new Set(months)]));tdeeContext=null;return true;}
   catch(error){showToast('Could not save removed months');return false;}
 }
 document.getElementById('restoreYearMonthsBtn').addEventListener('click',()=>{
   const year=weeklyAnchor.slice(0,4);
-  if(saveHiddenYearMonths(getHiddenYearMonths().filter(month=>!month.startsWith(year+'-')))) renderYearly();
+  if(saveHiddenYearMonths(getHiddenYearMonths().filter(month=>!month.startsWith(year+'-')))){updateTdeeDisplay();renderYearly();}
 });
 
 function renderYearlyWeight(months){
@@ -2924,8 +2924,8 @@ function renderYearly(){
   list.querySelectorAll('[data-remove-month]').forEach(button=>button.addEventListener('click',async()=>{
     const month=button.dataset.removeMonth;
     const label=new Date(month+'-01T12:00:00').toLocaleDateString(undefined,{month:'long',year:'numeric'});
-    const confirmed=await showConfirmModal('Remove '+label+' from the yearly view and its totals? Daily food, fasting, steps and weight records are kept. You can restore removed months.','Remove month');
-    if(confirmed && saveHiddenYearMonths([...getHiddenYearMonths(),month])) renderYearly();
+    const confirmed=await showConfirmModal('Remove '+label+' from the yearly view, its totals and adaptive TDEE calibration? Daily food, fasting, steps and weight records are kept. You can restore removed months.','Remove month');
+    if(confirmed && saveHiddenYearMonths([...getHiddenYearMonths(),month])){updateTdeeDisplay();renderYearly();}
   }));
   const summary=document.getElementById('weeklySummary');
   if(!review.completedMonths){
