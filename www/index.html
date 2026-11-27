@@ -425,6 +425,8 @@ body{
   text-align:center;
   line-height:1.5;
 }
+.tdee-detail-row{display:flex;justify-content:space-between;gap:12px;text-align:left;padding:5px 0;border-bottom:1px solid var(--hair);}
+.tdee-detail-row strong{text-align:right;font-weight:400;color:var(--ink);flex-shrink:0;max-width:50%;}
 .body-tdee .big{
   font-family:'Archivo Black',sans-serif;
   font-size:22px;
@@ -1697,9 +1699,9 @@ body{
         <option value="hard">Hard — short rests, high volume</option>
       </select>
     </div>
-    <p class="body-note">Gym calories are estimated above resting expenditure using MET values (2.5 / 3.5 / 5.0), your weight and workout duration. Don't include walking already counted as steps.</p>
+    <p class="body-note">Gym calories estimate resistance-training energy above rest from intensity, weight and duration. Don't include walking already counted as steps.</p>
     <div class="body-tdee" id="bodyTdeePreview"></div>
-    <p class="body-note">How it's estimated: Mifflin–St Jeor resting calories × 1.2 provides the baseline. The estimated net walking cost of every recorded step is then added, starting from the first step. Walking distance is estimated from your height (step length = 0.413 × height) and walking cost from your weight (0.5 kcal per kg per km). If no step data is available, no step calories are added. Other exercise isn't counted.</p>
+    <p class="body-note">Adaptive TDEE automatically learns from long-term food logs and weight trends. It needs at least 28 continuous completed days with usable food and activity records, plus 6 weigh-ins spanning 28 days, within the last 42 days. Missing or possibly partial records pause calibration. Keep logging all meals and workouts, including high-calorie days. All TDEE calculations stay on this device.</p>
 
     <div class="data-actions">
       <button type="button" id="bodyCancelBtn" class="secondary">Cancel</button>
@@ -1762,6 +1764,8 @@ body{
   </div>
 </div>
 
+<script src="tdee.js"></script>
+<script src="tdee-local.js"></script>
 <script src="openai.js"></script>
 <script src="scan-units.js"></script>
 <script src="year-review.js"></script>
@@ -2938,7 +2942,7 @@ function renderYearly(){
   if(review.tdee===null){summary.textContent='Year vs your TDEE · '+year+' — Add body stats to calculate your TDEE.';return;}
   const eaten=Math.round(review.calories),difference=eaten-review.tdee;
   const signed=(difference>0?'+':difference<0?'−':'±')+Math.abs(difference).toLocaleString();
-  summary.innerHTML=`<div class="weekly-balance"><div class="wb-row"><span class="wb-label">Year vs your TDEE</span><span class="wb-val">${signed} cal <small>${difference>0?'over':difference<0?'under':'on target'}</small></span></div><div class="wb-sub">${eaten.toLocaleString()} eaten − ${review.tdee.toLocaleString()} estimated burn<br>${year} · completed months only · ${review.foodDays} food days · ${review.fastingDays} marked fasting days · unlogged days excluded${review.excludedCount?` · ${review.excludedCount} months removed`:''}</div></div>`;
+  summary.innerHTML=`<div class="weekly-balance"><div class="wb-row"><span class="wb-label">Year vs your TDEE</span><span class="wb-val">${signed} cal <small>${difference>0?'over':difference<0?'under':'on target'}</small></span></div><div class="wb-sub">${eaten.toLocaleString()} eaten − ${review.tdee.toLocaleString()} estimated burn (saved/legacy estimates preserved)<br>${year} · completed months only · ${review.foodDays} food days · ${review.fastingDays} marked fasting days · unlogged days excluded${review.excludedCount?` · ${review.excludedCount} months removed`:''}</div></div>`;
 }
 
 function renderWeekly(){
@@ -2966,11 +2970,11 @@ function renderWeekly(){
     const t = day.totals;
     const isToday = day.date === today;
     let dailyStats = '';
-    if(periodMode === 'month'){
+    if(periodMode === 'month'||periodMode === 'week'){
       const tdee = tdeeForDate(day.date);
       const steps = effectiveSteps(day.date);
       dailyStats = `<div class="monthly-day-stats">
-        <span class="${tdee === null ? 'missing' : ''}">${tdee === null ? 'TDEE — add body stats' : `TDEE (est.) ${tdee.toLocaleString()} kcal`}</span>
+        <span class="${tdee === null ? 'missing' : ''}">${tdee === null ? 'TDEE — add body stats' : `${tdeeDateLabel(day.date)} ${tdee.toLocaleString()} kcal`}</span>
         <span class="${steps ? '' : 'missing'}">${steps ? `${steps.steps.toLocaleString()} steps` : 'Steps not recorded'}</span>
       </div>`;
     }
@@ -3009,9 +3013,9 @@ function renderWeekly(){
   renderWeeklyWeight(start, end, noun);
 
   const summary = document.getElementById('weeklySummary');
-  const logged = days.filter(d => d.totals.count > 0 || d.totals.fasting);
+  const logged = days.filter(d => d.date<today && (d.totals.count > 0 || d.totals.fasting));
   if(logged.length === 0){
-    summary.textContent = 'Nothing logged in this range yet.';
+    summary.textContent = 'No completed food or fasting days in this range. Today’s intake and projected expenditure are excluded from the deficit total.';
     return;
   }
 
@@ -3027,7 +3031,7 @@ function renderWeekly(){
   const vsTdee = eatenTotal - tdeeTotal;
   const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toLocaleString();
   const word = v => (v > 0 ? 'over' : v < 0 ? 'under' : 'on target');
-  const todayNote = logged.some(d => d.date === today) ? ' · includes today so far' : '';
+  const todayNote = ' · completed logged days only · today excluded · saved/legacy estimates preserved';
   summary.innerHTML = `<div class="weekly-balance">` +
     `<div class="wb-row"><span class="wb-label">${noun === 'month' ? 'Month' : 'Week'} vs your TDEE</span><span class="wb-val">${signed(vsTdee)} cal <small>${word(vsTdee)}</small></span></div>` +
     `<div class="wb-sub">${eatenTotal.toLocaleString()} eaten − ${tdeeTotal.toLocaleString()} estimated burn${todayNote}</div>` +
@@ -3035,6 +3039,7 @@ function renderWeekly(){
 }
 
 function openPeriod(mode){
+  ensureTdeeContext();
   periodMode = mode;
   weeklyAnchor = mode==='year' ? todayStr().slice(0,4)+'-01-01' : currentDate;
   document.querySelector('.weekly-box').scrollTop=0;
@@ -3350,44 +3355,58 @@ async function scanBarcodeCode(fallbackInputId,isActive=()=>true){
 }
 
 // ---- Body stats, TDEE and steps ----
-// Mifflin-St Jeor estimates resting energy. BMR × 1.2 is the baseline;
-// the estimated net walking cost of EVERY recorded step is added on top.
-// Step length scales with height; walking energy scales with body weight.
-// This is an estimate: actual stride length, pace, terrain and gait vary.
-const TDEE_ACTIVITY_FACTOR = 1.2;
-const WALK_NET_KCAL_PER_KG_KM = 0.5;
-const STEP_LENGTH_PER_HEIGHT = 0.413;
-
-function computeBmr(sex, age, heightCm, weightKg){
-  return 10 * weightKg + 6.25 * heightCm - 5 * age + (sex === 'male' ? 5 : -161);
+// Formula and calibration coefficients live in tdee.js; all state stays local.
+const TDEE_ACTIVITY_FACTOR=1.2;
+function computeBmr(sex,age,heightCm,weightKg){return TdeeModel.bmr({sex,age,heightCm},weightKg);}
+function kcalPerStep(heightCm,weightKg){return weightKg*0.0004;}
+function computeTdee(profile,weightKg,steps){
+  const t=TdeeModel.estimate(profile,weightKg,steps);
+  return {...t,sedentaryBaseline:t.baseline,base:t.baseline,stepKcal:t.stepCalories,total:t.estimatedTDEE};
 }
-
-function kcalPerStep(heightCm, weightKg){
-  const stepLengthM = STEP_LENGTH_PER_HEIGHT * heightCm / 100;
-  return WALK_NET_KCAL_PER_KG_KM * weightKg * stepLengthM / 1000;
+let tdeeStore=null,tdeeContext=null,tdeeContextDate=null;
+function ensureTdeeContext(){
+  if(!hasStorage())return null;
+  if(!tdeeStore)tdeeStore=TdeeLocal.create(window.localStorage);
+  try{tdeeContext=tdeeStore.sync(todayStr(),{allowCalibration:!completedActivityTask});tdeeContextDate=todayStr();}
+  catch(error){console.error('Could not persist TDEE data',error);tdeeContext=null;}
+  return tdeeContext;
 }
-
-function computeTdee(profile, weightKg, steps){
-  const bmr = computeBmr(profile.sex, profile.age, profile.heightCm, weightKg);
-  const sedentaryBaseline = Math.round(bmr * TDEE_ACTIVITY_FACTOR);
-  const perStep = kcalPerStep(profile.heightCm, weightKg);
-  const base = sedentaryBaseline;
-  const actualSteps = Math.max(0, Number(steps) || 0);
-  const stepKcal = Math.round(actualSteps * perStep);
-  const total = base + stepKcal;
-  return {
-    bmr: Math.round(bmr),
-    sedentaryBaseline,
-    base,
-    perStep,
-    steps: actualSteps,
-    stepKcal,
-    total
-  };
+function personalizedTdee(dateStr,override){
+  if(!tdeeContext||tdeeContextDate!==todayStr())ensureTdeeContext();
+  if(!tdeeContext?.profile)return null;
+  return tdeeStore.result(tdeeContext,dateStr,todayStr(),override);
+}
+function tdeeDateLabel(date){
+  if(date>=todayStr())return 'TDEE (full-day projection)';
+  const r=personalizedTdee(date);
+  return r?.saved?.formula==='legacy-height-walking-v1'?'TDEE (legacy estimate)':r?.saved?'TDEE (saved estimate)':'TDEE (recalculated estimate)';
+}
+function tdeeBreakdown(t,observation){
+  const o=observation||{confidence:'Low',days:0};
+  const kcal=n=>Math.round(n).toLocaleString()+' kcal';
+  const rows=[['Basal metabolic rate',kcal(t.bmr)],['Baseline expenditure (BMR × 1.20)',kcal(t.baseline)],['Steps above 2,000',kcal(t.stepCalories)],['Gym (net above rest)',kcal(t.gymCalories)],['Uncalibrated estimated TDEE',kcal(t.estimatedTDEE)],['Adaptive correction',(t.calibrationOffset>=0?'+':'−')+kcal(Math.abs(t.calibrationOffset))],['Adaptive confidence'+(t.saved?' (current model)':''),o.confidence],['Average daily calorie intake',o.averageIntake===null||o.averageIntake===undefined?'Not enough data':kcal(o.averageIntake)],['Weekly weight trend',o.weeklyTrend===null||o.weeklyTrend===undefined?'Not enough data':(o.weeklyTrend>0?'+':'')+o.weeklyTrend.toFixed(2)+' kg/week'],['Days used for calibration',String(o.days||0)]];
+  if(t.saved)rows.push(['Preserved '+t.saved.source,kcal(t.saved.total)],['Recalculated personalized estimate',kcal(t.recalculated)]);
+  return rows.map(([label,value])=>`<div class="tdee-detail-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('')+
+    `<p class="body-note">${escapeHtml(o.reason||'Adaptive TDEE is automatically calibrated from long-term calorie intake and weight trends.')}</p>`+
+    (t.stepsRecorded===false?'<p class="body-note">No step record: step expenditure is shown as zero, so this daily estimate may be incomplete.</p>':'')+
+    (o.start?`<p class="body-note">Observation: ${formatDateShort(o.start)} – ${formatDateShort(shiftDate(o.endExclusive,-1))}; weights through ${formatDateShort(o.endExclusive)}. Current unfinished day excluded.</p>`:'');
+}
+// Query only previously observed days, using local Health Connect, to replace
+// partial phone step totals with a completed-day reading. No external service.
+let completedActivityTask=null,completedActivityChecked=null;
+function refreshCompletedTdeeActivity(){
+  if(completedActivityTask||completedActivityChecked===todayStr()||!tdeeStore||!getHealthPlugin())return;
+  const today=todayStr(),s=tdeeStore.exportData(),steps=getStepsMap();
+  const dates=Object.keys(s.observations).filter(date=>date<today&&date>=shiftDate(today,-42)&&steps[date]?.phone!==undefined&&!s.stepChecks[date]).sort();
+  completedActivityChecked=today;
+  if(!dates.length)return;
+  completedActivityTask=Promise.resolve().then(async()=>{
+    for(const date of dates){const result=await refreshPhoneSteps(date,{force:true});if(['no-permission','unavailable','no-plugin','error'].includes(result.status))break;}
+  }).catch(error=>console.error('Completed-day steps unavailable',error)).finally(()=>{completedActivityTask=null;ensureTdeeContext();if(document.getElementById('bodyOverlay').classList.contains('show'))updateBodyPreview();});
 }
 
 // ---- Gym workouts stored per day; net energy above resting level ----
-const GYM_METS = {light:2.5, moderate:3.5, hard:5.0};
+const GYM_METS = TdeeModel.METS;
 function getGymMap(){
   if(!hasStorage()) return {};
   try{
@@ -3404,15 +3423,11 @@ function getGymWorkout(dateStr){
 function saveGymWorkout(dateStr, minutes, intensity){
   if(!hasStorage()) return;
   const m = getGymMap();
-  if(minutes > 0) m[dateStr] = {minutes, intensity};
-  else delete m[dateStr];
+  m[dateStr] = {minutes, intensity}; // Keep explicit rest days for data quality.
   try{ window.localStorage.setItem('dic:gym', JSON.stringify(m)); }
   catch(e){ console.error('Failed to save gym workout', e); }
 }
-function gymKcal(weightKg, workout){
-  const met = GYM_METS[workout.intensity] || GYM_METS.moderate;
-  return Math.round(Math.max(0, met - 1) * 3.5 * weightKg / 200 * workout.minutes);
-}
+function gymKcal(weightKg,workout){return TdeeModel.gymCalories(weightKg,workout);}
 function readGymInputs(){
   const raw = document.getElementById('gymMinutes').value.trim();
   return {minutes:raw === '' ? 0 : Number(raw), intensity:document.getElementById('gymIntensity').value};
@@ -3489,33 +3504,14 @@ function parseSteps(raw){
 
 // ---- TDEE summary ----
 function updateTdeeDisplay(){
-  const valueEl = document.getElementById('tdeeValue');
-  const subEl = document.getElementById('tdeeSub');
-  if(!valueEl || !subEl) return;
-
-  const profile = getProfile();
-  if(!profile){
-    valueEl.textContent = '—';
-    subEl.textContent = 'tap to add your body stats';
-    return;
-  }
-
-  const wi = weighInOnOrBefore(currentDate);
-  const kg = wi ? wi.kg : profile.weightKg;
-  const st = effectiveSteps(currentDate);
-  // Missing step data is not the same as zero steps: use the 5,000-step
-  // sedentary assumption until the user records an actual step count.
-  const steps = st ? st.steps : 0;
-  const t = computeTdee(profile, kg, steps);
-  const gym = gymKcal(kg, getGymWorkout(currentDate));
-  const total = t.total + gym;
-
-  valueEl.textContent = total.toLocaleString();
-  if(!st){
-    subEl.textContent = `${total.toLocaleString()} estimated · no step data recorded${gym ? ` · gym +${gym}` : ''}`;
-  } else {
-    subEl.textContent = `base ${t.base.toLocaleString()} + ${t.stepKcal.toLocaleString()} from ${steps.toLocaleString()} steps${gym ? ` + ${gym} gym` : ''}`;
-  }
+  const valueEl=document.getElementById('tdeeValue'),subEl=document.getElementById('tdeeSub');
+  if(!valueEl||!subEl)return;
+  ensureTdeeContext();
+  const t=personalizedTdee(currentDate);
+  if(!t){valueEl.textContent='—';subEl.textContent='tap to add your body stats';return;}
+  valueEl.textContent=t.total.toLocaleString();
+  subEl.textContent=(t.projected?'full-day projection':t.saved?'preserved historical estimate':'recalculated estimate')+' · '+tdeeContext.observation.confidence+' adaptive confidence'+(tdeeContext.state.calibration.warning?' · calibration needs review':'')+' · tap for details';
+  refreshCompletedTdeeActivity();
 }
 
 // ---- Phone steps through Health Connect (capacitor-health plugin, registered as "HealthPlugin") ----
@@ -3592,6 +3588,7 @@ async function refreshPhoneSteps(dateStr, opts){
       const steps = Math.round(values.reduce((sum,n)=>sum+n,0));
       if(!Number.isSafeInteger(steps)) throw new Error('The phone returned an invalid step count.');
       setStepsField(dateStr,'phone',steps);
+      if(typeof tdeeStore!=='undefined'&&tdeeStore)tdeeStore.noteStepRead(dateStr,todayStr());
       lastStepsRefresh[dateStr] = Date.now();
       updateTdeeDisplay();
       if(dateStr===currentDate){setStepsStatus(describePhoneSteps());updateBodyPreview();}
@@ -3659,6 +3656,7 @@ async function connectPhoneSteps(){
       r = await refreshPhoneSteps(currentDate,{force:true,restart:true});
     }
     if(r.status==='ok'){
+      if(typeof refreshCompletedTdeeActivity==='function'){completedActivityChecked=null;refreshCompletedTdeeActivity();}
       setStepsStatus(describePhoneSteps());
     }else if(r.status==='unavailable'){
       const open = await showConfirmModal("Health Connect isn't available on this phone. Open the Play Store to install it?",'Open Play Store');
@@ -3719,19 +3717,23 @@ function updateBodyPreview(){
   const steps = hasStepInput
     ? Math.max(isNaN(typed) ? 0 : typed, phone)
     : 0;
-  const t = computeTdee(v, kg, steps);
-  const gymInput = readGymInputs();
-  const gymProblem = gymInputsProblem(gymInput);
-  if(gymProblem){ el.textContent = gymProblem; return; }
-  const gym = gymKcal(kg, gymInput);
+  const gymInput=readGymInputs(),gymProblem=gymInputsProblem(gymInput);
+  if(gymProblem){el.textContent=gymProblem;return;}
+  if(!tdeeContext||tdeeContextDate!==todayStr())ensureTdeeContext();
+  let t=personalizedTdee(currentDate,{profile:v,weightKg:kg,steps,stepsKnown:hasStepInput,gym:gymInput});
+  if(!t){const raw=TdeeModel.estimate(v,kg,steps,gymInput);t={...raw,total:Math.round(raw.estimatedTDEE),calibrationOffset:0};}
+  const saved=personalizedTdee(currentDate)?.saved;
+  if(saved)t={...t,saved,recalculated:t.total};
+  const displayed=saved?saved.total:t.total;
+  const title=currentDate>=todayStr()?'Personalized TDEE · full-day projection':saved?'Preserved historical TDEE':'Personalized TDEE · recalculated';
+  el.innerHTML=escapeHtml(title)+`<span class="big">${displayed.toLocaleString()} kcal</span>`+tdeeBreakdown(t,tdeeContext?.observation);
+  const intake=getDayTotalsFromStorage(currentDate);
+  if(intake.count||intake.fasting)el.innerHTML+=`<p class="body-note">${currentDate>=todayStr()?'Projected balance (intake so far)':'Estimated balance'}: ${Math.round(Math.abs(displayed-intake.cal)).toLocaleString()} kcal ${displayed>=intake.cal?'below':'above'} TDEE.</p>`;
 
-  let detail = `Resting ${t.bmr.toLocaleString()} × ${TDEE_ACTIVITY_FACTOR} = ${t.sedentaryBaseline.toLocaleString()}; add ${t.stepKcal.toLocaleString()} for ${steps.toLocaleString()} steps (${t.perStep.toFixed(3)} kcal/step).`;
-  if(!hasStepInput) detail += ` No step data: no step calories added.`;
-  if(gym) detail += ` Gym +${gym.toLocaleString()} kcal (${gymInput.minutes} min, ${gymInput.intensity}).`;
-  el.innerHTML = `Estimated TDEE<span class="big">${(t.total + gym).toLocaleString()} kcal</span>${escapeHtml(detail)}`;
 }
 
 function openBodyDialog(){
+  ensureTdeeContext();
   const p = getProfile();
   document.getElementById('bodyAge').value = p ? String(p.age) : '';
   document.getElementById('bodyHeight').value = p ? String(p.heightCm) : '';
@@ -3794,6 +3796,8 @@ function saveBodyDialog(){
   if(bodyWeightTouched) logWeighIn(currentDate, roundWeight(v.weightKg));
   setStepsField(currentDate, 'manual', manual);
   saveGymWorkout(currentDate, gymInput.minutes, gymInput.intensity);
+  if(!tdeeStore)ensureTdeeContext();
+  tdeeStore?.noteActivity(currentDate,getProfile(),gymInput);
   closeBodyDialog();
   updateTdeeDisplay();
   showToast('Saved');
@@ -3839,6 +3843,7 @@ function collectAllData(){
     data.gym = getGymMap();
     data.fastingDays = getFastingDays();
     data.hiddenYearMonths = getHiddenYearMonths();
+    if(tdeeStore)data.tdee=tdeeStore.exportData();
   }catch(e){ console.error('Failed to collect data', e); }
   return data;
 }
@@ -3912,12 +3917,14 @@ function restoreAllData(data){
         const g = data.gym[dateStr];
         if(!g || typeof g !== 'object' || Array.isArray(g)) return;
         const minutes = Number(g.minutes);
-        if(!Number.isFinite(minutes) || minutes <= 0 || minutes > 300) return;
+        if(!Number.isFinite(minutes) || minutes < 0 || minutes > 300) return;
         if(!Object.prototype.hasOwnProperty.call(GYM_METS, g.intensity)) return;
         mergedGym[dateStr] = {minutes, intensity:g.intensity};
       });
       window.localStorage.setItem('dic:gym', JSON.stringify(mergedGym));
     }
+    if(data.tdee){if(!tdeeStore)tdeeStore=TdeeLocal.create(window.localStorage);tdeeStore.restore(data.tdee);}
+    tdeeContext=null;completedActivityChecked=null;
     return true;
   }catch(e){
     console.error('Failed to restore data', e);
@@ -4729,16 +4736,7 @@ document.getElementById('scanTextForm').addEventListener('submit', async functio
 });
 
 // Estimated burn (TDEE) for one day, or null if body stats aren't set up yet
-function tdeeForDate(dateStr){
-  const profile = getProfile();
-  if(!profile) return null;
-  const wi = weighInOnOrBefore(dateStr);
-  const kg = wi ? wi.kg : profile.weightKg;
-  const st = effectiveSteps(dateStr);
-  // For dates without step records, add no step calories.
-  return computeTdee(profile, kg, st ? st.steps : 0).total
-    + gymKcal(kg, getGymWorkout(dateStr));
-}
+function tdeeForDate(dateStr){return personalizedTdee(dateStr)?.total??null;}
 
 function computeMultiPhotoTotals(){
   const totals = scanTotals(multiPhotoItems);
@@ -5168,6 +5166,9 @@ document.getElementById('photoRefineInput').addEventListener('keydown', event=>{
     document.getElementById('photoAskBtn').click();
   }
 });
+
+window.addEventListener('focus',()=>updateTdeeDisplay());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')updateTdeeDisplay();});
 
 (async function init(){
   await loadSettings();
