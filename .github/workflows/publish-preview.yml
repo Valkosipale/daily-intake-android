@@ -1,4 +1,4 @@
-name: Publish local personalized TDEE
+name: Restore visible daily steps
 
 on:
   push:
@@ -134,21 +134,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-personalized-tdee-debug.apk
-          sha256sum daily-intake-personalized-tdee-debug.apk > SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk daily-intake-visible-steps-debug.apk
+          sha256sum daily-intake-visible-steps-debug.apk > SHA256SUMS
           cat > release-notes.md <<'NOTES'
-          TDEE now uses Mifflin–St Jeor BMR × 1.20, weight-dependent steps above a 2000-step allowance, and net resistance-training calories from gross METs 3.5 / 4.5 / 6.0. No separate food thermogenesis, new settings, dependencies or external TDEE API.
+          Restores the effective daily step count beneath TDEE alongside the projected/historical label and adaptive confidence. Explicit zero steps display as zero; absent data is shown as No steps recorded. Uses the existing higher-of-manual/phone count for the selected day.
 
-          Local adaptive calibration uses a rolling 42-completed-day window, robust Theil–Sen regression on dated weigh-ins, aligned intake/activity averages, quality-weighted daily smoothing and a +/-500 kcal/day guardrail. Requires 28 continuous usable days and 6 weigh-ins spanning 28 days; gaps and today's unfinished records never become zero intake. Fully logged high-calorie days stay included. Repeated guardrail corrections show Low confidence. Reopening cannot apply the same daily update again.
-
-          The existing Body stats panel now shows the personalized total, all energy components, correction, confidence, intake average, weekly weight trend and calibration days. Current/future expenditure is labelled projected. Week/month deficit totals exclude today and compare matching completed logged dates. Year reviews still use completed months.
-
-          Food, weight, steps and workouts are preserved. Legacy TDEE values are reconstructed once using the previous formula and labelled separately; new completed estimates remain immutable, with recalculations distinguished. Backups include calibration/history. Food completeness must be inferred, and unknown past activity prevents immediate calibration, so 28 new usable days may be needed after upgrade. The activity-based formula works immediately.
-
-          All 87 automated tests passed, including 26 TDEE tests. Mobile browser checks at 320px and 390px verified panel layout, formulas, preview/cancel, monthly date alignment, backups and no repeat-launch smoothing. A mocked local Health Connect check verified 42 completed-day reads without permission prompts and calibration once after the full batch. See docs/TDEE.md for formulas, eligibility rules and limitations. Retains the update signing key.
+          Includes the personalized TDEE update and all previous features. Step synchronization and calculations are unchanged. Browser checks verify automatic/manual counts, zero versus missing data, date changes and immediate display updates. Retains the update signing key.
           NOTES
-          if gh release view personalized-tdee-preview-2026-11-27 >/dev/null 2>&1; then
-            gh release upload personalized-tdee-preview-2026-11-27 daily-intake-personalized-tdee-debug.apk SHA256SUMS --clobber
+          if gh release view visible-steps-preview-2026-11-27 >/dev/null 2>&1; then
+            gh release upload visible-steps-preview-2026-11-27 daily-intake-visible-steps-debug.apk SHA256SUMS --clobber
           else
-            gh release create personalized-tdee-preview-2026-11-27 daily-intake-personalized-tdee-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Local personalized TDEE and automatic calibration' --notes-file release-notes.md --prerelease --latest=false
+            gh release create visible-steps-preview-2026-11-27 daily-intake-visible-steps-debug.apk SHA256SUMS --target "$GITHUB_SHA" --title 'Restore step count beneath TDEE' --notes-file release-notes.md --prerelease --latest=false
           fi

@@ -3510,7 +3510,9 @@ function updateTdeeDisplay(){
   const t=personalizedTdee(currentDate);
   if(!t){valueEl.textContent='—';subEl.textContent='tap to add your body stats';return;}
   valueEl.textContent=t.total.toLocaleString();
-  subEl.textContent=(t.projected?'full-day projection':t.saved?'preserved historical estimate':'recalculated estimate')+' · '+tdeeContext.observation.confidence+' adaptive confidence'+(tdeeContext.state.calibration.warning?' · calibration needs review':'')+' · tap for details';
+  const recordedSteps=effectiveSteps(currentDate);
+  const stepText=recordedSteps?recordedSteps.steps.toLocaleString()+' steps':'No steps recorded';
+  subEl.textContent=stepText+' · '+(t.projected?'full-day projection':t.saved?'preserved historical estimate':'recalculated estimate')+' · '+tdeeContext.observation.confidence+' adaptive confidence'+(tdeeContext.state.calibration.warning?' · calibration needs review':'')+' · tap for details';
   refreshCompletedTdeeActivity();
 }
 
